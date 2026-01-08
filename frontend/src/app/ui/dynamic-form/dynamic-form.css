@@ -1,0 +1,86 @@
+.form-grid{
+  display: grid;
+  grid-template-columns: 1fr;   
+  gap: 20px;
+}
+
+textarea{
+  grid-column: span 1;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.opt-row{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  padding:6px 8px;
+}
+
+.opt-header{
+  font-weight:600;
+  opacity:.85;
+  border-bottom:1px solid #f0f0f0;
+}
+
+.opt-cell{
+  flex: initial;      /* ✅ important: width/flex-basis template se control hoga */
+  min-width:0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-size:12px;
+}
+
+/* selected label ellipsis */
+.select-trigger-text{
+  display:inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* loading center */
+.select-loading{
+  padding: 10px 0;
+  display:flex;
+  justify-content:center;
+}
+
+/* Dropdown option text visible fix */
+:host ::ng-deep .ant-select-item-option-content,
+:host ::ng-deep .ant-select-item-option-content * {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* optional hover bg */
+:host ::ng-deep .ant-select-item-option-active {
+  background: #eaf7ff !important;
+}
+
+:host ::ng-deep .ant-select-item-option-content .opt-row{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  padding:4px 8px;
+}
+
+:host ::ng-deep .ant-select-item-option-content .opt-header{
+  font-weight:600;
+  opacity:.85;
+  border-bottom:1px solid #f0f0f0;
+}
+
+:host ::ng-deep .ant-select-item-option-content .opt-cell{
+  flex:1;
+  min-width:0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-size:12px;
+}

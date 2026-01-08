@@ -1,0 +1,21 @@
+.app-table {
+  background: var(--content-bg);
+  min-width: 700px;
+}
+
+.app-table th {
+  font-weight: 600;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.app-table td {
+  vertical-align: middle;
+  color: var(--text-primary);
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius);
+}

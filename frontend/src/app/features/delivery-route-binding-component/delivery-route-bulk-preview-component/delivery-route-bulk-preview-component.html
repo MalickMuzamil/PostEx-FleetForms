@@ -1,0 +1,164 @@
+<!-- delivery-route-bulk-preview-component.html (UPDATED - Correct Description dropdown added) -->
+
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <button class="btn btn-outline-secondary" routerLink="/delivery-route-binding">
+                    ← Back
+                </button>
+
+                <h4 class="fw-bold mb-0">Delivery Route Bulk Preview</h4>
+            </div>
+
+            <!-- ✅ Loader wrapper (only initial load/file read) -->
+            <nz-spin [nzSpinning]="isLoading" [nzTip]="loadingText">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 40px">
+                                    <input type="checkbox" class="form-check-input" [ngModel]="checkAll"
+                                        (ngModelChange)="onToggleAll($event)" [disabled]="isLoading" />
+                                </th>
+                                <th>#</th>
+                                <th>Delivery Route</th>
+                                <th>Branch</th>
+                                <th>Sub Branch</th>
+
+                                <!-- ✅ NEW COLUMN -->
+                                <th>Correct Description</th>
+
+                                <th>Effective Date</th>
+                                <th>Required Reports</th>
+                                <th style="width: 140px">Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <ng-container *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+                                <!-- MAIN ROW -->
+                                <tr [class.table-warning]="row.checked"
+                                    [class.table-danger]="(row.errors?.length ?? 0) > 0">
+                                    <!-- Checkbox -->
+                                    <td>
+                                        <input type="checkbox" class="form-check-input" [(ngModel)]="row.checked"
+                                            (change)="onRowToggle(row, row.checked)"
+                                            [disabled]="isLoading || !row.isValid" />
+                                    </td>
+
+                                    <!-- Row No -->
+                                    <td>{{ row.rowNo }}</td>
+
+                                    <!-- Delivery Route Dropdown -->
+                                    <td>
+                                        <select class="form-select form-select-sm"
+                                            [formControl]="row.deliveryRouteControl" (change)="onRowRouteChange(row)"
+                                            [disabled]="isLoading">
+                                            <option value="">Any</option>
+                                            <option *ngFor="let dr of deliveryRoutes" [value]="dr.DeliveryRouteID">
+                                                {{ dr.DeliveryRouteNo }} - {{ dr.DeliveryRouteDescription }}
+                                            </option>
+                                        </select>
+                                    </td>
+
+                                    <!-- Branch -->
+                                    <td>
+                                        <select class="form-select form-select-sm" [(ngModel)]="row.branchId"
+                                            (ngModelChange)="onRowBranchChange(row)"
+                                            [disabled]="isLoading || !row.deliveryRouteControl.value">
+                                            <option [ngValue]="null">Select Branch</option>
+                                            <option *ngFor="let b of row.routeBranches" [ngValue]="b.value">
+                                                {{ b.label }}
+                                            </option>
+                                        </select>
+                                    </td>
+
+                                    <!-- Sub Branch -->
+                                    <td>
+                                        <select class="form-select form-select-sm" [(ngModel)]="row.subBranchId"
+                                            [disabled]="isLoading || !row.branchId"
+                                            (ngModelChange)="updateHasValidRow()">
+                                            <option [ngValue]="null">Select Sub Branch</option>
+                                            <option *ngFor="let sb of row.subBranches" [ngValue]="sb.SubBranchID">
+                                                {{ sb.SubBranchName }}
+                                            </option>
+                                        </select>
+                                    </td>
+
+                                    <!-- ✅ Correct Description Dropdown -->
+                                    <td>
+                                        <select class="form-select form-select-sm" [(ngModel)]="row.correctDescId"
+                                            [disabled]="isLoading" (ngModelChange)="updateHasValidRow()">
+                                            <option [ngValue]="null">Select Description</option>
+                                            <option *ngFor="let d of correctDescriptions" [ngValue]="d.id">
+                                                {{ d.text }}
+                                            </option>
+                                        </select>
+                                    </td>
+
+                                    <!-- Effective Date -->
+                                    <td>
+                                        <nz-date-picker nzFormat="yyyy-MM-dd" nzSize="small"
+                                            [formControl]="row.effectiveDateControl" [nzDisabledDate]="disablePastDates"
+                                            [nzDisabled]="isLoading"
+                                            (ngModelChange)="updateHasValidRow()"></nz-date-picker>
+
+                                        <div class="text-danger small mt-1"
+                                            *ngIf="row.effectiveDateControl.invalid && row.effectiveDateControl.touched">
+                                            Future date required
+                                        </div>
+                                    </td>
+
+                                    <!-- Required Reports -->
+                                    <td>
+                                        <select class="form-select form-select-sm" [(ngModel)]="row.requiredReportsFlag"
+                                            [disabled]="isLoading" (ngModelChange)="updateHasValidRow()">
+                                            <option [ngValue]="1">Active</option>
+                                            <option [ngValue]="0">Inactive</option>
+                                        </select>
+                                    </td>
+
+                                    <!-- Action -->
+                                    <td>
+                                        <!-- ✅ Save enabled when row is valid (no checkbox needed) -->
+                                        <button class="btn btn-outline-primary btn-sm w-100"
+                                            [disabled]="isLoading || !row.isValid || row.saving" (click)="saveRow(row)">
+                                            <span *ngIf="row.saving"
+                                                class="spinner-border spinner-border-sm me-1"></span>
+                                            {{ row.saving ? 'Saving...' : 'Save' }}
+                                        </button>
+
+                                        <button class="btn btn-outline-danger btn-sm w-100 mt-2" type="button"
+                                            [disabled]="isLoading" (click)="removeRow(i)">
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <!-- ERROR ROW -->
+                                <tr *ngIf="row.errors?.length">
+                                    <!-- ✅ colspan updated (8 -> 9) because new column added -->
+                                    <td colspan="9" class="py-2">
+                                        <div class="text-danger small">
+                                            <div *ngFor="let err of row.errors">• {{ err }}</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </ng-container>
+                        </tbody>
+                    </table>
+
+                    <!-- Bulk Proceed -->
+                    <div class="d-flex justify-content-end mt-3" *ngIf="selectedValidCount >= 2">
+                        <button class="btn btn-success px-4" [disabled]="isLoading || !canProceed"
+                            (click)="proceedBulkUpdate()">
+                            <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
+                            {{ bulkSaving ? 'Processing...' : 'Proceed' }}
+                        </button>
+                    </div>
+                </div>
+            </nz-spin>
+        </div>
+    </div>
+</div>

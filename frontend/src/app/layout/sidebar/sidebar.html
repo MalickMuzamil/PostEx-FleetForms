@@ -1,0 +1,52 @@
+<div class="logo px-3 mb-4 d-flex align-items-center justify-content-center justify-content-lg-start">
+    <i class="fas fa-cube text-primary fs-4"></i>
+
+    <span *ngIf="!collapsed" class="fw-bold ms-2 d-none d-lg-inline">
+        Logistic Fleet Forms
+    </span>
+</div>
+
+<ul nz-menu nzMode="inline">
+
+    <li nz-menu-item routerLink="/" routerLinkActive="nz-menu-item-selected"
+        [routerLinkActiveOptions]="{ exact: true }">
+        <i class="fas fa-gauge-high me-2"></i>
+        <span *ngIf="!collapsed">Dashboard</span>
+    </li>
+
+    <li nz-menu-item routerLink="/branch-coordinator-assignment" routerLinkActive="nz-menu-item-selected">
+        <i class="fas fa-user-check me-2"></i>
+        <span *ngIf="!collapsed">Branch Coordinator</span>
+    </li>
+
+    <li nz-menu-item routerLink="/branch-general-employee-binding" routerLinkActive="nz-menu-item-selected">
+        <i class="fas fa-users-gear me-2"></i>
+        <span *ngIf="!collapsed">Employee Binding</span>
+    </li>
+
+    <li nz-menu-item routerLink="/branch-dashboard-binding" routerLinkActive="nz-menu-item-selected">
+        <i class="fas fa-project-diagram me-2"></i>
+        <span *ngIf="!collapsed">Conference Binding</span>
+    </li>
+
+    <li nz-menu-item routerLink="/sub-branch-binding" routerLinkActive="nz-menu-item-selected">
+        <i class="fas fa-code-branch me-2"></i>
+        <span *ngIf="!collapsed">Sub-Branch Binding</span>
+    </li>
+
+    <li nz-menu-item routerLink="/delivery-route-definition" routerLinkActive="nz-menu-item-selected">
+        <i class="fas fa-map-marked-alt me-2"></i>
+        <span *ngIf="!collapsed">Delivery Route</span>
+    </li>
+
+    <li nz-menu-item routerLink="/delivery-route-binding" routerLinkActive="nz-menu-item-selected">
+        <i class="fas fa-link me-2"></i>
+        <span *ngIf="!collapsed">Route Binding</span>
+    </li>
+
+     <li nz-menu-item routerLink="/sub-branch-assignment-definition" routerLinkActive="nz-menu-item-selected">
+        <i class="fas fa-link me-2"></i>
+        <span *ngIf="!collapsed">Sub Branch Assignment Definition</span>
+    </li>
+
+</ul>

@@ -1,0 +1,246 @@
+/* =====================================================
+   FONT
+===================================================== */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+/* =====================================================
+   ROOT DESIGN TOKENS (MATERIAL PRO)
+===================================================== */
+:root {
+  /* Brand */
+  --primary: #f44336;
+  --primary-shadow: rgba(244, 67, 54, 0.4);
+
+  /* Sidebar */
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #3c4858;
+  --sidebar-muted: #a9afbb;
+  --sidebar-hover: rgba(0, 0, 0, 0.04);
+
+  /* App */
+  --app-bg: #eeeeee;
+  --content-bg: #ffffff;
+
+  /* Text */
+  --text-primary: #3c4858;
+  --text-secondary: #999999;
+
+  /* UI */
+  --border-color: #dddddd;
+  --radius: 10px;
+
+  /* Font */
+  --font: "Inter", system-ui, sans-serif;
+
+  /* =====================================================
+     RESPONSIVE FONT SCALE (🔥 IMPORTANT)
+  ===================================================== */
+  --fs-xs: clamp(0.7rem, 0.8vw, 0.8rem);
+  --fs-sm: clamp(0.6rem, 0.9vw, 0.9rem);
+  --fs-md: clamp(0.8rem, 1vw, 1rem);
+  --fs-lg: clamp(1rem, 1.2vw, 1.2rem);
+  --fs-xl: clamp(1.2rem, 1.6vw, 1.6rem);
+  --fs-2xl: clamp(1.4rem, 2vw, 2rem);
+}
+
+/* =====================================================
+   RESET
+===================================================== */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: var(--font);
+  background: var(--app-bg);
+  color: var(--text-primary);
+  font-size: var(--fs-md);
+}
+
+/* =====================================================
+   TYPOGRAPHY (RESPONSIVE)
+===================================================== */
+h1 {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+}
+
+h2 {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+}
+
+h3 {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+h4,
+h5 {
+  font-size: var(--fs-md);
+  font-weight: 500;
+}
+
+p,
+span,
+label,
+small {
+  font-size: var(--fs-sm);
+}
+
+/* =====================================================
+   NG-ZORRO LAYOUT
+===================================================== */
+nz-layout {
+  min-height: 100vh;
+}
+
+/* =====================================================
+   SIDEBAR – CREATIVE TIM STYLE
+===================================================== */
+nz-sider {
+  background: var(--sidebar-bg) !important;
+  box-shadow:
+    0 16px 38px -12px rgba(0, 0, 0, 0.56),
+    0 4px 25px 0 rgba(0, 0, 0, 0.12),
+    0 8px 10px -5px rgba(0, 0, 0, 0.2);
+  padding-top: 20px;
+}
+
+.nz-menu {
+  background: transparent !important;
+  border-right: none;
+  padding: 0 12px;
+}
+
+.nz-menu-item {
+  color: var(--sidebar-text) !important;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  border-radius: var(--radius);
+  height: clamp(40px, 5vh, 48px);
+  margin-bottom: 10px;
+  transition: all 0.25s ease;
+}
+
+.nz-menu-item:hover {
+  background: var(--sidebar-hover) !important;
+}
+
+.nz-menu-item-selected {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.14),
+    0 7px 10px -5px var(--primary-shadow);
+}
+
+.nz-menu-item nz-icon {
+  font-size: var(--fs-md);
+  margin-right: 14px;
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
+nz-header {
+  background: var(--content-bg) !important;
+  border-bottom: 1px solid var(--border-color);
+  padding: clamp(12px, 2vw, 16px) clamp(16px, 3vw, 24px);
+}
+
+.trigger {
+  font-size: var(--fs-lg);
+  cursor: pointer;
+}
+
+.trigger:hover {
+  color: var(--primary);
+}
+
+/* =====================================================
+   CONTENT
+===================================================== */
+nz-content {
+  padding: clamp(16px, 3vw, 30px);
+  background: var(--app-bg);
+}
+
+/* =====================================================
+   CARDS
+===================================================== */
+.bg-white {
+  background: var(--content-bg);
+  border-radius: var(--radius);
+  padding: clamp(16px, 2.5vw, 28px);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.08),
+    0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* =====================================================
+   TABLE
+===================================================== */
+.app-table th {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.app-table td {
+  font-size: var(--fs-sm);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* =====================================================
+   BUTTONS
+===================================================== */
+button,
+.nz-button-primary,
+.nz-button-default {
+  font-size: var(--fs-sm);
+  padding:
+    clamp(6px, 0.8vw, 10px)
+    clamp(12px, 1.2vw, 18px);
+  border-radius: 10px;
+}
+
+.nz-button-primary {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.15),
+    0 6px 10px var(--primary-shadow);
+}
+
+.nz-button-primary:hover {
+  opacity: 0.9;
+}
+
+.nz-button-default {
+  font-weight: 500;
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.nz-button-default:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* =====================================================
+   UTILITIES
+===================================================== */
+.text-primary {
+  color: var(--primary);
+}
+
+.text-muted {
+  color: var(--text-secondary);
+}

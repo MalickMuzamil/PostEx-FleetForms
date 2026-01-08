@@ -1,0 +1,80 @@
+<div class="auth-page">
+  <div class="container">
+    <div class="row justify-content-center align-items-center min-vh-100">
+      <div class="col-12 col-sm-10 col-md-7 col-lg-7 col-xl-6">
+        <div class="card shadow-lg border-0 rounded-4">
+          <div class="card-body p-4 p-md-5">
+            <h3 class="fw-bold mb-1">Login</h3>
+            <p class="text-muted mb-4">Sign in to continue</p>
+
+            <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+              <!-- Email -->
+              <div class="mb-3">
+                <label for="email" class="form-label fw-semibold">
+                  Email <span class="text-danger">*</span>
+                </label>
+
+                <input type="email" id="email" class="form-control form-control-lg" placeholder="email@example.com"
+                  formControlName="email" [class.is-invalid]="emailCtrl?.touched && emailCtrl?.invalid" />
+
+                <div class="invalid-feedback" *ngIf="emailCtrl?.touched && emailCtrl?.errors">
+                  <div *ngIf="emailCtrl?.errors?.['required']">Email is required</div>
+                  <div *ngIf="emailCtrl?.errors?.['invalidEmail']">Invalid email format</div>
+                  <div *ngIf="emailCtrl?.errors?.['maxLength']">
+                    Max {{ emailCtrl?.errors?.['maxLength']?.requiredLength }} characters allowed
+                  </div>
+                </div>
+              </div>
+
+              <!-- Password -->
+              <div class="mb-2">
+                <label for="password" class="form-label fw-semibold">
+                  Password <span class="text-danger">*</span>
+                </label>
+
+                <div class="input-group input-group-lg">
+                  <input [type]="showPassword ? 'text' : 'password'" id="password" class="form-control"
+                    placeholder="••••••••" formControlName="password"
+                    [class.is-invalid]="passwordCtrl?.touched && passwordCtrl?.invalid" />
+                  <button type="button" class="btn btn-outline-secondary" (click)="showPassword = !showPassword"
+                    [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+                    {{ showPassword ? 'Hide' : 'Show' }}
+                  </button>
+                </div>
+
+                <div class="invalid-feedback d-block" *ngIf="passwordCtrl?.touched && passwordCtrl?.errors">
+                  <div *ngIf="passwordCtrl?.errors?.['required']">Password is required</div>
+                  <div *ngIf="passwordCtrl?.errors?.['minlength']">
+                    Minimum {{ passwordCtrl?.errors?.['minlength']?.requiredLength }} characters
+                  </div>
+                </div>
+              </div>
+
+              <!-- Forgot -->
+              <div class="d-flex justify-content-end mb-4">
+                <a href="javascript:void(0)" class="link-primary small text-decoration-none">
+                  Forgot password?
+                </a>
+              </div>
+
+              <!-- Button -->
+              <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="loading">
+                <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+                Login
+              </button>
+
+              <div class="text-center mt-4">
+                <span class="text-muted small">
+                  Don’t have an account?
+                  <a routerLink="/auth/signup" class="link-primary fw-semibold text-decoration-none">
+                    Sign up
+                  </a>
+                </span>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

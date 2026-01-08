@@ -1,0 +1,112 @@
+<div class="auth-page">
+    <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-100">
+            <div class="col-12 col-sm-10 col-md-7 col-lg-7 col-xl-6">
+                <div class="card shadow-lg border-0 rounded-4">
+                    <div class="card-body p-4 p-md-5">
+                        <h3 class="fw-bold mb-1">Sign Up</h3>
+                        <p class="text-muted mb-4">Create your account</p>
+
+                        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+
+                            <!-- Full Name -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    Full Name <span class="text-danger">*</span>
+                                </label>
+
+                                <input type="text" class="form-control form-control-lg" placeholder="Enter your name"
+                                    formControlName="name"
+                                    [class.is-invalid]="nameCtrl?.touched && nameCtrl?.invalid" />
+
+                                <div class="invalid-feedback" *ngIf="nameCtrl?.touched && nameCtrl?.errors">
+                                    <div *ngIf="nameCtrl?.errors?.['required']">Name is required</div>
+                                    <div *ngIf="nameCtrl?.errors?.['invalidName']">Invalid name format</div>
+                                    <div *ngIf="nameCtrl?.errors?.['maxLength']">
+                                        Max {{ nameCtrl?.errors?.['maxLength']?.requiredLength }} characters allowed
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    Email <span class="text-danger">*</span>
+                                </label>
+
+                                <input type="email" class="form-control form-control-lg" placeholder="email@example.com"
+                                    formControlName="email"
+                                    [class.is-invalid]="emailCtrl?.touched && emailCtrl?.invalid" />
+
+                                <div class="invalid-feedback" *ngIf="emailCtrl?.touched && emailCtrl?.errors">
+                                    <div *ngIf="emailCtrl?.errors?.['required']">Email is required</div>
+                                    <div *ngIf="emailCtrl?.errors?.['invalidEmail']">Invalid email format</div>
+                                    <div *ngIf="emailCtrl?.errors?.['maxLength']">
+                                        Max {{ emailCtrl?.errors?.['maxLength']?.requiredLength }} characters allowed
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Password -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    Password <span class="text-danger">*</span>
+                                </label>
+
+                                <div class="input-group input-group-lg">
+                                    <input [type]="showPassword ? 'text' : 'password'" class="form-control"
+                                        placeholder="••••••••" formControlName="password"
+                                        [class.is-invalid]="passwordCtrl?.touched && passwordCtrl?.invalid" />
+                                    <button type="button" class="btn btn-outline-secondary"
+                                        (click)="showPassword = !showPassword">
+                                        {{ showPassword ? 'Hide' : 'Show' }}
+                                    </button>
+                                </div>
+
+                                <div class="invalid-feedback d-block"
+                                    *ngIf="passwordCtrl?.touched && passwordCtrl?.errors">
+                                    <div *ngIf="passwordCtrl?.errors?.['required']">Password is required</div>
+                                    <div *ngIf="passwordCtrl?.errors?.['minlength']">
+                                        Minimum {{ passwordCtrl?.errors?.['minlength']?.requiredLength }} characters
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Confirm Password -->
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">
+                                    Confirm Password <span class="text-danger">*</span>
+                                </label>
+
+                                <input [type]="showPassword ? 'text' : 'password'" class="form-control form-control-lg"
+                                    placeholder="••••••••" formControlName="confirmPassword" />
+
+                                <div class="invalid-feedback d-block"
+                                    *ngIf="confirmPasswordCtrl?.touched && form?.errors?.['passwordMismatch']">
+                                    Passwords do not match
+                                </div>
+                            </div>
+
+                            <!-- Button -->
+                            <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="loading">
+                                <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+                                Create Account
+                            </button>
+
+                            <!-- Footer -->
+                            <div class="text-center mt-4">
+                                <span class="text-muted small">
+                                    Already have an account?
+                                    <a routerLink="/auth/login" class="link-primary fw-semibold text-decoration-none">
+                                        Login
+                                    </a>
+                                </span>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
