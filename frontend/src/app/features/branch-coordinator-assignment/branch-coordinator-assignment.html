@@ -1,0 +1,17 @@
+<!-- ================= TABLE VIEW ================= -->
+<div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Branch Coordinator Assignments</h5>
+
+        <button nz-button nzType="primary" class="nz-button-primary p-1" (click)="openAddForm()">
+            <i class="fa fa-plus me-2"></i>
+            Add Assignment
+        </button>
+    </div>
+
+    <app-table [config]="tableConfig" [data]="tableData" (edit)="edit($event)" (delete)="delete($event)"></app-table>
+</div>
+
+<!-- ================= MODAL FORM ================= -->
+<app-modal [visible]="showModal" [title]="formConfig.title" [formConfig]="formConfig" [data]="data"
+    (submit)="onSubmit($event)" (formChange)="onFormChange($any($event))" (cancel)="closeModal()"></app-modal>

@@ -1,0 +1,12 @@
+<nz-modal [nzVisible]="visible" [nzTitle]="title" nzWidth="720px" nzCentered [nzMaskClosable]="false"
+    (nzOnCancel)="handleCancel()" [nzFooter]="null">
+
+    <ng-template nzModalContent>
+
+        <app-dynamic-form [config]="formConfig" [data]="data" (submitForm)="handleSubmit($event)"
+            (formChange)="formChange.emit($event)">
+        </app-dynamic-form>
+
+    </ng-template>
+
+</nz-modal>

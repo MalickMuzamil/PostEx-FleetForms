@@ -1,0 +1,224 @@
+<nz-card [nzTitle]="config.title">
+  <form [formGroup]="form" (ngSubmit)="submit()">
+
+    <div class="form-grid">
+      <ng-container *ngFor="let field of config.fields">
+
+        <!-- TEXT -->
+        <nz-form-item *ngIf="field.type === 'text'">
+          <nz-form-label [nzRequired]="field.required">
+            {{ field.label }}
+          </nz-form-label>
+
+          <nz-form-control>
+            <input nz-input [type]="field.key === 'email' ? 'email' : 'text'" [formControlName]="field.key"
+              [disabled]="!!field.disabled" [attr.maxlength]="field.key === 'email' ? 50 : null" />
+
+            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'required')">
+              {{ field.label }} is required
+            </div>
+
+            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'invalidEmail')">
+              Enter a valid email address
+            </div>
+
+            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'maxLength')">
+              Maximum length exceeded
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- NUMBER -->
+        <nz-form-item *ngIf="field.type === 'number'">
+          <nz-form-label [nzRequired]="field.required">
+            {{ field.label }}
+          </nz-form-label>
+
+          <nz-form-control>
+            <input nz-input type="number" [formControlName]="field.key" [disabled]="!!field.disabled" />
+
+            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'required')">
+              {{ field.label }} is required
+            </div>
+
+            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'invalidNumber')">
+              Enter a valid number
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- TEXTAREA -->
+        <nz-form-item *ngIf="field.type === 'textarea'">
+          <nz-form-label [nzRequired]="field.required">
+            {{ field.label }}
+          </nz-form-label>
+
+          <nz-form-control>
+            <textarea nz-input rows="3" [formControlName]="field.key" [disabled]="!!field.disabled"></textarea>
+
+            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'required')">
+              {{ field.label }} is required
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- SELECT -->
+        <nz-form-item *ngIf="field.type === 'select'">
+          <nz-form-label [nzRequired]="field.required">
+            {{ field.label }}
+          </nz-form-label>
+
+          <nz-form-control>
+
+            <!-- loading template for dropdown / not found -->
+            <ng-template #loadingTpl>
+              <div style="padding: 8px 12px; display:flex; align-items:center; gap:8px;">
+                <nz-spin nzSimple></nz-spin>
+                <span>Loading...</span>
+              </div>
+            </ng-template>
+
+            <nz-select nzAllowClear nzShowSearch [nzFilterOption]="filterOption" [formControlName]="field.key"
+              [nzDisabled]="field.disabled" [nzLoading]="!!field.loading"
+              [nzNotFoundContent]="field.loading ? loadingTpl : 'No data'"
+              (nzSearchValueChange)="onSelectSearch(field.key, $any($event))"
+              (ngModelChange)="onSelectChange(field.key, $event)">
+
+              <!-- HEADER (fake disabled option) -->
+              <nz-option *ngIf="field.optionColumns?.length" nzDisabled="true" nzCustomContent="true"
+                [nzLabel]="'__header__'" [nzValue]="null">
+                <div class="opt-row opt-header">
+                  <div class="opt-cell" *ngFor="let c of field.optionColumns" [style.width]="c.width || 'auto'">
+                    {{ c.title }}
+                  </div>
+                </div>
+              </nz-option>
+
+              <!-- ✅ LOADING OPTION (dropdown open pe bhi loader show ho) -->
+              <nz-option *ngIf="field.loading" nzDisabled="true" nzCustomContent="true" [nzLabel]="'__loading__'"
+                [nzValue]="null">
+                <div style="padding: 8px 12px; display:flex; align-items:center; gap:8px;">
+                  <nz-spin nzSimple></nz-spin>
+                  <span>Loading...</span>
+                </div>
+              </nz-option>
+
+              <!-- OPTIONS (async) -->
+              <ng-container *ngIf="field.options$; else staticOptions">
+                <nz-option *ngFor="let opt of (field.options$ | async) || []" [nzLabel]="opt.label"
+                  [nzValue]="opt.value" [nzTitle]="opt.searchText || opt.label" nzCustomContent="true">
+
+                  <ng-container *ngIf="field.optionColumns?.length; else simpleOpt">
+                    <div class="opt-row">
+                      <div class="opt-cell" *ngFor="let c of field.optionColumns" [style.width]="c.width || 'auto'"
+                        [title]="(opt.meta?.[c.key] ?? '')">
+                        {{ opt.meta?.[c.key] ?? '' }}
+                      </div>
+                    </div>
+                  </ng-container>
+
+                  <ng-template #simpleOpt>{{ opt.label }}</ng-template>
+                </nz-option>
+              </ng-container>
+
+              <!-- OPTIONS (static) -->
+              <ng-template #staticOptions>
+                <nz-option *ngFor="let opt of field.options || []" [nzLabel]="opt.label" [nzValue]="opt.value"
+                  [nzTitle]="opt.searchText || opt.label" nzCustomContent="true">
+
+                  <ng-container *ngIf="field.optionColumns?.length; else simpleOpt2">
+                    <div class="opt-row">
+                      <div class="opt-cell" *ngFor="let c of field.optionColumns">
+                        {{ opt.meta?.[c.key] ?? '' }}
+                      </div>
+                    </div>
+                  </ng-container>
+
+                  <ng-template #simpleOpt2>{{ opt.label }}</ng-template>
+                </nz-option>
+              </ng-template>
+
+            </nz-select>
+
+            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'required')">
+              {{ field.label }} is required
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- DATE -->
+        <nz-form-item *ngIf="field.type === 'date'">
+          <nz-form-label [nzRequired]="field.required">
+            {{ field.label }}
+          </nz-form-label>
+
+          <nz-form-control>
+            <nz-date-picker style="width: 100%" [formControlName]="field.key" [nzDisabled]="field.disabled"
+              [nzDisabledDate]="getDisabledDateFn(field.key)" [nzInputReadOnly]="true"></nz-date-picker>
+
+            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'required')">
+              {{ field.label }} is required
+            </div>
+
+            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'pastDateNotAllowed')">
+              Effective Date cannot be a past date. Please select a future date.
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- CHECKBOX -->
+        <nz-form-item *ngIf="field.type === 'checkbox'">
+          <nz-form-label [nzRequired]="field.required">
+            {{ field.label }}
+          </nz-form-label>
+
+          <nz-form-control>
+            <label nz-checkbox [formControlName]="field.key" [nzDisabled]="field.disabled">
+              {{ field.label }}
+            </label>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- FILE -->
+        <nz-form-item *ngIf="field.type === 'file'">
+          <nz-form-label>{{ field.label }}</nz-form-label>
+
+          <nz-form-control>
+            <button nz-button nzType="default" type="button"
+              [disabled]="isFileDisabled(field) || uploadingMap[field.key]" (click)="fileInput.click()">
+              <i class="fa fa-upload me-1"></i>
+              Bulk Import
+            </button>
+
+            <input #fileInput type="file" hidden [accept]="field.accept" (change)="onFileSelected(field.key, $event)" />
+
+            <div *ngIf="uploadingMap[field.key]" class="mt-2">
+              <nz-progress [nzPercent]="uploadProgressMap[field.key]" nzStatus="active" nzSize="small">
+              </nz-progress>
+
+              <small class="text-muted">
+                Uploading... {{ uploadProgressMap[field.key] }}%
+              </small>
+            </div>
+
+            <div class="text-muted mt-1" *ngIf="!uploadingMap[field.key]">
+              Only CSV / Excel files allowed
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+      </ng-container>
+    </div>
+
+    <div class="form-actions mt-3">
+      <button nz-button nzType="primary" class="mx-2" [disabled]="form.invalid">
+        Save
+      </button>
+
+      <!-- <button nz-button nzType="default" type="button" (click)="form.reset()">
+        Cancel
+      </button> -->
+    </div>
+
+  </form>
+</nz-card>

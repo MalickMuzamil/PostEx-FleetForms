@@ -1,0 +1,67 @@
+<div class="table-responsive">
+    <div class="d-flex gap-2 align-items-center mb-2" *ngIf="config.globalSearch as gs">
+        <input #gsInput class="form-control form-control-sm" style="max-width: 320px" [ngModel]="globalTerm"
+            (input)="onGlobalInput($event)" [attr.maxlength]="gs.rules?.maxLength ?? null"
+            [placeholder]="gs.placeholder || 'Search...'" />
+        <button class="btn btn-sm btn-outline-secondary" (click)="resetFilters()">
+            Reset
+        </button>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-2" *ngIf="hasFilters">
+        <ng-container *ngFor="let col of config.columns">
+            <ng-container *ngIf="col.filter as f">
+                <!-- text -->
+                <input *ngIf="f.type === 'text'" class="form-control form-control-sm" style="max-width: 220px"
+                    [ngModel]="colFilters[col.key]" (ngModelChange)="onColTextFilterChange(col.key, $event, f.rules)"
+                    [attr.maxlength]="f.rules?.maxLength ?? null"
+                    [placeholder]="f.placeholder || ('Search ' + col.title)" />
+
+                <!-- select -->
+                <select *ngIf="f.type === 'select'" class="form-select form-select-sm" style="max-width: 220px"
+                    [(ngModel)]="colFilters[col.key]" (ngModelChange)="applyFilters()">
+
+                    <option [ngValue]="null">
+                        {{ f.placeholder || ('All ' + col.title) }}
+                    </option>
+
+                    <option *ngFor="let opt of col.filter.options" [ngValue]="opt.value">
+                        {{ opt.label }}
+                    </option>
+                </select>
+            </ng-container>
+        </ng-container>
+    </div>
+
+    <nz-table #table class="table table-hover table-bordered app-table" [nzData]="filteredData"
+        [nzFrontPagination]="config.pagination !== false">
+        <thead class="table-light">
+            <tr>
+                <th *ngFor="let col of config.columns">{{ col.title }}</th>
+                <th *ngIf="config.actions?.length" class="text-center">Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @for (row of table.data; track row) {
+            <tr>
+                <td *ngFor="let col of config.columns">{{ row[col.key] }}</td>
+
+                <td *ngIf="config.actions?.length" class="text-center">
+                    <ng-container *ngFor="let action of config.actions">
+                        <button *ngIf="action.action === 'edit'" class="btn btn-sm btn-outline-primary me-2"
+                            (click)="onEdit(row)">
+                            {{ action.label }}
+                        </button>
+
+                        <button *ngIf="action.action === 'delete'" class="btn btn-sm btn-outline-danger mx-2"
+                            (click)="onDelete(row)">
+                            {{ action.label }}
+                        </button>
+                    </ng-container>
+                </td>
+            </tr>
+            }
+        </tbody>
+    </nz-table>
+</div>
