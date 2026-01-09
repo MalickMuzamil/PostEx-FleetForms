@@ -72,7 +72,7 @@ export const BRANCH_GENERAL_EMP_BINDING_FORM: FormConfig = {
       required: true,
       validators: [AppValidators.email(50)],
       // avoid per-keystroke validation for email input
-      updateOn: 'blur',
+      updateOn: 'change',
     },
 
     // ================= EFFECTIVE DATE =================

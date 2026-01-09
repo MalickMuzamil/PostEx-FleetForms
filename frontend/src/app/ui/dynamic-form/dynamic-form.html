@@ -1,19 +1,36 @@
 <nz-card [nzTitle]="config.title">
   <form [formGroup]="form" (ngSubmit)="submit()">
-
     <div class="form-grid">
       <ng-container *ngFor="let field of config.fields">
-
         <!-- TEXT -->
         <nz-form-item *ngIf="field.type === 'text'">
           <nz-form-label [nzRequired]="field.required">
             {{ field.label }}
           </nz-form-label>
+
           <nz-form-control>
             <input nz-input [type]="field.key === 'email' ? 'email' : 'text'" [formControlName]="field.key"
-              [disabled]="!!field.disabled" [attr.maxlength]="field.key === 'email' ? 50 : null" />
+              [disabled]="!!field.disabled" [attr.maxlength]="field.key === 'email' ? 50 : null" autocomplete="off"
+              spellcheck="false" />
+
+            <!-- REQUIRED -->
             <div class="text-danger mt-1" *ngIf="hasError(field.key, 'required')">
               {{ field.label }} is required
+            </div>
+
+            <!-- EMAIL FORMAT (Angular built-in key) -->
+            <div class="text-danger mt-1" *ngIf="field.key === 'email' && hasError(field.key, 'email')">
+              Please enter a valid email address
+            </div>
+
+            <!-- EMAIL FORMAT (common custom key fallback) -->
+            <div class="text-danger mt-1" *ngIf="field.key === 'email' && hasError(field.key, 'invalidEmail')">
+              Please enter a valid email address
+            </div>
+
+            <!-- MAX LENGTH -->
+            <div class="text-danger mt-1" *ngIf="field.key === 'email' && hasError(field.key, 'maxlength')">
+              Maximum 50 characters allowed
             </div>
           </nz-form-control>
         </nz-form-item>
@@ -23,6 +40,7 @@
           <nz-form-label [nzRequired]="field.required">
             {{ field.label }}
           </nz-form-label>
+
           <nz-form-control>
             <input nz-input type="number" [formControlName]="field.key" [disabled]="!!field.disabled" />
           </nz-form-control>
@@ -33,25 +51,27 @@
           <nz-form-label [nzRequired]="field.required">
             {{ field.label }}
           </nz-form-label>
+
           <nz-form-control>
-            <textarea nz-input rows="3" [formControlName]="field.key" [disabled]="!!field.disabled"></textarea>
+            <textarea nz-input rows="3" [formControlName]="field.key" [disabled]="!!field.disabled" autocomplete="off"
+              spellcheck="false"></textarea>
           </nz-form-control>
         </nz-form-item>
 
-        <!-- ✅ SELECT (CLEAN – NO DROPDOWN LOADER) -->
+        <!-- ✅ SELECT -->
         <nz-form-item *ngIf="field.type === 'select'">
           <nz-form-label [nzRequired]="field.required">
             {{ field.label }}
           </nz-form-label>
 
           <nz-form-control>
-            <nz-select nzAllowClear nzShowSearch [nzFilterOption]="filterOption" [formControlName]="field.key"
-              [nzDisabled]="field.disabled" [nzLoading]="!!field.loading" nzNotFoundContent="No data"
-              (nzSearchValueChange)="onSelectSearch(field.key, $any($event))"
-              (ngModelChange)="onSelectChange(field.key, $event)">
-
+            <nz-select nzAllowClear [nzShowSearch]="!!field.searchable" [nzFilterOption]="filterOption"
+              [formControlName]="field.key" [nzDisabled]="!!field.disabled" [nzLoading]="!!field.loading"
+              nzNotFoundContent="No data" nzDropdownClassName="opt-dropdown"
+              (nzValueChange)="onSelectChange(field.key, $event)"
+              (nzSearchValueChange)="onSelectSearch(field.key, $any($event))">
               <!-- HEADER (optional column header) -->
-              <nz-option *ngIf="field.optionColumns?.length" nzDisabled="true" nzCustomContent="true"
+              <nz-option *ngIf="field.optionColumns?.length" [nzDisabled]="true" [nzCustomContent]="true"
                 [nzLabel]="'__header__'" [nzValue]="null">
                 <div class="opt-row opt-header" [style.gridTemplateColumns]="getGridTemplate(field.optionColumns)">
                   <div class="opt-cell" *ngFor="let c of field.optionColumns">
@@ -61,9 +81,9 @@
               </nz-option>
 
               <!-- ASYNC OPTIONS -->
-              <ng-container *ngIf="field.options$; else staticOptions">
-                <nz-option *ngFor="let opt of (field.options$ | async) || []" [nzLabel]="opt.label"
-                  [nzValue]="opt.value" [nzTitle]="opt.searchText || opt.label" nzCustomContent="true">
+              <ng-container *ngIf="field.options$ | async as asyncOpts; else staticOptions">
+                <nz-option *ngFor="let opt of asyncOpts" [nzLabel]="opt.label" [nzValue]="opt.value"
+                  [nzTitle]="opt.searchText || opt.label" [nzCustomContent]="true">
                   <ng-container *ngIf="field.optionColumns?.length; else simpleOpt">
                     <div class="opt-row" [style.gridTemplateColumns]="getGridTemplate(field.optionColumns)">
                       <div class="opt-cell" *ngFor="let c of field.optionColumns">
@@ -83,7 +103,6 @@
                   {{ opt.label }}
                 </nz-option>
               </ng-template>
-
             </nz-select>
 
             <div class="text-danger mt-1" *ngIf="hasError(field.key, 'required')">
@@ -92,14 +111,14 @@
           </nz-form-control>
         </nz-form-item>
 
-
         <!-- DATE -->
         <nz-form-item *ngIf="field.type === 'date'">
           <nz-form-label [nzRequired]="field.required">
             {{ field.label }}
           </nz-form-label>
+
           <nz-form-control>
-            <nz-date-picker style="width: 100%" [formControlName]="field.key" [nzDisabled]="field.disabled"
+            <nz-date-picker style="width: 100%" [formControlName]="field.key" [nzDisabled]="!!field.disabled"
               [nzDisabledDate]="getDisabledDateFn(field.key)" [nzInputReadOnly]="true"></nz-date-picker>
           </nz-form-control>
         </nz-form-item>
@@ -109,6 +128,7 @@
           <nz-form-label [nzRequired]="field.required">
             {{ field.label }}
           </nz-form-label>
+
           <nz-form-control>
             <label nz-checkbox [formControlName]="field.key">
               {{ field.label }}
@@ -116,6 +136,32 @@
           </nz-form-control>
         </nz-form-item>
 
+        <!-- FILE -->
+        <nz-form-item *ngIf="field.type === 'file'">
+          <nz-form-label>{{ field.label }}</nz-form-label>
+
+          <nz-form-control>
+            <button nz-button nzType="default" type="button"
+              [disabled]="isFileDisabled(field) || uploadingMap[field.key]" (click)="fileInput.click()">
+              <i class="fa fa-upload me-1"></i>
+              Bulk Import
+            </button>
+
+            <input #fileInput type="file" hidden [accept]="field.accept" (change)="onFileSelected(field.key, $event)" />
+
+            <div *ngIf="uploadingMap[field.key]" class="mt-2">
+              <nz-progress [nzPercent]="uploadProgressMap[field.key]" nzStatus="active" nzSize="small"></nz-progress>
+
+              <small class="text-muted">
+                Uploading... {{ uploadProgressMap[field.key] }}%
+              </small>
+            </div>
+
+            <div class="text-muted mt-1" *ngIf="!uploadingMap[field.key]">
+              Only CSV / Excel files allowed
+            </div>
+          </nz-form-control>
+        </nz-form-item>
       </ng-container>
     </div>
 
@@ -124,6 +170,5 @@
         Save
       </button>
     </div>
-
   </form>
 </nz-card>

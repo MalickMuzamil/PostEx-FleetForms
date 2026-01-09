@@ -7,6 +7,9 @@ import {
   OnChanges,
   SimpleChanges,
   OnDestroy,
+  NgZone,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
 } from '@angular/core';
 import {
   FormGroup,
@@ -30,7 +33,6 @@ import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { Subscription } from 'rxjs';
-import { NgZone } from '@angular/core';
 
 @Component({
   selector: 'app-dynamic-form',
@@ -50,6 +52,8 @@ import { NgZone } from '@angular/core';
   ],
   templateUrl: './dynamic-form.html',
   styleUrl: './dynamic-form.css',
+  // ✅ BIG perf win when you have heavy selects
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DynamicForm implements OnInit, OnChanges, OnDestroy {
   @Input() config!: FormConfig;
@@ -64,11 +68,12 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
 
   form!: FormGroup;
   private valueSub?: Subscription;
+
   selectSearchMap: Record<string, string> = {};
   uploadProgressMap: Record<string, number> = {};
   uploadingMap: Record<string, boolean> = {};
 
-  constructor(private zone: NgZone) {}
+  constructor(private zone: NgZone, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.createForm();
@@ -77,25 +82,24 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
   ngOnChanges(changes: SimpleChanges) {
     if (changes['config']) {
       this.createForm();
+      // ✅ OnPush: ensure template refresh
+      this.cdr.markForCheck();
     }
 
     if (changes['data'] && this.form) {
-      // Patch only keys that are safe to overwrite.
-      // Do NOT overwrite controls that are currently focused or configured to update on 'blur'
       const src = this.data || {};
       const patch: any = {};
 
       // find focused control (if any)
       let focusedControl: string | null = null;
       try {
-        const active = (document &&
-          document.activeElement) as HTMLElement | null;
+        const active = document?.activeElement as HTMLElement | null;
         focusedControl = active?.closest
           ? (
               active.closest('[formcontrolname]') as HTMLElement | null
             )?.getAttribute('formcontrolname') ?? null
           : active?.getAttribute('formcontrolname') ?? null;
-      } catch (e) {
+      } catch {
         focusedControl = null;
       }
 
@@ -103,14 +107,16 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
         const field = this.config?.fields?.find((f) => f.key === k);
         const willUpdateOnBlur = field?.updateOn === 'blur';
 
-        if (k === focusedControl) continue; // skip the currently focused control
-        if (willUpdateOnBlur) continue; // do not overwrite blur-controlled fields
+        if (k === focusedControl) continue;
+        if (willUpdateOnBlur) continue;
 
         patch[k] = src[k];
       }
 
       if (Object.keys(patch).length) {
         this.form.patchValue(patch, { emitEvent: false });
+        // ✅ OnPush: data patch ke baad refresh
+        this.cdr.markForCheck();
       }
     }
   }
@@ -124,7 +130,7 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
 
     const group: any = {};
 
-    this.config.fields.forEach((field) => {
+    (this.config?.fields || []).forEach((field) => {
       let value = this.data?.[field.key] ?? null;
 
       if (
@@ -134,8 +140,9 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
         value = field.defaultValue;
       }
 
+      // ✅ date values safely
       if (field.type === 'date' && value) {
-        value = new Date(value);
+        value = value instanceof Date ? value : new Date(value);
       }
 
       const disabled = !!field.disabled || field.type === 'readonly';
@@ -150,9 +157,13 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
     });
 
     this.form = new FormGroup(group);
-    this.valueSub = this.form.valueChanges.subscribe(() => {});
+
+    // ✅ DON'T keep empty valueChanges subscription (extra work)
+    // If you ever need it, subscribe with debounce.
+    this.valueSub = undefined;
   }
 
+  // ✅ called from (nzValueChange) in HTML
   onSelectChange(key: string, value: any) {
     this.formChange.emit({ key, value, formValue: this.form.getRawValue() });
   }
@@ -164,7 +175,7 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
     const label = (option?.nzLabel ?? '').toString().toLowerCase();
     if (label === '__header__') return false;
 
-    const title = (option?.nzTitle ?? '').toString().toLowerCase(); // ✅ searchText yahan
+    const title = (option?.nzTitle ?? '').toString().toLowerCase();
     return label.includes(val) || title.includes(val);
   };
 
@@ -173,12 +184,13 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
       this.submitForm.emit(this.form.getRawValue());
     } else {
       this.form.markAllAsTouched();
+      this.cdr.markForCheck();
     }
   }
 
   hasError(fieldKey: string, error: string) {
-    const control = this.form.get(fieldKey);
-    return control && control.touched && control.hasError(error);
+    const c = this.form.get(fieldKey);
+    return !!c && (c.dirty || c.touched) && c.hasError(error);
   }
 
   getDisabledDateFn(fieldKey: string): ((d: Date) => boolean) | undefined {
@@ -207,10 +219,12 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
     sanitized = sanitized.slice(0, MAX_LENGTH);
 
     sanitized = sanitized.replace(/[^A-Za-z0-9 ]/g, '');
-
     sanitized = sanitized.replace(/\s+/g, ' ').trimStart();
 
     this.selectSearchMap[fieldKey] = sanitized;
+
+    // ✅ OnPush: update search UI if you show it anywhere
+    this.cdr.markForCheck();
   }
 
   isFileDisabled(field: FormField): boolean {
@@ -234,43 +248,23 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
   }
 
   onFileSelected(fieldKey: string, event: Event) {
-    console.log('📁 File selected event fired', fieldKey);
-
     const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) {
-      console.log('❌ No file found in input');
-      return;
-    }
+    if (!input.files || input.files.length === 0) return;
 
     const file = input.files[0];
-    console.log('✅ File object:', file);
-
     input.value = '';
 
     this.uploadingMap[fieldKey] = true;
     this.uploadProgressMap[fieldKey] = 0;
+    this.cdr.markForCheck();
 
     const interval = setInterval(() => {
       this.zone.run(() => {
-        console.log('⏳ Progress:', this.uploadProgressMap[fieldKey]);
-
         if (this.uploadProgressMap[fieldKey] >= 100) {
           clearInterval(interval);
-          console.log('✅ Upload reached 100%');
 
           this.uploadingMap[fieldKey] = false;
-
-          // 🔥 VERY IMPORTANT CHECK
           this.form.get(fieldKey)?.setValue(file);
-          console.log(
-            '🧾 FormControl value after setValue:',
-            this.form.get(fieldKey)?.value
-          );
-
-          console.log(
-            '📦 Form raw value before emit:',
-            this.form.getRawValue()
-          );
 
           this.formChange.emit({
             key: fieldKey,
@@ -278,12 +272,12 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
             formValue: this.form.getRawValue(),
           });
 
-          console.log('📤 formChange emitted');
-
+          this.cdr.markForCheck();
           return;
         }
 
         this.uploadProgressMap[fieldKey] += 10;
+        this.cdr.markForCheck();
       });
     }, 150);
   }
