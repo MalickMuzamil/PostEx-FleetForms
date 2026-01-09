@@ -1,6 +1,6 @@
 .form-grid{
   display: grid;
-  grid-template-columns: 1fr;   
+  grid-template-columns: 1fr;
   gap: 20px;
 }
 
@@ -14,31 +14,33 @@ textarea{
   margin-top: 24px;
 }
 
+/* ✅ DROPDOWN ROWS → GRID (table like spacing) */
 .opt-row{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  padding:6px 8px;
+  display: grid;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  /* grid-template-columns inline style se set hoga:
+     [style.gridTemplateColumns]="getGridTemplate(field.optionColumns)" */
 }
 
 .opt-header{
-  font-weight:600;
-  opacity:.85;
-  border-bottom:1px solid #f0f0f0;
+  font-weight: 600;
+  opacity: .85;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .opt-cell{
-  flex: initial;      /* ✅ important: width/flex-basis template se control hoga */
-  min-width:0;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  font-size:12px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
 }
 
 /* selected label ellipsis */
 .select-trigger-text{
-  display:inline-block;
+  display: inline-block;
   max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
@@ -48,8 +50,8 @@ textarea{
 /* loading center */
 .select-loading{
   padding: 10px 0;
-  display:flex;
-  justify-content:center;
+  display: flex;
+  justify-content: center;
 }
 
 /* Dropdown option text visible fix */
@@ -63,24 +65,24 @@ textarea{
   background: #eaf7ff !important;
 }
 
+/* ✅ ng-zorro dropdown inside content */
 :host ::ng-deep .ant-select-item-option-content .opt-row{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  padding:4px 8px;
+  display: grid;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 8px;
 }
 
 :host ::ng-deep .ant-select-item-option-content .opt-header{
-  font-weight:600;
-  opacity:.85;
-  border-bottom:1px solid #f0f0f0;
+  font-weight: 600;
+  opacity: .85;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 :host ::ng-deep .ant-select-item-option-content .opt-cell{
-  flex:1;
-  min-width:0;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  font-size:12px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
 }

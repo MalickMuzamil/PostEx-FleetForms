@@ -112,7 +112,7 @@ export const BRANCH_COORDINATOR_ASSIGNMENT_TABLE: TableConfig = {
     { key: 'branchName', title: 'Branch' },
     { key: 'employeeName', title: 'Employee Name' },
     { key: 'email', title: 'Email' },
-    { key: 'effectiveDate', title: 'Effective Date' },
+    { key: 'effectiveDateDisplay', title: 'Effective Date' },
   ],
 
   actions: [

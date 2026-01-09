@@ -84,24 +84,45 @@ export class BranchCoordinatorAssignment implements OnInit {
           );
 
           const empMap = new Map<number, string>(
-            employees.map((e: any) => [+e.EMP_ID, (e.APP_Name ?? '').trim()])
+            employees.map((e: any) => [
+              +(e.EMP_ID ?? e.EmpId ?? e.ID),
+              (e.APP_Name ?? e.Name ?? '').trim(),
+            ])
           );
 
-          return bindings.map((r: any) => {
+          return (bindings || []).map((r: any) => {
             const branchId = +(r.BranchID ?? r.branchId);
             const empId = +(r.BC_Emp_ID ?? r.employeeId);
 
             const rawDate = r.EffectiveDate ?? r.effectiveDate;
 
+            // ✅ Date object (edit/date-picker)
+            const d = this.asLocalDate(rawDate);
+
+            // ✅ Date-only for table
+            const effectiveDateDisplay = d
+              ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+                  2,
+                  '0'
+                )}-${String(d.getDate()).padStart(2, '0')}`
+              : '';
+
             return {
               id: r.ID ?? r.id,
+
               branchId,
               branchName: branchMap.get(branchId) ?? 'NA',
+
               employeeId: empId,
               employeeName: empMap.get(empId) ?? 'NA',
+
               email: r.BC_Email ?? r.email,
-              // ✅ normalized for NZ date picker + edit mode stability
-              effectiveDate: this.asLocalDate(rawDate),
+
+              // ✅ keep for edit mode
+              effectiveDate: d,
+
+              // ✅ show in table
+              effectiveDateDisplay,
             };
           });
         })

@@ -76,16 +76,37 @@ export class BranchDashboardBindingComponent {
   loadTable() {
     this.service.getAll().subscribe((res: any) => {
       const rows = res?.data ?? res ?? [];
-      this.tableData = rows.map((r: any) => ({
-        id: r.ID,
-        branchId: r.BranchID,
-        branchName: r.BranchName ?? 'NA',
-        branchDesc: r.BranchDesc ?? 'NA',
-        conferenceCallFlag: Number(r.Req_Con_Call ? 1 : 0), // ✅ backend field
-        effectiveDate: r.EffectiveDate,
-      }));
+
+      this.tableData = rows.map((r: any) => {
+        const flag = Number(r.Req_Con_Call ? 1 : 0);
+
+        const d = r.EffectiveDate ? new Date(r.EffectiveDate) : null;
+        const effectiveDateDisplay = d
+          ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+              2,
+              '0'
+            )}-${String(d.getDate()).padStart(2, '0')}`
+          : '';
+
+        return {
+          id: r.ID,
+          branchId: r.BranchID,
+          branchName: r.BranchName ?? 'NA',
+          branchDesc: r.BranchDesc ?? 'NA',
+
+          // ✅ numeric (filter/edit stable)
+          conferenceCallFlag: flag,
+
+          // ✅ text (table display)
+          conferenceCallText: flag === 1 ? 'Active' : 'Inactive',
+
+          effectiveDate: r.EffectiveDate,
+          effectiveDateDisplay,
+        };
+      });
     });
   }
+
   // ---------- MODES ----------
   private setMode(mode: 'create' | 'update') {
     this.formConfig = {

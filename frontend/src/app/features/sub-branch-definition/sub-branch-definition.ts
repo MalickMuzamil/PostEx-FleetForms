@@ -43,18 +43,43 @@ export class SubBranchDefinitionComponent implements OnInit {
   loadTable() {
     this.service.getAll().subscribe((res: any) => {
       const rows = res?.data ?? res ?? [];
-      this.tableData = rows.map((r: any) => ({
-        id: r.ID,
-        subBranchId: r.SubBranchID,
-        branchId: r.BranchID,
-        branchName: r.BranchName,
-        subBranchName: r.SubBranchName,
 
-        enteredOn: r.EnteredOn,
-        enteredBy: r.EnteredBy,
-        editedOn: r.EditedOn,
-        editedBy: r.EditedBy,
-      }));
+      this.tableData = rows.map((r: any) => {
+        const entered = r.EnteredOn ? new Date(r.EnteredOn) : null;
+        const edited = r.EditedOn ? new Date(r.EditedOn) : null;
+
+        const enteredOnDisplay = entered
+          ? `${entered.getFullYear()}-${String(entered.getMonth() + 1).padStart(
+              2,
+              '0'
+            )}-${String(entered.getDate()).padStart(2, '0')}`
+          : '';
+
+        const editedOnDisplay = edited
+          ? `${edited.getFullYear()}-${String(edited.getMonth() + 1).padStart(
+              2,
+              '0'
+            )}-${String(edited.getDate()).padStart(2, '0')}`
+          : '';
+
+        return {
+          id: r.ID,
+          subBranchId: r.SubBranchID,
+          branchId: r.BranchID,
+          branchName: r.BranchName,
+          subBranchName: r.SubBranchName,
+
+          // keep originals (optional)
+          enteredOn: r.EnteredOn,
+          enteredBy: r.EnteredBy,
+          editedOn: r.EditedOn,
+          editedBy: r.EditedBy,
+
+          // ✅ new display fields
+          enteredOnDisplay,
+          editedOnDisplay,
+        };
+      });
     });
   }
 

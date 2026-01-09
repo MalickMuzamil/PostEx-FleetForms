@@ -64,18 +64,18 @@ export const BRANCH_DASHBOARD_BINDING_TABLE: TableConfig = {
       title: 'Branch Description',
     },
     {
-      key: 'conferenceCallFlag',
+      key: 'conferenceCallText',
       title: 'Conference Call Flag',
       filter: {
         type: 'select',
         options: [
-          { label: 'Active (1)', value: 1 },
-          { label: 'Inactive (0)', value: 0 },
+          { label: 'Active (1)', value: 'Active' },
+          { label: 'Inactive (0)', value: 'Inactive' },
         ],
       },
     },
     {
-      key: 'effectiveDate',
+      key: 'effectiveDateDisplay',
       title: 'Effective Date',
     },
   ],

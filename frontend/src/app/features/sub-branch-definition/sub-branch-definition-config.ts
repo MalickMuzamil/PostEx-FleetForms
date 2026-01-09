@@ -60,9 +60,11 @@ export const SUB_BRANCH_DEFINITION_TABLE: TableConfig = {
     { key: 'subBranchId', title: 'Sub-Branch ID' },
     { key: 'branchName', title: 'Branch' },
     { key: 'subBranchName', title: 'Sub-Branch Name' },
-    { key: 'enteredOn', title: 'Entered On' },
+
+    { key: 'enteredOnDisplay', title: 'Entered On' },
     { key: 'enteredBy', title: 'Entered By' },
-    { key: 'editedOn', title: 'Edited On' },
+
+    { key: 'editedOnDisplay', title: 'Edited On' },
     { key: 'editedBy', title: 'Edited By' },
   ],
 
