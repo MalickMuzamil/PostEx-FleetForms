@@ -30,6 +30,8 @@ export class BranchGeneralEmployeeBinding implements OnInit {
   private branchesCache: any[] = [];
   private branchDetailsMap = new Map<number, any>();
   private empMap = new Map<number, string>();
+  private branches$!: any;
+  private employees$!: any;
 
   constructor(
     private service: BranchGeneralEmployeeService,
@@ -54,32 +56,39 @@ export class BranchGeneralEmployeeBinding implements OnInit {
   }
 
   ngOnInit() {
-    this.loadTable();
-    this.loadDropdowns();
+    this.branches$ = this.service.getBranches().pipe(
+      map((res: any) => res?.data ?? res ?? []),
+      shareReplay(1)
+    );
+
+    this.employees$ = this.service.getEmployees().pipe(
+      map((res: any) => res?.data ?? res ?? []),
+      shareReplay(1)
+    );
+    this.loadDropdowns(); // ✅ dropdowns (cached)
+    this.loadTable(); // ✅ table (cached)
   }
 
-  // ✅ Updated: normalize effectiveDate for stability (edit/date picker)
+  // ================= TABLE =================
   loadTable() {
     forkJoin({
-      branchesRes: this.service.getBranches(),
-      employeesRes: this.service.getEmployees(),
+      branches: this.branches$,
+      employees: this.employees$,
       bindingsRes: this.service.getAll(),
     })
       .pipe(
-        map(({ branchesRes, employeesRes, bindingsRes }: any) => {
-          const branches = branchesRes?.data ?? branchesRes ?? [];
-          const employees = employeesRes?.data ?? employeesRes ?? [];
+        map(({ branches, employees, bindingsRes }: any) => {
           const bindings = bindingsRes?.data ?? bindingsRes ?? [];
 
           const branchMap = new Map<number, string>(
-            branches.map((b: any) => [
+            (branches || []).map((b: any) => [
               +(b.BranchID ?? b.Branch_ID ?? b.ID),
               (b.BranchName ?? b.Branch_Name ?? b.Name ?? '').trim(),
             ])
           );
 
           const empMap = new Map<number, string>(
-            employees.map((e: any) => [
+            (employees || []).map((e: any) => [
               +(e.EMP_ID ?? e.EmpId ?? e.ID),
               (e.APP_Name ?? e.Name ?? '').trim(),
             ])
@@ -149,23 +158,21 @@ export class BranchGeneralEmployeeBinding implements OnInit {
       .subscribe((rows) => (this.tableData = rows));
   }
 
-  // ✅ same as your code, just kept as-is (no behavior change)
+  // ================= DROPDOWNS =================
   loadDropdowns() {
     // ===== Branch =====
     const branchField = this.formConfig.fields.find(
       (f) => f.key === 'branchId'
     );
-
     if (branchField) {
       branchField.loading = true;
 
-      branchField.options$ = this.service.getBranches().pipe(
-        map((res: any) => res?.data ?? res ?? []),
+      const branchesOptions$ = this.branches$.pipe(
         tap((branches: any[]) => {
-          this.branchesCache = branches;
+          this.branchesCache = branches || [];
 
           this.branchDetailsMap.clear();
-          branches.forEach((b: any) => {
+          (branches || []).forEach((b: any) => {
             const id = +(b.BranchID ?? b.Branch_ID ?? b.ID);
             if (Number.isNaN(id)) return;
 
@@ -203,12 +210,14 @@ export class BranchGeneralEmployeeBinding implements OnInit {
                   b.Name ??
                   ''
                 ).trim();
+
                 const desc = (
                   b.BranchDesc ??
                   b.Branch_Desc ??
                   b.BranchDescription ??
                   ''
                 ).trim();
+
                 const phone = (b.BPHONE ?? b.BPhone ?? b.Phone ?? '').trim();
                 const address = (
                   b.BADDRESS ??
@@ -229,34 +238,27 @@ export class BranchGeneralEmployeeBinding implements OnInit {
               })
               .filter(Boolean) as any[]
         ),
-        finalize(() => (branchField.loading = false)),
-        shareReplay(1)
-      ) as any;
+        finalize(() => (branchField.loading = false))
+      );
 
+      branchField.options$ = branchesOptions$ as any;
       branchField.searchable = true;
     }
 
     // ===== Employee =====
     const empField = this.formConfig.fields.find((f) => f.key === 'employeeId');
-
     if (empField) {
       empField.loading = true;
 
-      empField.options$ = this.service.getEmployees().pipe(
-        map((res: any) => res?.data ?? res ?? []),
-
+      const employeesOptions$ = this.employees$.pipe(
         tap((emps: any[]) => {
           this.empMap.clear();
-
           (emps || []).forEach((e: any) => {
             const id = +(e.EMP_ID ?? e.EmpId ?? e.ID);
             const name = (e.APP_Name ?? e.Name ?? '').trim();
-            if (!Number.isNaN(id)) {
-              this.empMap.set(id, name);
-            }
+            if (!Number.isNaN(id)) this.empMap.set(id, name);
           });
         }),
-
         map(
           (emps: any[]) =>
             (emps || [])
@@ -283,25 +285,20 @@ export class BranchGeneralEmployeeBinding implements OnInit {
                   label: name,
                   value: id,
                   searchText,
-                  meta: {
-                    id,
-                    name,
-                    department,
-                    designation,
-                  },
+                  meta: { id, name, department, designation },
                 };
               })
               .filter(Boolean) as any[]
         ),
+        finalize(() => (empField.loading = false))
+      );
 
-        finalize(() => (empField.loading = false)),
-        shareReplay(1)
-      ) as any;
-
+      empField.options$ = employeesOptions$ as any;
       empField.searchable = true;
     }
   }
 
+  // ================= MODES =================
   private setMode(mode: 'create' | 'update') {
     this.formConfig = {
       ...this.formConfig,
@@ -310,15 +307,15 @@ export class BranchGeneralEmployeeBinding implements OnInit {
         if (
           mode === 'update' &&
           (f.key === 'employeeId' || f.key === 'branchId')
-        ) {
+        )
           return { ...f, disabled: true };
-        }
+
         if (
           mode === 'create' &&
           (f.key === 'employeeId' || f.key === 'branchId')
-        ) {
+        )
           return { ...f, disabled: false };
-        }
+
         return f;
       }),
     };
@@ -328,7 +325,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
     this.selectedId = null;
     this.data = {
       statusFlag: 1,
-      effectiveDate: null, // ✅ keep Date|null in form state
+      effectiveDate: null,
     };
     this.setMode('create');
     this.showModal = true;
@@ -339,7 +336,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
 
     this.data = {
       ...row,
-      effectiveDate: this.asLocalDate(row.effectiveDate), // ✅ always Date|null
+      effectiveDate: this.asLocalDate(row.effectiveDate),
       statusFlag:
         row.statusFlag === true
           ? 1
@@ -356,120 +353,94 @@ export class BranchGeneralEmployeeBinding implements OnInit {
     this.showModal = false;
   }
 
+  // ================= FORM CHANGE (PERF FIX) =================
+  // ✅ IMPORTANT: email typing should NOT spread/replace whole object
   onFormChange(ev: any) {
     if (!ev || !ev.key) return;
 
     const key = ev.key;
     const value = ev.value;
 
-    // ✅ 1) Effective Date: always Date | null
-    if (key === 'effectiveDate') {
-      const nextDate = value ? this.asLocalDate(value) : null;
-
-      // same date -> no rerender spam
-      const cur = this.data?.effectiveDate;
-      if (cur instanceof Date && nextDate instanceof Date) {
-        if (cur.getTime() === nextDate.getTime()) return;
-      } else if (!cur && !nextDate) {
-        return;
-      }
-
-      this.data = { ...this.data, effectiveDate: nextDate };
-      return;
-    }
-
-    // ✅ 2) Email typing: keep it ultra-light (prevents lag)
+    // ✅ 1) Email typing: MUTATE (prevents lag)
     if (key === 'email') {
-      const nextEmail = (value ?? '').toString();
-      if (this.data?.email === nextEmail) return;
-      this.data = { ...this.data, email: nextEmail };
+      const next = (value ?? '').toString();
+      if (this.data?.email === next) return;
+      this.data.email = next;
       return;
     }
 
-    // ✅ 3) Branch: only when branchId changes -> auto fill once
+    // ✅ 2) Effective Date: keep Date|null (mutate)
+    if (key === 'effectiveDate') {
+      const next = value ? this.asLocalDate(value) : null;
+
+      const cur = this.data?.effectiveDate;
+      if (
+        cur instanceof Date &&
+        next instanceof Date &&
+        cur.getTime() === next.getTime()
+      )
+        return;
+      if (!cur && !next) return;
+
+      this.data.effectiveDate = next;
+      return;
+    }
+
+    // ✅ 3) Branch: mutate only (and keep same auto-fill flow)
     if (key === 'branchId') {
       const branchId = +value;
-
       if (+this.data?.branchId === branchId) return;
 
-      const nextData: any = { ...this.data, branchId };
+      this.data.branchId = branchId;
 
-      const bd =
-        this.branchDetailsMap.get(branchId) ||
-        (() => {
-          const b = this.branchesCache.find(
-            (x) => +(x.BranchID ?? x.Branch_ID ?? x.ID) === branchId
-          );
-          if (!b) return null;
-          return {
-            name: (b.BranchName ?? b.Branch_Name ?? b.Name ?? '').trim(),
-            desc: (
-              b.BranchDesc ??
-              b.Branch_Desc ??
-              b.BranchDescription ??
-              ''
-            ).trim(),
-            shortCode: (b.BranchShortCode ?? b.ShortCode ?? '').trim(),
-            bcId:
-              b.BranchCoordinatorID ??
-              b.BC_Emp_ID ??
-              b.BC_EmpId ??
-              b.BranchCoordinatorEmpId ??
-              null,
-          };
-        })();
-
+      const bd = this.branchDetailsMap.get(branchId);
       if (bd) {
-        nextData.branchName = bd.name ?? '';
-        nextData.branchDesc = bd.desc ?? '';
-        nextData.branchShortCode = bd.shortCode ?? '';
+        this.data.branchName = bd.name ?? '';
+        this.data.branchDesc = bd.desc ?? '';
+        this.data.branchShortCode = bd.shortCode ?? '';
 
-        // ✅ only set BC if empty
-        if (nextData.branchCoordinatorId == null) {
-          nextData.branchCoordinatorId = bd.bcId ?? null;
+        // ✅ only set BC if empty (same as your existing logic)
+        if (this.data.branchCoordinatorId == null) {
+          this.data.branchCoordinatorId = bd.bcId ?? null;
         }
       }
-
-      this.data = nextData;
       return;
     }
 
-    // ✅ 4) Employee: minimal update
+    // ✅ 4) Employee: mutate only
     if (key === 'employeeId') {
       const employeeId = +value;
       if (+this.data?.employeeId === employeeId) return;
-      this.data = { ...this.data, employeeId };
+      this.data.employeeId = employeeId;
       return;
     }
 
-    // ✅ 5) Status flag: normalize to 0/1
+    // ✅ 5) Status flag: normalize to 0/1 (mutate)
     if (key === 'statusFlag') {
       const statusFlag =
         value === true ? 1 : value === false ? 0 : +(value ?? 1);
 
       if (+this.data?.statusFlag === statusFlag) return;
-      this.data = { ...this.data, statusFlag };
+      this.data.statusFlag = statusFlag;
       return;
     }
 
-    // ✅ 6) Default: light patch
+    // ✅ 6) Default: mutate
     if (this.data?.[key] === value) return;
-    this.data = { ...this.data, [key]: value };
+    this.data[key] = value;
   }
 
+  // ================= SUBMIT =================
   onSubmit(payload: any) {
     const cleanPayload = {
       empId: payload.employeeId,
       branchId: payload.branchId,
       branchCoordinatorId: payload.branchCoordinatorId ?? null,
       email: (payload.email || '').trim(),
-
-      // ✅ convert Date -> ISO only here
       effectiveDate:
         payload.effectiveDate instanceof Date
           ? payload.effectiveDate.toISOString()
           : payload.effectiveDate,
-
       status: payload.statusFlag ?? 1,
     };
 
@@ -498,6 +469,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
     });
   }
 
+  // ================= DELETE =================
   delete(row: any) {
     this.modal.confirm({
       nzTitle: 'Delete Confirmation',
@@ -505,7 +477,6 @@ export class BranchGeneralEmployeeBinding implements OnInit {
       nzOkText: 'Yes, Delete',
       nzOkDanger: true,
       nzCancelText: 'Cancel',
-
       nzOnOk: () => {
         this.service.delete(row.id).subscribe({
           next: () => {

@@ -6,10 +6,10 @@ import {
 } from './branch-coordinator-assignment.config';
 import { BranchCoordinatorService } from '../../core/services/branch-coordinator-service';
 import { Table } from '../../ui/table/table';
-import { finalize, map, tap, shareReplay, forkJoin } from 'rxjs';
 import { Modal } from '../../ui/modal/modal';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import { finalize, forkJoin, map, shareReplay, tap } from 'rxjs';
 
 type BranchDetails = {
   id: number;
@@ -38,6 +38,14 @@ export class BranchCoordinatorAssignment implements OnInit {
 
   private branchDetailsMap = new Map<number, BranchDetails>();
   private empMap = new Map<number, string>();
+  private branches$!: any;
+  private employees$!: any;
+
+  constructor(
+    private service: BranchCoordinatorService,
+    private notification: NzNotificationService,
+    private modal: NzModalService
+  ) {}
 
   // ✅ compact: converts "YYYY-MM-DD" into local Date (no timezone issues)
   private asLocalDate(v: any): Date | null {
@@ -55,38 +63,41 @@ export class BranchCoordinatorAssignment implements OnInit {
     return isNaN(dt.getTime()) ? null : dt;
   }
 
-  constructor(
-    private service: BranchCoordinatorService,
-    private notification: NzNotificationService,
-    private modal: NzModalService
-  ) {}
-
   ngOnInit() {
-    this.loadTable();
+    this.branches$ = this.service.getBranches().pipe(
+      map((res: any) => res?.data ?? res ?? []),
+      shareReplay(1)
+    );
+
+    this.employees$ = this.service.getEmployees().pipe(
+      map((res: any) => res?.data ?? res ?? []),
+      shareReplay(1)
+    );
+
     this.loadBranchesAndEmployeesForForm();
+    this.loadTable();
   }
 
+  // ================= TABLE =================
   loadTable() {
     forkJoin({
-      branchesRes: this.service.getBranches(),
-      employeesRes: this.service.getEmployees(),
+      branches: this.branches$,
+      employees: this.employees$,
       bindingsRes: this.service.getAll(),
     })
       .pipe(
-        map(({ branchesRes, employeesRes, bindingsRes }: any) => {
-          const branches = branchesRes?.data ?? branchesRes ?? [];
-          const employees = employeesRes?.data ?? employeesRes ?? [];
+        map(({ branches, employees, bindingsRes }: any) => {
           const bindings = bindingsRes?.data ?? bindingsRes ?? [];
 
           const branchMap = new Map<number, string>(
-            branches.map((b: any) => [
+            (branches || []).map((b: any) => [
               +(b.Branch_ID ?? b.BranchID ?? b.ID),
               (b.Branch_Name ?? b.BranchName ?? b.Name ?? '').trim(),
             ])
           );
 
           const empMap = new Map<number, string>(
-            employees.map((e: any) => [
+            (employees || []).map((e: any) => [
               +(e.EMP_ID ?? e.EmpId ?? e.ID),
               (e.APP_Name ?? e.Name ?? '').trim(),
             ])
@@ -132,22 +143,23 @@ export class BranchCoordinatorAssignment implements OnInit {
       .subscribe((rows) => (this.tableData = rows));
   }
 
+  // ================= DROPDOWNS =================
   loadBranchesAndEmployeesForForm() {
     // ===== Branch dropdown =====
     const branchField = this.formConfig.fields.find(
       (f) => f.key === 'branchId'
     );
-
     if (branchField) {
       branchField.loading = true;
 
-      const branches$ = this.service.getBranches().pipe(
-        map((res: any) => res?.data ?? res ?? []),
+      const branchesOptions$ = this.branches$.pipe(
         tap((branches: any[]) => {
           this.branchDetailsMap.clear();
 
-          branches.forEach((b: any) => {
+          (branches || []).forEach((b: any) => {
             const id = +(b.Branch_ID ?? b.BranchID ?? b.ID);
+            if (Number.isNaN(id)) return;
+
             const name = (b.Branch_Name ?? b.BranchName ?? b.Name ?? '').trim();
             const desc = (b.BranchDesc ?? b.Branch_Desc ?? '').trim();
             const email = (b.BEMAIL ?? b.BEmail ?? b.Email ?? '').trim();
@@ -159,108 +171,95 @@ export class BranchCoordinatorAssignment implements OnInit {
               ''
             ).trim();
 
-            if (!Number.isNaN(id)) {
-              this.branchDetailsMap.set(id, {
-                id,
-                name,
-                desc,
-                email,
-                phone,
-                address,
-              });
-            }
+            this.branchDetailsMap.set(id, {
+              id,
+              name,
+              desc,
+              email,
+              phone,
+              address,
+            });
           });
         }),
-        map(
-          (branches: any[]) =>
-            branches
-              .map((b: any) => {
-                const id = +(b.Branch_ID ?? b.BranchID ?? b.ID);
-                if (Number.isNaN(id)) return null;
+        map((branches: any[]) =>
+          (branches || [])
+            .map((b: any) => {
+              const id = +(b.Branch_ID ?? b.BranchID ?? b.ID);
+              if (Number.isNaN(id)) return null;
 
-                const name = (
-                  b.Branch_Name ??
-                  b.BranchName ??
-                  b.Name ??
-                  ''
-                ).trim();
-                const desc = (b.BranchDesc ?? b.Branch_Desc ?? '').trim();
-                const phone = (b.BPHONE ?? b.BPhone ?? b.Phone ?? '').trim();
-                const address = (
-                  b.BADDRESS ??
-                  b.BAddress ??
-                  b.Address ??
-                  ''
-                ).trim();
+              const name = (
+                b.Branch_Name ??
+                b.BranchName ??
+                b.Name ??
+                ''
+              ).trim();
+              const desc = (b.BranchDesc ?? b.Branch_Desc ?? '').trim();
+              const phone = (b.BPHONE ?? b.BPhone ?? b.Phone ?? '').trim();
+              const address = (
+                b.BADDRESS ??
+                b.BAddress ??
+                b.Address ??
+                ''
+              ).trim();
 
-                const searchText =
-                  `${id} ${name} ${desc} ${phone} ${address}`.trim();
-
-                return {
-                  label: name,
-                  value: id,
-                  searchText,
-                  meta: { id, name, desc, phone, address },
-                };
-              })
-              .filter(Boolean) as any[]
+              return {
+                label: name,
+                value: id,
+                searchText: `${id} ${name} ${desc} ${phone} ${address}`.trim(),
+                meta: { id, name, desc, phone, address },
+              };
+            })
+            .filter(Boolean)
         ),
-        finalize(() => (branchField.loading = false)),
-        shareReplay(1)
+        finalize(() => (branchField.loading = false))
       );
 
-      branchField.options$ = branches$ as any;
+      branchField.options$ = branchesOptions$ as any;
       branchField.searchable = true;
     }
 
     // ===== Employee dropdown =====
     const empField = this.formConfig.fields.find((f) => f.key === 'employeeId');
-
     if (empField) {
       empField.loading = true;
 
-      const emps$ = this.service.getEmployees().pipe(
-        map((res: any) => res?.data ?? res ?? []),
+      const employeesOptions$ = this.employees$.pipe(
         tap((emps: any[]) => {
           this.empMap.clear();
-          emps.forEach((e: any) => {
+          (emps || []).forEach((e: any) => {
             const id = +(e.EMP_ID ?? e.EmpId ?? e.ID);
             const name = (e.APP_Name ?? e.Name ?? '').trim();
             if (!Number.isNaN(id)) this.empMap.set(id, name);
           });
         }),
-        map(
-          (emps: any[]) =>
-            emps
-              .map((e: any) => {
-                const id = +(e.EMP_ID ?? e.EmpId ?? e.ID);
-                if (Number.isNaN(id)) return null;
+        map((emps: any[]) =>
+          (emps || [])
+            .map((e: any) => {
+              const id = +(e.EMP_ID ?? e.EmpId ?? e.ID);
+              if (Number.isNaN(id)) return null;
 
-                const name = (e.APP_Name ?? e.Name ?? '').trim();
-                const dept = (e.DepartmentName ?? e.DEP_DESC ?? '').trim();
-                const desig = (e.DesignationName ?? e.DES_DESC ?? '').trim();
+              const name = (e.APP_Name ?? e.Name ?? '').trim();
+              const dept = (e.DepartmentName ?? e.DEP_DESC ?? '').trim();
+              const desig = (e.DesignationName ?? e.DES_DESC ?? '').trim();
 
-                const searchText = `${id} ${name} ${dept} ${desig}`.trim();
-
-                return {
-                  label: name,
-                  value: id,
-                  searchText,
-                  meta: {
-                    id,
-                    name,
-                    department: dept,
-                    designation: desig,
-                  },
-                };
-              })
-              .filter(Boolean) as any[]
+              return {
+                label: name,
+                value: id,
+                searchText: `${id} ${name} ${dept} ${desig}`.trim(),
+                meta: {
+                  id,
+                  name,
+                  department: dept,
+                  designation: desig,
+                },
+              };
+            })
+            .filter(Boolean)
         ),
-        finalize(() => (empField.loading = false)),
-        shareReplay(1)
+        finalize(() => (empField.loading = false))
       );
 
-      empField.options$ = emps$ as any;
+      empField.options$ = employeesOptions$ as any;
       empField.searchable = true;
     }
   }
@@ -271,49 +270,41 @@ export class BranchCoordinatorAssignment implements OnInit {
     const key = ev.key;
     const value = ev.value;
 
-    // ✅ Effective Date: always Date | null
-    if (key === 'effectiveDate') {
-      this.data = {
-        ...this.data,
-        effectiveDate: value ? this.asLocalDate(value) : null,
-      };
+    // ✅ Email typing: MUTATE (prevents lag)
+    if (key === 'email') {
+      const next = (value ?? '').toString();
+      if (this.data?.email === next) return;
+      this.data.email = next;
       return;
     }
 
-    // ✅ Branch: only update branchId (no extra patching)
+    // ✅ Effective Date: keep Date|null (mutate)
+    if (key === 'effectiveDate') {
+      this.data.effectiveDate = value ? this.asLocalDate(value) : null;
+      return;
+    }
+
+    // ✅ Branch: mutate only
     if (key === 'branchId') {
       const branchId = +value;
-
-      // same branch -> no re-render spam
       if (+this.data?.branchId === branchId) return;
-
-      this.data = {
-        ...this.data,
-        branchId,
-      };
+      this.data.branchId = branchId;
       return;
     }
 
-    // ✅ Employee: only update employeeId
+    // ✅ Employee: mutate only
     if (key === 'employeeId') {
       const employeeId = +value;
-
       if (+this.data?.employeeId === employeeId) return;
-
-      this.data = {
-        ...this.data,
-        employeeId,
-      };
+      this.data.employeeId = employeeId;
       return;
     }
 
-    // ✅ Email or other simple inputs
-    this.data = {
-      ...this.data,
-      [key]: value,
-    };
+    // ✅ Others
+    this.data[key] = value;
   }
 
+  // ================= MODES =================
   openAddForm() {
     this.selectedId = null;
     this.data = {};
@@ -328,7 +319,6 @@ export class BranchCoordinatorAssignment implements OnInit {
 
     this.data = {
       ...row,
-      // ✅ normalize date for edit mode
       effectiveDate: this.asLocalDate(row.effectiveDate),
       branchName: bd?.name ?? row.branchName ?? '',
       branchDesc: bd?.desc ?? '',
@@ -345,6 +335,7 @@ export class BranchCoordinatorAssignment implements OnInit {
     this.showModal = false;
   }
 
+  // ================= SUBMIT =================
   onSubmit(payload: any) {
     const body = {
       empId: payload.employeeId,
@@ -386,6 +377,7 @@ export class BranchCoordinatorAssignment implements OnInit {
     });
   }
 
+  // ================= DELETE =================
   delete(row: any) {
     this.modal.confirm({
       nzTitle: 'Delete Confirmation',
@@ -393,7 +385,6 @@ export class BranchCoordinatorAssignment implements OnInit {
       nzOkText: 'Yes, Delete',
       nzOkDanger: true,
       nzCancelText: 'Cancel',
-
       nzOnOk: () => {
         this.service.delete(row.id).subscribe({
           next: () => {

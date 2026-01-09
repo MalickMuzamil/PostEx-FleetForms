@@ -81,7 +81,7 @@ export const BRANCH_COORDINATOR_ASSIGNMENT_FORM: FormConfig = {
       required: true,
       validators: [AppValidators.email(50)],
       // avoid per-keystroke validation for email input: update on blur
-      updateOn: 'blur',
+      updateOn: 'change',
     },
 
     // ================= EFFECTIVE DATE =================
