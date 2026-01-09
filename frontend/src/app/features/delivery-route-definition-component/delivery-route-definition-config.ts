@@ -25,7 +25,7 @@ export const DELIVERY_ROUTE_DEFINITION_TABLE: TableConfig = {
     keys: ['Id', 'CorrectionDescriptionforReports'],
     rules: {
       mode: 'alphanumeric',
-      maxLength: 50,
+      maxLength: 20,
       trim: true,
     },
   },

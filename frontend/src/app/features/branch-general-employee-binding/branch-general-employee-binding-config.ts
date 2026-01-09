@@ -113,7 +113,7 @@ export const BRANCH_GENERAL_EMP_BINDING_TABLE: TableConfig = {
     { key: 'branchName', title: 'Branch' },
     { key: 'employeeName', title: 'Employee Name' },
     { key: 'email', title: 'Email' },
-    { key: 'effectiveDate', title: 'Effective Date' },
+    { key: 'effectiveDateDisplay', title: 'Effective Date' },
     { key: 'statusText', title: 'Status' },
   ],
   actions: [

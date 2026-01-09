@@ -73,11 +73,12 @@ export const DELIVERY_ROUTE_BINDING_EDIT_FORM: FormConfig = {
 export const DELIVERY_ROUTE_BINDING_TABLE: TableConfig = {
   globalSearch: {
     placeholder: 'Search BN, Sub-BN, DRD',
-    keys: [
-      'deliveryRouteDescription',
-      'subBranchName',
-      'branchName', 
-    ],
+    keys: ['deliveryRouteDescription', 'subBranchName', 'branchName'],
+    rules: {
+      mode: 'alphanumeric',
+      maxLength: 20,
+      trim: true,
+    },
   },
 
   columns: [
@@ -85,8 +86,8 @@ export const DELIVERY_ROUTE_BINDING_TABLE: TableConfig = {
     { key: 'branchName', title: 'Branch' },
     { key: 'subBranchName', title: 'Sub Branch' },
     { key: 'deliveryRouteDescription', title: 'Delivery Route Description' },
-    { key: 'effectiveDate', title: 'Effective Date' },
-    { key: 'requiredReportsFlag', title: 'Required Reports (1/0)' },
+    { key: 'effectiveDateDisplay', title: 'Effective Date' },
+    { key: 'requiredReportsDisplay', title: 'Required Reports' },
   ],
 
   actions: [

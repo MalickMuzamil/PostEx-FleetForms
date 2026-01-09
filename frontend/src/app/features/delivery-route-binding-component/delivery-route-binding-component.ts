@@ -106,21 +106,43 @@ export class DeliveryRouteBindingComponent implements OnInit {
   loadTable() {
     this.bindingService.getAll().subscribe((res: any) => {
       const rows = res?.data ?? res ?? [];
-      this.tableData = rows.map((r: any) => ({
-        id: r.ID ?? r.Id,
-        branchId: r.BranchID,
-        branchName: r.BranchName,
-        subBranchId: r.SubBranchID,
-        subBranchName: r.SubBranchName,
-        deliveryRouteId: r.DeliveryRouteID,
-        deliveryRouteDescription: r.DeliveryRouteDescription,
-        effectiveDate: r.EffectiveDate ? new Date(r.EffectiveDate) : null,
-        requiredReportsFlag: r.RequiredReportsFlag,
-        rowStatus:
-          r.RequiredReportsFlag === 1 || r.RequiredReportsFlag === true
-            ? 'ACTIVE'
-            : 'INACTIVE',
-      }));
+
+      this.tableData = rows.map((r: any) => {
+        const isActive =
+          r.RequiredReportsFlag === 1 || r.RequiredReportsFlag === true;
+
+        // ✅ date only: YYYY-MM-DD
+        const d = r.EffectiveDate ? new Date(r.EffectiveDate) : null;
+        const effectiveDateOnly = d
+          ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+              2,
+              '0'
+            )}-${String(d.getDate()).padStart(2, '0')}`
+          : '';
+
+        return {
+          id: r.ID ?? r.Id,
+
+          branchId: r.BranchID,
+          branchName: r.BranchName,
+
+          subBranchId: r.SubBranchID,
+          subBranchName: r.SubBranchName,
+
+          deliveryRouteId: r.DeliveryRouteID,
+          deliveryRouteDescription: r.DeliveryRouteDescription,
+
+          // ✅ keep real date for edit logic if needed
+          effectiveDate: d,
+
+          // ✅ keep flag for edit payloads
+          requiredReportsFlag: isActive ? 1 : 0,
+
+          // ✅ NEW display fields for table
+          effectiveDateDisplay: effectiveDateOnly,
+          requiredReportsDisplay: isActive ? 'Active' : 'Inactive',
+        };
+      });
     });
   }
 

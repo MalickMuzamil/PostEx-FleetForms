@@ -83,7 +83,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
             ])
           );
 
-          return bindings.map((r: any) => {
+          return (bindings || []).map((r: any) => {
             const branchId = +(r.BranchID ?? r.branchId);
             const empId = +(r.Emp_ID ?? r.employeeId);
 
@@ -97,6 +97,17 @@ export class BranchGeneralEmployeeBinding implements OnInit {
 
             const rawDate = r.EffectiveDate ?? r.effectiveDate;
 
+            // ✅ keep Date object (edit picker)
+            const d = this.asLocalDate(rawDate);
+
+            // ✅ date-only for table
+            const effectiveDateDisplay = d
+              ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+                  2,
+                  '0'
+                )}-${String(d.getDate()).padStart(2, '0')}`
+              : '';
+
             const rawStatus = r.Status ?? r.status ?? 1;
             const statusFlag =
               rawStatus === true
@@ -107,6 +118,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
 
             return {
               id: r.ID ?? r.id,
+
               branchId,
               branchName: branchMap.get(branchId) ?? 'NA',
 
@@ -119,12 +131,14 @@ export class BranchGeneralEmployeeBinding implements OnInit {
               employeeName: empMap.get(empId) ?? 'NA',
 
               email: r.Email ?? r.email,
-              effectiveDate: this.asLocalDate(rawDate),
 
-              // ✅ keep numeric for form/edit
+              // ✅ for edit/date-picker
+              effectiveDate: d,
+
+              // ✅ for table view
+              effectiveDateDisplay,
+
               statusFlag,
-
-              // ✅ display in table
               statusText: statusFlag === 1 ? 'Active' : 'Inactive',
             };
           });

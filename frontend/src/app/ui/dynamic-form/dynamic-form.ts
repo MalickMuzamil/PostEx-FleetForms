@@ -88,8 +88,13 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
       // find focused control (if any)
       let focusedControl: string | null = null;
       try {
-        const active = (document && document.activeElement) as HTMLElement | null;
-        focusedControl = active?.closest ? (active.closest('[formcontrolname]') as HTMLElement | null)?.getAttribute('formcontrolname') ?? null : active?.getAttribute('formcontrolname') ?? null;
+        const active = (document &&
+          document.activeElement) as HTMLElement | null;
+        focusedControl = active?.closest
+          ? (
+              active.closest('[formcontrolname]') as HTMLElement | null
+            )?.getAttribute('formcontrolname') ?? null
+          : active?.getAttribute('formcontrolname') ?? null;
       } catch (e) {
         focusedControl = null;
       }
@@ -282,5 +287,9 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
       });
     }, 150);
   }
-  
+
+  getGridTemplate(cols: any[] = []): string {
+    if (!cols.length) return '1fr';
+    return cols.map((c) => (c.width ? c.width : '1fr')).join(' ');
+  }
 }

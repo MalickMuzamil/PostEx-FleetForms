@@ -10,13 +10,8 @@
             {{ field.label }}
           </nz-form-label>
           <nz-form-control>
-            <input
-              nz-input
-              [type]="field.key === 'email' ? 'email' : 'text'"
-              [formControlName]="field.key"
-              [disabled]="!!field.disabled"
-              [attr.maxlength]="field.key === 'email' ? 50 : null"
-            />
+            <input nz-input [type]="field.key === 'email' ? 'email' : 'text'" [formControlName]="field.key"
+              [disabled]="!!field.disabled" [attr.maxlength]="field.key === 'email' ? 50 : null" />
             <div class="text-danger mt-1" *ngIf="hasError(field.key, 'required')">
               {{ field.label }} is required
             </div>
@@ -29,12 +24,7 @@
             {{ field.label }}
           </nz-form-label>
           <nz-form-control>
-            <input
-              nz-input
-              type="number"
-              [formControlName]="field.key"
-              [disabled]="!!field.disabled"
-            />
+            <input nz-input type="number" [formControlName]="field.key" [disabled]="!!field.disabled" />
           </nz-form-control>
         </nz-form-item>
 
@@ -44,12 +34,7 @@
             {{ field.label }}
           </nz-form-label>
           <nz-form-control>
-            <textarea
-              nz-input
-              rows="3"
-              [formControlName]="field.key"
-              [disabled]="!!field.disabled"
-            ></textarea>
+            <textarea nz-input rows="3" [formControlName]="field.key" [disabled]="!!field.disabled"></textarea>
           </nz-form-control>
         </nz-form-item>
 
@@ -60,32 +45,16 @@
           </nz-form-label>
 
           <nz-form-control>
-            <nz-select
-              nzAllowClear
-              nzShowSearch
-              [nzFilterOption]="filterOption"
-              [formControlName]="field.key"
-              [nzDisabled]="field.disabled"
-              [nzLoading]="!!field.loading"
-              nzNotFoundContent="No data"
+            <nz-select nzAllowClear nzShowSearch [nzFilterOption]="filterOption" [formControlName]="field.key"
+              [nzDisabled]="field.disabled" [nzLoading]="!!field.loading" nzNotFoundContent="No data"
               (nzSearchValueChange)="onSelectSearch(field.key, $any($event))"
-              (ngModelChange)="onSelectChange(field.key, $event)"
-            >
+              (ngModelChange)="onSelectChange(field.key, $event)">
 
               <!-- HEADER (optional column header) -->
-              <nz-option
-                *ngIf="field.optionColumns?.length"
-                nzDisabled="true"
-                nzCustomContent="true"
-                [nzLabel]="'__header__'"
-                [nzValue]="null"
-              >
-                <div class="opt-row opt-header">
-                  <div
-                    class="opt-cell"
-                    *ngFor="let c of field.optionColumns"
-                    [style.width]="c.width || 'auto'"
-                  >
+              <nz-option *ngIf="field.optionColumns?.length" nzDisabled="true" nzCustomContent="true"
+                [nzLabel]="'__header__'" [nzValue]="null">
+                <div class="opt-row opt-header" [style.gridTemplateColumns]="getGridTemplate(field.optionColumns)">
+                  <div class="opt-cell" *ngFor="let c of field.optionColumns">
                     {{ c.title }}
                   </div>
                 </div>
@@ -93,36 +62,24 @@
 
               <!-- ASYNC OPTIONS -->
               <ng-container *ngIf="field.options$; else staticOptions">
-                <nz-option
-                  *ngFor="let opt of (field.options$ | async) || []"
-                  [nzLabel]="opt.label"
-                  [nzValue]="opt.value"
-                  [nzTitle]="opt.searchText || opt.label"
-                  nzCustomContent="true"
-                >
+                <nz-option *ngFor="let opt of (field.options$ | async) || []" [nzLabel]="opt.label"
+                  [nzValue]="opt.value" [nzTitle]="opt.searchText || opt.label" nzCustomContent="true">
                   <ng-container *ngIf="field.optionColumns?.length; else simpleOpt">
-                    <div class="opt-row">
-                      <div
-                        class="opt-cell"
-                        *ngFor="let c of field.optionColumns"
-                        [style.width]="c.width || 'auto'"
-                      >
+                    <div class="opt-row" [style.gridTemplateColumns]="getGridTemplate(field.optionColumns)">
+                      <div class="opt-cell" *ngFor="let c of field.optionColumns">
                         {{ opt.meta?.[c.key] ?? '' }}
                       </div>
                     </div>
                   </ng-container>
+
                   <ng-template #simpleOpt>{{ opt.label }}</ng-template>
                 </nz-option>
               </ng-container>
 
               <!-- STATIC OPTIONS -->
               <ng-template #staticOptions>
-                <nz-option
-                  *ngFor="let opt of field.options || []"
-                  [nzLabel]="opt.label"
-                  [nzValue]="opt.value"
-                  [nzTitle]="opt.searchText || opt.label"
-                >
+                <nz-option *ngFor="let opt of field.options || []" [nzLabel]="opt.label" [nzValue]="opt.value"
+                  [nzTitle]="opt.searchText || opt.label">
                   {{ opt.label }}
                 </nz-option>
               </ng-template>
@@ -135,19 +92,15 @@
           </nz-form-control>
         </nz-form-item>
 
+
         <!-- DATE -->
         <nz-form-item *ngIf="field.type === 'date'">
           <nz-form-label [nzRequired]="field.required">
             {{ field.label }}
           </nz-form-label>
           <nz-form-control>
-            <nz-date-picker
-              style="width: 100%"
-              [formControlName]="field.key"
-              [nzDisabled]="field.disabled"
-              [nzDisabledDate]="getDisabledDateFn(field.key)"
-              [nzInputReadOnly]="true"
-            ></nz-date-picker>
+            <nz-date-picker style="width: 100%" [formControlName]="field.key" [nzDisabled]="field.disabled"
+              [nzDisabledDate]="getDisabledDateFn(field.key)" [nzInputReadOnly]="true"></nz-date-picker>
           </nz-form-control>
         </nz-form-item>
 
