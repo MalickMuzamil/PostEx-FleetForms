@@ -13,10 +13,22 @@ class BranchGeneralEmpBindingService {
   async listActiveEmployees() {
     const pool = await getPool();
     const result = await pool.request().query(`
-      SELECT EMP_ID, APP_Name, APP_NIC
-      FROM HRM.HR.Employees
-      WHERE APP_ACTIVE = 1
-      ORDER BY APP_Name
+      SELECT 
+    E.EMP_ID,
+    E.APP_Name,
+    E.APP_NIC,
+    E.APP_ACTIVE,
+    E.DEP_ID,
+    D.DEP_DESC      AS DepartmentName,
+    E.DES_ID,
+    G.DES_DESC      AS DesignationName
+FROM HRM.HR.Employees E
+LEFT JOIN HRM.HR.Department D
+    ON E.DEP_ID = D.DEP_ID
+LEFT JOIN HRM.HR.Designation G
+    ON E.DES_ID = G.DES_ID
+WHERE E.APP_ACTIVE = 1
+ORDER BY E.APP_Name;
     `);
     return result.recordset;
   }

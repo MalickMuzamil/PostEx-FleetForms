@@ -113,28 +113,24 @@ export class SubBranchDefinitionComponent implements OnInit {
     );
     if (idx === -1) return;
 
-    if (clearSelection) {
-      this.data = { ...this.data, subBranchName: null };
-    }
+    if (clearSelection) this.data = { ...this.data, subBranchName: null };
 
-    // ✅ clear options immediately to avoid showing old branch options
+    // clear options immediately
     const fieldsA = [...this.formConfig.fields];
-    fieldsA[idx] = { ...fieldsA[idx], loading: true, options: [] };
+    fieldsA[idx] = { ...fieldsA[idx], loading: false, options: [] };
     this.formConfig = { ...this.formConfig, fields: fieldsA };
 
-    const hasBranch =
-      branchId !== undefined && branchId !== null && branchId !== 0;
+    const hasBranch = !!branchId;
 
-    const req$ = hasBranch
-      ? this.service.getSubBranchesByBranchId(branchId!)
-      : this.service.getAll();
+    // ✅ If no branch -> stop (no API)
+    if (!hasBranch) return;
+
+    // ✅ Always hit API for selected branch
+    const req$ = this.service.getSubBranchesByBranchId(branchId!);
 
     req$
       .pipe(
         map((res: any) => res?.data ?? res ?? []),
-        map((rows: any[]) =>
-          hasBranch ? rows.filter((r) => +r.BranchID === +branchId!) : rows
-        ),
         map((rows: any[]) =>
           rows
             .map((r) => (r.SubBranchName ?? '').trim())
@@ -144,7 +140,6 @@ export class SubBranchDefinitionComponent implements OnInit {
               label: name,
               value: name,
               searchText: name,
-              name,
               meta: { name },
             }))
         ),
@@ -199,12 +194,12 @@ export class SubBranchDefinitionComponent implements OnInit {
   openAddForm() {
     this.selectedId = null;
     this.data = {};
-    this.lastBranchId = 0; // ✅ reset
+    this.lastBranchId = 0;
     this.formConfig = { ...SUB_BRANCH_DEFINITION_FORM, mode: 'create' };
     this.showModal = true;
 
-    // create mode: show all (or empty) until branch select
-    this.loadSubBranchDropdown(undefined, true);
+    // ✅ Do NOT call getAll here
+    this.loadSubBranchDropdown(0, true); // or just clear options without API
   }
 
   edit(row: any) {

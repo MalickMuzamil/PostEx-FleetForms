@@ -242,26 +242,52 @@ export class BranchCoordinatorAssignment implements OnInit {
     }
   }
 
-  onFormChange(ev: { key: string; value: any; formValue: any }) {
-    if (!ev || ev.key !== 'branchId') return;
+  onFormChange(ev: any) {
+    if (!ev || !ev.key) return;
 
-    const branchId = +ev.value;
+    const key = ev.key;
+    const value = ev.value;
 
-    // ✅ prevents unnecessary re-patching -> email typing smooth
-    if (+this.data?.branchId === branchId) return;
+    // ✅ Effective Date: always Date | null
+    if (key === 'effectiveDate') {
+      this.data = {
+        ...this.data,
+        effectiveDate: value ? this.asLocalDate(value) : null,
+      };
+      return;
+    }
 
-    const bd = this.branchDetailsMap.get(branchId);
-    if (!bd) return;
+    // ✅ Branch: only update branchId (no extra patching)
+    if (key === 'branchId') {
+      const branchId = +value;
 
-    // ✅ only patch readonly auto fields
+      // same branch -> no re-render spam
+      if (+this.data?.branchId === branchId) return;
+
+      this.data = {
+        ...this.data,
+        branchId,
+      };
+      return;
+    }
+
+    // ✅ Employee: only update employeeId
+    if (key === 'employeeId') {
+      const employeeId = +value;
+
+      if (+this.data?.employeeId === employeeId) return;
+
+      this.data = {
+        ...this.data,
+        employeeId,
+      };
+      return;
+    }
+
+    // ✅ Email or other simple inputs
     this.data = {
       ...this.data,
-      branchId,
-      branchName: bd.name ?? '',
-      branchDesc: bd.desc ?? '',
-      branchEmail: bd.email ?? '',
-      branchPhone: bd.phone ?? '',
-      branchAddress: bd.address ?? '',
+      [key]: value,
     };
   }
 

@@ -58,77 +58,80 @@ export class BranchGeneralEmployeeBinding implements OnInit {
 
   // ✅ Updated: normalize effectiveDate for stability (edit/date picker)
   loadTable() {
-  forkJoin({
-    branchesRes: this.service.getBranches(),
-    employeesRes: this.service.getEmployees(),
-    bindingsRes: this.service.getAll(),
-  })
-    .pipe(
-      map(({ branchesRes, employeesRes, bindingsRes }: any) => {
-        const branches = branchesRes?.data ?? branchesRes ?? [];
-        const employees = employeesRes?.data ?? employeesRes ?? [];
-        const bindings = bindingsRes?.data ?? bindingsRes ?? [];
+    forkJoin({
+      branchesRes: this.service.getBranches(),
+      employeesRes: this.service.getEmployees(),
+      bindingsRes: this.service.getAll(),
+    })
+      .pipe(
+        map(({ branchesRes, employeesRes, bindingsRes }: any) => {
+          const branches = branchesRes?.data ?? branchesRes ?? [];
+          const employees = employeesRes?.data ?? employeesRes ?? [];
+          const bindings = bindingsRes?.data ?? bindingsRes ?? [];
 
-        const branchMap = new Map<number, string>(
-          branches.map((b: any) => [
-            +(b.BranchID ?? b.Branch_ID ?? b.ID),
-            (b.BranchName ?? b.Branch_Name ?? b.Name ?? '').trim(),
-          ])
-        );
+          const branchMap = new Map<number, string>(
+            branches.map((b: any) => [
+              +(b.BranchID ?? b.Branch_ID ?? b.ID),
+              (b.BranchName ?? b.Branch_Name ?? b.Name ?? '').trim(),
+            ])
+          );
 
-        const empMap = new Map<number, string>(
-          employees.map((e: any) => [
-            +(e.EMP_ID ?? e.EmpId ?? e.ID),
-            (e.APP_Name ?? e.Name ?? '').trim(),
-          ])
-        );
+          const empMap = new Map<number, string>(
+            employees.map((e: any) => [
+              +(e.EMP_ID ?? e.EmpId ?? e.ID),
+              (e.APP_Name ?? e.Name ?? '').trim(),
+            ])
+          );
 
-        return bindings.map((r: any) => {
-          const branchId = +(r.BranchID ?? r.branchId);
-          const empId = +(r.Emp_ID ?? r.employeeId);
+          return bindings.map((r: any) => {
+            const branchId = +(r.BranchID ?? r.branchId);
+            const empId = +(r.Emp_ID ?? r.employeeId);
 
-          const bcId =
-            +(
-              r.BranchCoordinatorID ??
-              r.BC_Emp_ID ??
-              r.branchCoordinatorId ??
-              0
-            ) || null;
+            const bcId =
+              +(
+                r.BranchCoordinatorID ??
+                r.BC_Emp_ID ??
+                r.branchCoordinatorId ??
+                0
+              ) || null;
 
-          const rawDate = r.EffectiveDate ?? r.effectiveDate;
+            const rawDate = r.EffectiveDate ?? r.effectiveDate;
 
-          const rawStatus = r.Status ?? r.status ?? 1;
-          const statusFlag =
-            rawStatus === true ? 1 : rawStatus === false ? 0 : +(rawStatus ?? 1);
+            const rawStatus = r.Status ?? r.status ?? 1;
+            const statusFlag =
+              rawStatus === true
+                ? 1
+                : rawStatus === false
+                ? 0
+                : +(rawStatus ?? 1);
 
-          return {
-            id: r.ID ?? r.id,
-            branchId,
-            branchName: branchMap.get(branchId) ?? 'NA',
+            return {
+              id: r.ID ?? r.id,
+              branchId,
+              branchName: branchMap.get(branchId) ?? 'NA',
 
-            branchCoordinatorId: bcId,
-            branchCoordinatorName: bcId ? empMap.get(bcId) ?? 'NA' : 'NA',
-            branchCoordinatorEmail:
-              r.BranchCoordinatorEmail ?? r.BC_Email ?? 'NA',
+              branchCoordinatorId: bcId,
+              branchCoordinatorName: bcId ? empMap.get(bcId) ?? 'NA' : 'NA',
+              branchCoordinatorEmail:
+                r.BranchCoordinatorEmail ?? r.BC_Email ?? 'NA',
 
-            employeeId: empId,
-            employeeName: empMap.get(empId) ?? 'NA',
+              employeeId: empId,
+              employeeName: empMap.get(empId) ?? 'NA',
 
-            email: r.Email ?? r.email,
-            effectiveDate: this.asLocalDate(rawDate),
+              email: r.Email ?? r.email,
+              effectiveDate: this.asLocalDate(rawDate),
 
-            // ✅ keep numeric for form/edit
-            statusFlag,
+              // ✅ keep numeric for form/edit
+              statusFlag,
 
-            // ✅ display in table
-            statusText: statusFlag === 1 ? 'Active' : 'Inactive',
-          };
-        });
-      })
-    )
-    .subscribe((rows) => (this.tableData = rows));
-}
-
+              // ✅ display in table
+              statusText: statusFlag === 1 ? 'Active' : 'Inactive',
+            };
+          });
+        })
+      )
+      .subscribe((rows) => (this.tableData = rows));
+  }
 
   // ✅ same as your code, just kept as-is (no behavior change)
   loadDropdowns() {
@@ -225,14 +228,19 @@ export class BranchGeneralEmployeeBinding implements OnInit {
 
       empField.options$ = this.service.getEmployees().pipe(
         map((res: any) => res?.data ?? res ?? []),
+
         tap((emps: any[]) => {
           this.empMap.clear();
+
           (emps || []).forEach((e: any) => {
             const id = +(e.EMP_ID ?? e.EmpId ?? e.ID);
             const name = (e.APP_Name ?? e.Name ?? '').trim();
-            if (!Number.isNaN(id)) this.empMap.set(id, name);
+            if (!Number.isNaN(id)) {
+              this.empMap.set(id, name);
+            }
           });
         }),
+
         map(
           (emps: any[]) =>
             (emps || [])
@@ -241,19 +249,35 @@ export class BranchGeneralEmployeeBinding implements OnInit {
                 if (Number.isNaN(id)) return null;
 
                 const name = (e.APP_Name ?? e.Name ?? '').trim();
-                const cnic = (e.APP_NIC ?? e.CNIC ?? e.NIC ?? '').trim();
+                const department = (
+                  e.DepartmentName ??
+                  e.DEP_DESC ??
+                  ''
+                ).trim();
+                const designation = (
+                  e.DesignationName ??
+                  e.DES_DESC ??
+                  ''
+                ).trim();
 
-                const searchText = `${id} ${name} ${cnic}`.trim();
+                const searchText =
+                  `${id} ${name} ${department} ${designation}`.trim();
 
                 return {
                   label: name,
                   value: id,
                   searchText,
-                  meta: { id, name, cnic },
+                  meta: {
+                    id,
+                    name,
+                    department,
+                    designation,
+                  },
                 };
               })
               .filter(Boolean) as any[]
         ),
+
         finalize(() => (empField.loading = false)),
         shareReplay(1)
       ) as any;
@@ -286,18 +310,20 @@ export class BranchGeneralEmployeeBinding implements OnInit {
 
   openAddForm() {
     this.selectedId = null;
-    this.data = { statusFlag: 1 };
+    this.data = {
+      statusFlag: 1,
+      effectiveDate: null, // ✅ keep Date|null in form state
+    };
     this.setMode('create');
     this.showModal = true;
   }
 
-  // ✅ Updated: normalize effectiveDate on edit to avoid datepicker weirdness
   edit(row: any) {
     this.selectedId = row.id;
 
     this.data = {
       ...row,
-      effectiveDate: this.asLocalDate(row.effectiveDate),
+      effectiveDate: this.asLocalDate(row.effectiveDate), // ✅ always Date|null
       statusFlag:
         row.statusFlag === true
           ? 1
@@ -314,29 +340,43 @@ export class BranchGeneralEmployeeBinding implements OnInit {
     this.showModal = false;
   }
 
-  // ✅ Updated: SINGLE assignment, no formValue spreading, no double this.data updates
-  // ✅ Fixes: email typing lag after selecting branch/employee
   onFormChange(ev: any) {
-    if (!ev) return;
+    if (!ev || !ev.key) return;
 
     const key = ev.key;
     const value = ev.value;
 
-    // We ONLY react to select-type changes (branchId / employeeId / statusFlag etc.)
-    if (!key) return;
+    // ✅ 1) Effective Date: always Date | null
+    if (key === 'effectiveDate') {
+      const nextDate = value ? this.asLocalDate(value) : null;
 
-    // Build nextData once
-    const nextData = { ...this.data, [key]: value };
+      // same date -> no rerender spam
+      const cur = this.data?.effectiveDate;
+      if (cur instanceof Date && nextDate instanceof Date) {
+        if (cur.getTime() === nextDate.getTime()) return;
+      } else if (!cur && !nextDate) {
+        return;
+      }
 
-    // If branch selected -> auto fill readonly fields ONCE
+      this.data = { ...this.data, effectiveDate: nextDate };
+      return;
+    }
+
+    // ✅ 2) Email typing: keep it ultra-light (prevents lag)
+    if (key === 'email') {
+      const nextEmail = (value ?? '').toString();
+      if (this.data?.email === nextEmail) return;
+      this.data = { ...this.data, email: nextEmail };
+      return;
+    }
+
+    // ✅ 3) Branch: only when branchId changes -> auto fill once
     if (key === 'branchId') {
       const branchId = +value;
 
-      // guard: same branch -> don't spam updates
-      if (+this.data?.branchId === branchId) {
-        this.data = nextData;
-        return;
-      }
+      if (+this.data?.branchId === branchId) return;
+
+      const nextData: any = { ...this.data, branchId };
 
       const bd =
         this.branchDetailsMap.get(branchId) ||
@@ -368,28 +408,52 @@ export class BranchGeneralEmployeeBinding implements OnInit {
         nextData.branchDesc = bd.desc ?? '';
         nextData.branchShortCode = bd.shortCode ?? '';
 
-        // branchCoordinatorId optional: set only if empty
+        // ✅ only set BC if empty
         if (nextData.branchCoordinatorId == null) {
           nextData.branchCoordinatorId = bd.bcId ?? null;
         }
       }
+
+      this.data = nextData;
+      return;
     }
 
-    // ✅ one assignment only
-    this.data = nextData;
+    // ✅ 4) Employee: minimal update
+    if (key === 'employeeId') {
+      const employeeId = +value;
+      if (+this.data?.employeeId === employeeId) return;
+      this.data = { ...this.data, employeeId };
+      return;
+    }
+
+    // ✅ 5) Status flag: normalize to 0/1
+    if (key === 'statusFlag') {
+      const statusFlag =
+        value === true ? 1 : value === false ? 0 : +(value ?? 1);
+
+      if (+this.data?.statusFlag === statusFlag) return;
+      this.data = { ...this.data, statusFlag };
+      return;
+    }
+
+    // ✅ 6) Default: light patch
+    if (this.data?.[key] === value) return;
+    this.data = { ...this.data, [key]: value };
   }
 
-  // ✅ Updated: effectiveDate send as ISO string (backend-friendly)
   onSubmit(payload: any) {
     const cleanPayload = {
       empId: payload.employeeId,
       branchId: payload.branchId,
       branchCoordinatorId: payload.branchCoordinatorId ?? null,
       email: (payload.email || '').trim(),
+
+      // ✅ convert Date -> ISO only here
       effectiveDate:
         payload.effectiveDate instanceof Date
           ? payload.effectiveDate.toISOString()
           : payload.effectiveDate,
+
       status: payload.statusFlag ?? 1,
     };
 
@@ -413,7 +477,6 @@ export class BranchGeneralEmployeeBinding implements OnInit {
           this.msg.error(message);
           return;
         }
-
         this.msg.error(message);
       },
     });

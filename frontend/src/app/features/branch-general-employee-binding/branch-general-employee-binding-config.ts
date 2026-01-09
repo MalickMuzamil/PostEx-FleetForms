@@ -18,7 +18,8 @@ export const BRANCH_GENERAL_EMP_BINDING_FORM: FormConfig = {
       optionColumns: [
         { key: 'id', title: 'ID', width: '70px' },
         { key: 'name', title: 'Name' },
-        { key: 'cnic', title: 'CNIC' },
+        { key: 'department', title: 'Department' },
+        { key: 'designation', title: 'Designation' },
       ],
     },
 

@@ -3,9 +3,18 @@
         <input #gsInput class="form-control form-control-sm" style="max-width: 320px" [ngModel]="globalTerm"
             (input)="onGlobalInput($event)" [attr.maxlength]="gs.rules?.maxLength ?? null"
             [placeholder]="gs.placeholder || 'Search...'" />
-        <button class="btn btn-sm btn-outline-secondary" (click)="resetFilters()">
-            Reset
+        <!-- <button class="btn btn-sm btn-light border d-flex align-items-center gap-1" title="Reset search and filters"
+            (click)="resetFilters()">
+            <i class="fa fa-rotate-left text-secondary"></i>
+            <span class="fw-semibold">Reset</span>
+        </button> -->
+
+        <button class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" title="Clear all filters"
+            (click)="resetFilters()">
+            <i class="fa fa-trash-can"></i>
+            Clear Filters
         </button>
+
     </div>
 
     <div class="d-flex flex-wrap gap-2 mb-2" *ngIf="hasFilters">

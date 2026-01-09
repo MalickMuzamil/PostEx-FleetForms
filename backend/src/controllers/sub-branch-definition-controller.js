@@ -14,7 +14,14 @@ class SubBranchDefinitionController {
     // ---------- LIST ALL ----------
     getAll = async (req, res, next) => {
         try {
-            const data = await subBranchDefinitionService.listSubBranches();
+
+            console.log("QUERY:", req.query); 
+            const branchId = req.query.branchId ? Number(req.query.branchId) : null;
+
+            const data = branchId
+                ? await subBranchDefinitionService.listSubBranchesByBranchId(branchId)
+                : await subBranchDefinitionService.listSubBranches();
+
             res.json({ data });
         } catch (err) {
             next(err);

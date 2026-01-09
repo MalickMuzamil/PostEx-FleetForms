@@ -14,6 +14,7 @@ import { DeliveryRouteBindingService } from '../../../core/services/delivery-rou
 import { AppValidators } from '../../../core/services/validators';
 import { DeliveryRouteDefinitionService } from '../../../core/services/delivery-route-definition-service';
 import { RouterLink } from '@angular/router';
+import { trigger, transition, style, animate } from '@angular/animations';
 
 interface BulkRow {
   rowNo: number;
@@ -51,10 +52,22 @@ interface BulkRow {
     NzDatePickerModule,
     NzModalModule,
     NzSpinModule,
-    RouterLink
+    RouterLink,
   ],
   templateUrl: './delivery-route-bulk-preview-component.html',
   styleUrl: './delivery-route-bulk-preview-component.css',
+
+  animations: [
+    trigger('rowAnim', [
+      transition(':leave', [
+        style({ opacity: 1, height: '*', transform: 'translateX(0)' }),
+        animate(
+          '180ms ease-in',
+          style({ opacity: 0, height: 0, transform: 'translateX(12px)' })
+        ),
+      ]),
+    ]),
+  ],
 })
 export class DeliveryRouteBulkPreviewComponent implements OnInit {
   file!: File;
@@ -65,6 +78,11 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   private readonly BRANCH_MISMATCH = 'Branch does not belong to selected Route';
   private readonly INVALID_FLAG = 'RequiredReportsFlag must be 0 or 1';
   private readonly INVALID_NUM = 'Invalid numeric value';
+  private readonly SUB_BRANCH_REQUIRED = 'Sub Branch is required';
+  private readonly DESC_REQUIRED = 'Correct Description is required';
+  private readonly DATE_REQUIRED = 'Effective Date is required'; // optional (if you want)
+  private readonly INVALID_DATE = 'Invalid Date'; // optional (if you want)
+  private readonly PAST_DATE_ERR = 'Effective Date must be a future date';
 
   rows: BulkRow[] = [];
   checkAll = false;
@@ -80,7 +98,6 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
 
   isLoading = true;
   loadingText = 'Loading routes...';
-  private readonly PAST_DATE_ERR = 'Effective Date must be a future date';
 
   // server validation scheduling (to avoid loops/spam)
   private serverValidateTimer: any = null;
@@ -202,6 +219,11 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       this.BRANCH_MISMATCH,
       this.INVALID_FLAG,
       this.INVALID_NUM,
+      this.SUB_BRANCH_REQUIRED,
+      this.DESC_REQUIRED,
+      this.DATE_REQUIRED,
+      this.INVALID_DATE,
+      this.PAST_DATE_ERR,
     ].forEach((m) => this.removeErr(row, m));
   }
 
@@ -418,6 +440,10 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       if (r.DeliveryRouteID) routeMap.set(Number(r.DeliveryRouteID), r);
     });
 
+    // ✅ today reference (for future date rule)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     for (const row of this.rows) {
       this.clearManagedErrors(row);
 
@@ -425,6 +451,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       const branchId = Number(row.branchId) || 0;
       const subBranchId = Number(row.subBranchId) || 0;
 
+      // ---------------- NUMERIC CHECKS ----------------
       if (
         (row.deliveryRouteControl.value != null && !routeId) ||
         (row.branchId != null && !branchId) ||
@@ -434,6 +461,36 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
         row.checked = false;
       }
 
+      // ---------------- REQUIRED FIELD ERRORS ----------------
+      // ✅ Sub Branch required
+      if (!row.subBranchId) {
+        this.addErr(row, this.SUB_BRANCH_REQUIRED);
+        row.checked = false;
+      }
+
+      // ✅ Correct Description required
+      if (!row.correctDescId) {
+        this.addErr(row, this.DESC_REQUIRED);
+        row.checked = false;
+      }
+
+      // ✅ Effective Date required + must be future
+      const dt = row.effectiveDateControl?.value;
+      if (!dt) {
+        this.addErr(row, this.DATE_REQUIRED);
+        row.checked = false;
+      } else {
+        const selected = new Date(dt);
+        selected.setHours(0, 0, 0, 0);
+
+        // invalid control OR past/today
+        if (!row.effectiveDateControl.valid || selected <= today) {
+          this.addErr(row, this.PAST_DATE_ERR);
+          row.checked = false;
+        }
+      }
+
+      // ---------------- ROUTE VALIDATION ----------------
       if (!routeId) continue;
 
       const route = routeMap.get(routeId);
@@ -712,9 +769,8 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       }
 
       this.bulkSaving = false;
-      this.rows.forEach((r) => (r.checked = false));
-      this.checkAll = false;
       this.toast('success', 'Success', `Bulk saved (${selected.length})`);
+      this.removeRowsRef(selected);
     } catch (e: any) {
       this.bulkSaving = false;
       const { message } = this.parseBackendError(e);
@@ -760,6 +816,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
         row.checked = false;
         this.checkAll = false;
         this.toast('success', 'Saved', `Row ${row.rowNo} saved successfully`);
+        this.removeRowRef(row);
       },
       error: async (e) => {
         if (this.isConfirmOverwriteError(e)) {
@@ -878,13 +935,14 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
 
   onRowDescChange(row: BulkRow) {
     row.checked = false;
+    this.applyLocalValidationsSafe();
     this.updateHasValidRow();
   }
 
   onRowDateChange(row: BulkRow) {
     row.checked = false;
+    this.applyLocalValidationsSafe();
 
-    // ❌ invalid date → STOP HERE
     if (!row.effectiveDateControl.valid) {
       this.updateHasValidRow();
       return;
@@ -896,6 +954,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
 
   onRowFlagChange(row: BulkRow) {
     row.checked = false;
+    this.applyLocalValidationsSafe();
     this.updateHasValidRow();
     this.scheduleServerValidation();
   }
@@ -911,10 +970,27 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     }, 100);
   }
 
-  private formatYMD(dateIso: string | null | undefined): string | null {
-    if (!dateIso) return null;
-    const d = new Date(dateIso);
-    if (isNaN(d.getTime())) return null;
-    return d.toISOString().split('T')[0];
+  private removeRowRef(row: BulkRow) {
+    const idx = this.rows.indexOf(row);
+    if (idx === -1) return;
+
+    this.rows.splice(idx, 1);
+    this.rows.forEach((r, i) => (r.rowNo = i + 1));
+
+    this.checkAll =
+      this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+    this.validateDuplicateRouteIds();
+    this.updateHasValidRow();
+  }
+
+  private removeRowsRef(rowsToRemove: BulkRow[]) {
+    const set = new Set(rowsToRemove);
+    this.rows = this.rows.filter((r) => !set.has(r));
+    this.rows.forEach((r, i) => (r.rowNo = i + 1));
+
+    this.checkAll =
+      this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+    this.validateDuplicateRouteIds();
+    this.updateHasValidRow();
   }
 }
