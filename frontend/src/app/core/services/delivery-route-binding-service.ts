@@ -30,25 +30,23 @@ export class DeliveryRouteBindingService {
     return this.api.get<any>(`${this.baseUrl}/delivery-routes`);
   }
 
-  // general branches (independent)
+  // (optional) general endpoints if you still need them elsewhere
   getBranches(): Observable<any> {
     return this.api.get<any>('/branches');
   }
 
-  // general sub-branches (by branch only)
   getSubBranchesByBranch(branchId: number): Observable<any> {
     return this.api.get<any>(`/branches/${branchId}/sub-branches`);
   }
 
-  // ----------------- DEPENDENT DROPDOWNS -----------------
-  // Route -> Branches
+  // ----------------- DEPENDENT DROPDOWNS (SINGLE) -----------------
+  // Keep old ones if used anywhere else in app
   getBranchesByRoute(deliveryRouteId: number): Observable<any> {
     return this.api.get<any>(
       `${this.baseUrl}/route/${deliveryRouteId}/branches`
     );
   }
 
-  // Route + Branch -> SubBranches
   getSubBranchesByRouteAndBranch(
     deliveryRouteId: number,
     branchId: number
@@ -56,5 +54,29 @@ export class DeliveryRouteBindingService {
     return this.api.get<any>(
       `${this.baseUrl}/route/${deliveryRouteId}/branch/${branchId}/sub-branches`
     );
+  }
+
+  // ----------------- DEPENDENT DROPDOWNS (BULK) ✅ NEW -----------------
+  // POST /delivery-route-bindings/routes/branches
+  // body: { routeIds: number[] }
+  getBranchesByRoutes(routeIds: number[]): Observable<any> {
+    return this.api.post<any>(`${this.baseUrl}/routes/branches`, { routeIds });
+  }
+
+  // POST /delivery-route-bindings/routes/branches/sub-branches
+  // body: { pairs: { routeId:number, branchId:number }[] }
+  getSubBranchesByRoutesAndBranches(
+    pairs: Array<{ routeId: number; branchId: number }>
+  ): Observable<any> {
+    return this.api.post<any>(`${this.baseUrl}/routes/branches/sub-branches`, {
+      pairs,
+    });
+  }
+
+  // ----------------- BULK VALIDATION (optional) -----------------
+  // If your backend already exposes validateBulk via same controller/service,
+  // you can call it like this. (Adjust path if you add a dedicated route.)
+  validateBulk(payloads: any[]): Observable<any> {
+    return this.api.post<any>(`${this.baseUrl}/validate-bulk`, { payloads });
   }
 }
