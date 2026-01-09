@@ -9,6 +9,7 @@ import { Table } from '../../ui/table/table';
 import { Modal } from '../../ui/modal/modal';
 import { finalize, map, shareReplay, tap } from 'rxjs';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
+import { NzModalService } from 'ng-zorro-antd/modal';
 
 @Component({
   selector: 'app-branch-dashboard-binding-component',
@@ -30,7 +31,8 @@ export class BranchDashboardBindingComponent {
 
   constructor(
     private service: BranchDashboardBindingService,
-    private notification: NzNotificationService
+    private notification: NzNotificationService,
+    private modal: NzModalService
   ) {}
 
   ngOnInit() {
@@ -206,22 +208,30 @@ export class BranchDashboardBindingComponent {
   }
 
   delete(row: any) {
-    if (confirm('Delete this record?')) {
-      this.service.delete(row.id).subscribe({
-        next: () => {
-          this.notification.success(
-            'Deleted',
-            'Branch Dashboard Binding deleted successfully.'
-          );
-          this.loadTable();
-        },
-        error: (err) => {
-          this.notification.error(
-            'Error',
-            err?.error?.message || 'Delete failed.'
-          );
-        },
-      });
-    }
+    this.modal.confirm({
+      nzTitle: 'Delete Confirmation',
+      nzContent: 'Are you sure you want to delete this record?',
+      nzOkText: 'Yes, Delete',
+      nzOkDanger: true,
+      nzCancelText: 'Cancel',
+
+      nzOnOk: () => {
+        this.service.delete(row.id).subscribe({
+          next: () => {
+            this.notification.success(
+              'Deleted',
+              'Branch Dashboard Binding deleted successfully.'
+            );
+            this.loadTable();
+          },
+          error: (err) => {
+            this.notification.error(
+              'Error',
+              err?.error?.message || 'Delete failed.'
+            );
+          },
+        });
+      },
+    });
   }
 }

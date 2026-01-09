@@ -9,6 +9,7 @@ import { Table } from '../../ui/table/table';
 import { Modal } from '../../ui/modal/modal';
 import { forkJoin, map, tap, finalize, shareReplay } from 'rxjs';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 
 @Component({
   selector: 'app-branch-general-employee-binding',
@@ -32,7 +33,8 @@ export class BranchGeneralEmployeeBinding implements OnInit {
 
   constructor(
     private service: BranchGeneralEmployeeService,
-    private msg: NzMessageService
+    private msg: NzMessageService,
+    private modal: NzModalService
   ) {}
 
   // ✅ compact: converts "YYYY-MM-DD" into local Date (no timezone issues)
@@ -497,16 +499,24 @@ export class BranchGeneralEmployeeBinding implements OnInit {
   }
 
   delete(row: any) {
-    if (confirm('Delete this record?')) {
-      this.service.delete(row.id).subscribe({
-        next: () => {
-          this.msg.success('Deleted successfully');
-          this.loadTable();
-        },
-        error: (err) => {
-          this.msg.error(err?.error?.message || 'Delete failed');
-        },
-      });
-    }
+    this.modal.confirm({
+      nzTitle: 'Delete Confirmation',
+      nzContent: 'Are you sure you want to delete this record?',
+      nzOkText: 'Yes, Delete',
+      nzOkDanger: true,
+      nzCancelText: 'Cancel',
+
+      nzOnOk: () => {
+        this.service.delete(row.id).subscribe({
+          next: () => {
+            this.msg.success('Deleted successfully');
+            this.loadTable();
+          },
+          error: (err) => {
+            this.msg.error(err?.error?.message || 'Delete failed');
+          },
+        });
+      },
+    });
   }
 }
