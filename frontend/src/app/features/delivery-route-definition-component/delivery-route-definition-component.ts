@@ -8,6 +8,7 @@ import { DeliveryRouteDefinitionService } from '../../core/services/delivery-rou
 import { Table } from '../../ui/table/table';
 import { Modal } from '../../ui/modal/modal';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
+import { NzModalService } from 'ng-zorro-antd/modal';
 
 @Component({
   selector: 'app-delivery-route-definition',
@@ -25,7 +26,8 @@ export class DeliveryRouteDefinitionComponent implements OnInit {
 
   constructor(
     private service: DeliveryRouteDefinitionService,
-    private notification: NzNotificationService
+    private notification: NzNotificationService,
+    private modal: NzModalService
   ) {}
 
   ngOnInit() {
@@ -93,14 +95,24 @@ export class DeliveryRouteDefinitionComponent implements OnInit {
   }
 
   delete(row: any) {
-    if (!confirm('Delete this record?')) return;
+    this.modal.confirm({
+      nzTitle: 'Delete Confirmation',
+      nzContent: 'Are you sure you want to delete this record?',
+      nzOkText: 'Yes, Delete',
+      nzOkDanger: true,
+      nzCancelText: 'Cancel',
 
-    this.service.delete(row.id).subscribe({
-      next: () => {
-        this.notification.success('Deleted', 'Record deleted');
-        this.loadTable();
+      nzOnOk: () => {
+        this.service.delete(row.id).subscribe({
+          next: () => {
+            this.notification.success('Deleted', 'Record deleted');
+            this.loadTable();
+          },
+          error: () => {
+            this.notification.error('Error', 'Something went wrong');
+          },
+        });
       },
-      error: () => this.notification.error('Error', 'Something went wrong'),
     });
   }
 }

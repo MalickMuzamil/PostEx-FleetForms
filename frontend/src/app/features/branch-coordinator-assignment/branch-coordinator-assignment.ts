@@ -9,6 +9,7 @@ import { Table } from '../../ui/table/table';
 import { finalize, map, tap, shareReplay, forkJoin } from 'rxjs';
 import { Modal } from '../../ui/modal/modal';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
+import { NzModalService } from 'ng-zorro-antd/modal';
 
 type BranchDetails = {
   id: number;
@@ -56,7 +57,8 @@ export class BranchCoordinatorAssignment implements OnInit {
 
   constructor(
     private service: BranchCoordinatorService,
-    private notification: NzNotificationService
+    private notification: NzNotificationService,
+    private modal: NzModalService
   ) {}
 
   ngOnInit() {
@@ -385,19 +387,30 @@ export class BranchCoordinatorAssignment implements OnInit {
   }
 
   delete(row: any) {
-    if (confirm('Delete this record?')) {
-      this.service.delete(row.id).subscribe({
-        next: () => {
-          this.loadTable();
-          this.notification.success('Deleted', 'Record deleted successfully.');
-        },
-        error: (err) => {
-          this.notification.error(
-            'Error',
-            err?.error?.message ?? 'Delete failed.'
-          );
-        },
-      });
-    }
+    this.modal.confirm({
+      nzTitle: 'Delete Confirmation',
+      nzContent: `Are you sure you want to delete this record?`,
+      nzOkText: 'Yes, Delete',
+      nzOkDanger: true,
+      nzCancelText: 'Cancel',
+
+      nzOnOk: () => {
+        this.service.delete(row.id).subscribe({
+          next: () => {
+            this.loadTable();
+            this.notification.success(
+              'Deleted',
+              'Record deleted successfully.'
+            );
+          },
+          error: (err) => {
+            this.notification.error(
+              'Error',
+              err?.error?.message ?? 'Delete failed.'
+            );
+          },
+        });
+      },
+    });
   }
 }

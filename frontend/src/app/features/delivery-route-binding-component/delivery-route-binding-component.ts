@@ -592,7 +592,6 @@ export class DeliveryRouteBindingComponent implements OnInit {
     };
 
     // ✅ YOUR REQUIREMENT:
-    // jab tak confirm na ho update nahi hoga (for Active + date change)
     if (isActive && dateChanged) {
       this.modal.confirm({
         nzTitle: 'Confirmation Required',
@@ -691,14 +690,33 @@ export class DeliveryRouteBindingComponent implements OnInit {
 
   // ================= ACTIONS =================
   delete(row: any) {
-    if (!confirm('Delete this binding?')) return;
-    this.bindingService.delete(row.id).subscribe(() => this.loadTable());
+    this.modal.confirm({
+      nzTitle: 'Delete Confirmation',
+      nzContent: 'Are you sure you want to delete this binding?',
+      nzOkText: 'Yes, Delete',
+      nzOkDanger: true,
+      nzCancelText: 'Cancel',
+
+      nzOnOk: () => {
+        this.bindingService.delete(row.id).subscribe({
+          next: () => {
+            this.notification.success(
+              'Deleted',
+              'Binding deleted successfully'
+            );
+            this.loadTable();
+          },
+          error: () => {
+            this.notification.error('Error', 'Delete failed');
+          },
+        });
+      },
+    });
   }
 
   private parseBackendError(err: any) {
     const status = err?.status;
 
-    // sometimes backend sends string
     const body =
       typeof err?.error === 'string' ? { message: err.error } : err?.error;
 
