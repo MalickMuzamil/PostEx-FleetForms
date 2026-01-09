@@ -19,6 +19,20 @@ router.get(
         deliveryRouteBindingController.subBranchesByRouteAndBranch(req, res)
 );
 
+// ✅ NEW (BULK) - branches for many routes
+router.post("/routes/branches", (req, res) =>
+    deliveryRouteBindingController.branchesByRoutes(req, res)
+);
+
+// ✅ NEW (BULK) - sub-branches for many (route,branch) pairs
+router.post("/routes/branches/sub-branches", (req, res) =>
+    deliveryRouteBindingController.subBranchesByRoutesAndBranches(req, res)
+);
+
+router.post("/validate-bulk", (req, res) =>
+  deliveryRouteBindingController.validateBulk(req, res)
+);
+
 router.post("/", (req, res) =>
     deliveryRouteBindingController.create(req, res)
 );

@@ -230,6 +230,65 @@ class DeliveryRouteBindingController {
             });
         }
     }
+
+
+    async branchesByRoutes(req, res) {
+        try {
+            const routeIds = Array.isArray(req.body?.routeIds) ? req.body.routeIds : [];
+            const rows = await deliveryRouteBindingService.getBranchesByRoutes(routeIds);
+
+            // group by routeId for easy frontend use
+            const out = {};
+            for (const r of rows) {
+                const rid = Number(r.DeliveryRouteID);
+                if (!out[rid]) out[rid] = [];
+                out[rid].push({
+                    BranchID: r.BranchID,
+                    BranchName: r.BranchName,
+                    BranchDesc: r.BranchDesc,
+                });
+            }
+
+            return res.json({ data: out });
+        } catch (e) {
+            console.error(e);
+            return res.status(500).json({ message: "Failed to load branches (bulk)" });
+        }
+    }
+
+    async subBranchesByRoutesAndBranches(req, res) {
+        try {
+            const pairs = Array.isArray(req.body?.pairs) ? req.body.pairs : [];
+            const rows = await deliveryRouteBindingService.getSubBranchesByRouteBranchPairs(pairs);
+
+            // group by "routeId|branchId"
+            const out = {};
+            for (const r of rows) {
+                const key = `${Number(r.DeliveryRouteID)}|${Number(r.BranchID)}`;
+                if (!out[key]) out[key] = [];
+                out[key].push({
+                    SubBranchID: r.SubBranchID,
+                    SubBranchName: r.SubBranchName,
+                    SubBranchDesc: r.SubBranchDesc,
+                });
+            }
+
+            return res.json({ data: out });
+        } catch (e) {
+            console.error(e);
+            return res.status(500).json({ message: "Failed to load sub branches (bulk)" });
+        }
+    }
+
+    async validateBulk(req, res) {
+        try {
+            const payloads = Array.isArray(req.body?.payloads) ? req.body.payloads : [];
+            const data = await deliveryRouteBindingService.validateBulkBindings(payloads);
+            return res.status(200).json({ data });
+        } catch (e) {
+            return res.status(500).json({ message: "Failed to validate bulk", error: e?.message });
+        }
+    }
 }
 
 export const deliveryRouteBindingController =

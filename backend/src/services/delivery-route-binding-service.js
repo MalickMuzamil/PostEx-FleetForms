@@ -978,6 +978,100 @@ class DeliveryRouteBindingService {
 
     return result.recordset?.[0] || null;
   }
+
+
+  async getBranchesByRoutes(routeIds = []) {
+    const ids = [...new Set((routeIds || []).map(Number).filter((x) => x > 0))];
+    if (!ids.length) return [];
+
+    const pool = await getPool();
+    const req = pool.request();
+
+    // build VALUES list safely
+    const values = ids.map((_, i) => `(@rid${i})`).join(",");
+    ids.forEach((id, i) => req.input(`rid${i}`, sql.Int, id));
+
+    const result = await req.query(`
+    SET NOCOUNT ON;
+
+    IF OBJECT_ID('tempdb..#RouteIds') IS NOT NULL DROP TABLE #RouteIds;
+    CREATE TABLE #RouteIds (RouteID INT NOT NULL PRIMARY KEY);
+
+    INSERT INTO #RouteIds(RouteID)
+    VALUES ${values};
+
+    SELECT
+      r.RouteID AS DeliveryRouteID,
+      br.BranchID,
+      br.BranchName,
+      br.BranchDesc
+    FROM #RouteIds ids
+    INNER JOIN GoGreen.dbo.DeliveryRoutes r
+      ON r.RouteID = ids.RouteID
+    INNER JOIN HRM.HR.Branches br
+      ON br.BranchID = r.BranchID
+    ORDER BY r.RouteID, br.BranchName;
+  `);
+
+    return result.recordset || [];
+  }
+
+
+  // ----------------- BULK: (ROUTE, BRANCH) -> SUBBRANCHES -----------------
+  async getSubBranchesByRouteBranchPairs(pairs = []) {
+    const clean = (pairs || [])
+      .map((p) => ({ routeId: Number(p?.routeId), branchId: Number(p?.branchId) }))
+      .filter((p) => p.routeId > 0 && p.branchId > 0);
+
+    // unique pairs
+    const seen = new Set();
+    const uniq = [];
+    for (const p of clean) {
+      const k = `${p.routeId}|${p.branchId}`;
+      if (!seen.has(k)) { seen.add(k); uniq.push(p); }
+    }
+    if (!uniq.length) return [];
+
+    const pool = await getPool();
+    const req = pool.request();
+
+    const values = uniq.map((_, i) => `(@r${i}, @b${i})`).join(",");
+    uniq.forEach((p, i) => {
+      req.input(`r${i}`, sql.Int, p.routeId);
+      req.input(`b${i}`, sql.Int, p.branchId);
+    });
+
+    const result = await req.query(`
+    SET NOCOUNT ON;
+
+    IF OBJECT_ID('tempdb..#Pairs') IS NOT NULL DROP TABLE #Pairs;
+    CREATE TABLE #Pairs (
+      RouteID  INT NOT NULL,
+      BranchID INT NOT NULL,
+      PRIMARY KEY (RouteID, BranchID)
+    );
+
+    INSERT INTO #Pairs(RouteID, BranchID)
+    VALUES ${values};
+
+    SELECT
+      p.RouteID  AS DeliveryRouteID,
+      p.BranchID AS BranchID,
+      sb.Sub_Branch_ID          AS SubBranchID,
+      sb.Sub_Branch_Name        AS SubBranchName,
+      sb.Sub_Branch_Description AS SubBranchDesc
+    FROM #Pairs p
+    INNER JOIN GoGreen.dbo.DeliveryRoutes r
+      ON r.RouteID = p.RouteID
+     AND r.BranchID = p.BranchID
+    INNER JOIN GoGreen.OPS.Sub_Branch_Definition sb
+      ON sb.BranchID = p.BranchID
+    ORDER BY p.RouteID, p.BranchID, sb.Sub_Branch_Name;
+  `);
+
+    return result.recordset || [];
+  }
+
 }
 
 export const deliveryRouteBindingService = new DeliveryRouteBindingService();
