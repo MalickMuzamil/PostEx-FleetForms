@@ -38,7 +38,7 @@
                         <tbody>
                             <ng-container *ngFor="let row of rows; let i = index; trackBy: trackByRow">
                                 <!-- MAIN ROW -->
-                                <tr [class.table-warning]="row.checked"
+                                <tr [@rowAnim] [class.table-warning]="row.checked"
                                     [class.table-danger]="(row.errors?.length ?? 0) > 0">
                                     <!-- Checkbox -->
                                     <td>
@@ -78,7 +78,7 @@
                                     <td>
                                         <select class="form-select form-select-sm" [(ngModel)]="row.subBranchId"
                                             [disabled]="isLoading || !row.branchId"
-                                            (ngModelChange)="updateHasValidRow()">
+                                            (ngModelChange)="onRowSubBranchChange(row)">
                                             <option [ngValue]="null">Select Sub Branch</option>
                                             <option *ngFor="let sb of row.subBranches" [ngValue]="sb.SubBranchID">
                                                 {{ sb.SubBranchName }}
@@ -86,10 +86,10 @@
                                         </select>
                                     </td>
 
-                                    <!-- ✅ Correct Description Dropdown -->
+                                    <!-- Correct Description -->
                                     <td>
                                         <select class="form-select form-select-sm" [(ngModel)]="row.correctDescId"
-                                            [disabled]="isLoading" (ngModelChange)="updateHasValidRow()">
+                                            [disabled]="isLoading" (ngModelChange)="onRowDescChange(row)">
                                             <option [ngValue]="null">Select Description</option>
                                             <option *ngFor="let d of correctDescriptions" [ngValue]="d.id">
                                                 {{ d.text }}
@@ -102,7 +102,7 @@
                                         <nz-date-picker nzFormat="yyyy-MM-dd" nzSize="small"
                                             [formControl]="row.effectiveDateControl" [nzDisabledDate]="disablePastDates"
                                             [nzDisabled]="isLoading"
-                                            (ngModelChange)="updateHasValidRow()"></nz-date-picker>
+                                            (ngModelChange)="onRowDateChange(row)"></nz-date-picker>
 
                                         <div class="text-danger small mt-1"
                                             *ngIf="row.effectiveDateControl.invalid && row.effectiveDateControl.touched">
@@ -113,7 +113,7 @@
                                     <!-- Required Reports -->
                                     <td>
                                         <select class="form-select form-select-sm" [(ngModel)]="row.requiredReportsFlag"
-                                            [disabled]="isLoading" (ngModelChange)="updateHasValidRow()">
+                                            [disabled]="isLoading" (ngModelChange)="onRowFlagChange(row)">
                                             <option [ngValue]="1">Active</option>
                                             <option [ngValue]="0">Inactive</option>
                                         </select>
@@ -121,7 +121,6 @@
 
                                     <!-- Action -->
                                     <td>
-                                        <!-- ✅ Save enabled when row is valid (no checkbox needed) -->
                                         <button class="btn btn-outline-primary btn-sm w-100"
                                             [disabled]="isLoading || !row.isValid || row.saving" (click)="saveRow(row)">
                                             <span *ngIf="row.saving"
@@ -137,8 +136,7 @@
                                 </tr>
 
                                 <!-- ERROR ROW -->
-                                <tr *ngIf="row.errors?.length">
-                                    <!-- ✅ colspan updated (8 -> 9) because new column added -->
+                                <tr *ngIf="row.errors?.length" [@rowAnim]>
                                     <td colspan="9" class="py-2">
                                         <div class="text-danger small">
                                             <div *ngFor="let err of row.errors">• {{ err }}</div>
@@ -147,6 +145,8 @@
                                 </tr>
                             </ng-container>
                         </tbody>
+
+
                     </table>
 
                     <!-- Bulk Proceed -->

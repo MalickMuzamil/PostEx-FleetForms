@@ -5,6 +5,39 @@ import { getPool } from "../config/sql-config.js";
 const normalize = (v) => (v || "").trim().toUpperCase();
 
 class SubBranchDefinitionService {
+
+
+  async listSubBranchesByBranchId(branchId) {
+    const pool = await getPool();
+    const request = pool.request();
+    request.input("branchId", sql.Int, Number(branchId));
+
+    const result = await request.query(`
+    SELECT
+      s.Sub_Branch_ID          AS ID,
+      s.Sub_Branch_ID          AS SubBranchID,
+      s.BranchID               AS BranchID,
+      s.Sub_Branch_Name        AS SubBranchName,
+      s.Sub_Branch_Description AS SubBranchDesc,
+
+      s.EnteredOn              AS EnteredOn,
+      s.EnteredBy              AS EnteredBy,
+      s.EditedOn               AS EditedOn,
+      s.EditedBy               AS EditedBy,
+
+      br.BranchName            AS BranchName,
+      br.BranchDesc            AS BranchDesc
+    FROM GoGreen.OPS.Sub_Branch_Definition s
+    LEFT JOIN HRM.HR.Branches br
+      ON br.BranchID = s.BranchID
+    WHERE s.BranchID = @branchId
+    ORDER BY s.Sub_Branch_ID DESC
+  `);
+
+    return result.recordset;
+  }
+
+
   // ---------- BRANCHES (Dropdown) ----------
   async listBranches() {
     const pool = await getPool();
