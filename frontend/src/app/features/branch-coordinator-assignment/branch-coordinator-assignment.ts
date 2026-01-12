@@ -79,7 +79,7 @@ export class BranchCoordinatorAssignment implements OnInit {
     );
 
     // this.loadBranchesAndEmployeesForForm();
-    this.warmupDropdownCaches();
+    // this.warmupDropdownCaches();
     this.loadTable();
   }
 
@@ -313,27 +313,33 @@ export class BranchCoordinatorAssignment implements OnInit {
   openAddForm() {
     this.selectedId = null;
     this.data = {};
-    this.formConfig.mode = 'create';
     this.showModal = true;
+
+    setTimeout(() => {
+      // ✅ reset config first
+      this.formConfig = {
+        ...BRANCH_COORDINATOR_ASSIGNMENT_FORM,
+        mode: 'create',
+      };
+
+      // ✅ then re-bind dropdowns (this adds options$ back)
+      this.warmupDropdownCaches();
+    }, 0);
   }
 
   edit(row: any) {
     this.selectedId = row.id;
-
-    const bd = this.branchDetailsMap.get(+row.branchId);
-
-    this.data = {
-      ...row,
-      effectiveDate: this.asLocalDate(row.effectiveDate),
-      branchName: bd?.name ?? row.branchName ?? '',
-      branchDesc: bd?.desc ?? '',
-      branchEmail: bd?.email ?? '',
-      branchPhone: bd?.phone ?? '',
-      branchAddress: bd?.address ?? '',
-    };
-
-    this.formConfig.mode = 'update';
+    this.data = { ...row };
     this.showModal = true;
+
+    setTimeout(() => {
+      this.formConfig = {
+        ...BRANCH_COORDINATOR_ASSIGNMENT_FORM,
+        mode: 'update',
+      };
+
+      this.warmupDropdownCaches();
+    }, 0);
   }
 
   closeModal() {
@@ -411,87 +417,96 @@ export class BranchCoordinatorAssignment implements OnInit {
   }
 
   private warmupDropdownCaches() {
-    forkJoin({
-      branches: this.branches$,
-      employees: this.employees$,
-    }).subscribe(({ branches, employees }: any) => {
-      // ---- branches cache ----
-      this.branchDetailsMap.clear();
-      this.branchOptions = (branches || [])
-        .map((b: any) => {
-          const id = +(b.Branch_ID ?? b.BranchID ?? b.ID);
-          if (Number.isNaN(id)) return null;
+    const fields = this.formConfig.fields.map((f) => ({ ...f }));
 
-          const name = (b.Branch_Name ?? b.BranchName ?? b.Name ?? '').trim();
-          const desc = (b.BranchDesc ?? b.Branch_Desc ?? '').trim();
-          const email = (b.BEMAIL ?? b.BEmail ?? b.Email ?? '').trim();
-          const phone = (b.BPHONE ?? b.BPhone ?? b.Phone ?? '').trim();
-          const address = (b.BADDRESS ?? b.BAddress ?? b.Address ?? '').trim();
+    /* ================= BRANCH ================= */
+    const bIdx = fields.findIndex((f) => f.key === 'branchId');
+    if (bIdx !== -1) {
+      fields[bIdx] = {
+        ...fields[bIdx],
+        searchable: true,
+        options$: this.branches$.pipe(
+          map((branches: any[]) =>
+            (branches || []).map((b: any) => {
+              const id = +(b.Branch_ID ?? b.BranchID ?? b.ID);
 
-          this.branchDetailsMap.set(id, {
-            id,
-            name,
-            desc,
-            email,
-            phone,
-            address,
-          });
+              const name = (
+                b.Branch_Name ??
+                b.BranchName ??
+                b.Name ??
+                ''
+              ).trim();
+              const desc = (b.BranchDesc ?? b.Branch_Desc ?? '').trim();
+              const phone = (b.BPHONE ?? b.BPhone ?? '').trim();
+              const address = (b.BADDRESS ?? b.BAddress ?? '').trim();
 
-          return {
-            label: name,
-            value: id,
-            searchText: `${id} ${name} ${desc} ${phone} ${address}`.trim(),
-            meta: { id, name, desc, phone, address },
-          };
-        })
-        .filter(Boolean);
+              return {
+                value: id,
+                label: name,
+                searchText: `${id} ${name}`,
 
-      this.branchesLoaded = true;
-
-      // ---- employees cache ----
-      this.empMap.clear();
-      this.employeeOptions = (employees || [])
-        .map((e: any) => {
-          const id = +(e.EMP_ID ?? e.EmpId ?? e.ID);
-          if (Number.isNaN(id)) return null;
-
-          const name = (e.APP_Name ?? e.Name ?? '').trim();
-          const dept = (e.DepartmentName ?? e.DEP_DESC ?? '').trim();
-          const desig = (e.DesignationName ?? e.DES_DESC ?? '').trim();
-
-          this.empMap.set(id, name);
-
-          return {
-            label: name,
-            value: id,
-            searchText: `${id} ${name} ${dept} ${desig}`.trim(),
-            meta: { id, name, department: dept, designation: desig },
-          };
-        })
-        .filter(Boolean);
-
-      this.employeesLoaded = true;
-
-      // ✅ now bind options to form fields (instant)
-      this.bindDropdownOptionsToForm();
-    });
-  }
-
-  private bindDropdownOptionsToForm() {
-    const branchField = this.formConfig.fields.find(
-      (f) => f.key === 'branchId'
-    );
-    if (branchField) {
-      branchField.loading = false;
-      branchField.searchable = true;
-      branchField.options = this.branchOptions; // ✅ IMPORTANT: plain array
+                // ✅ META (exact keys as optionColumns)
+                meta: {
+                  id,
+                  name,
+                  desc,
+                  phone,
+                  address,
+                },
+              };
+            })
+          )
+        ),
+      };
     }
 
-    const empField = this.formConfig.fields.find((f) => f.key === 'employeeId');
-    if (empField) {
-      empField.loading = false;
-      empField.searchable = true;
-      empField.options = this.employeeOptions; // ✅ IMPORTANT: plain array
+    /* ================= EMPLOYEE ================= */
+    const eIdx = fields.findIndex((f) => f.key === 'employeeId');
+    if (eIdx !== -1) {
+      fields[eIdx] = {
+        ...fields[eIdx],
+        searchable: true,
+        options$: this.employees$.pipe(
+          map((employees: any[]) =>
+            (employees || []).map((e: any) => {
+              const id = +(e.EMP_ID ?? e.EmpId ?? e.ID);
+
+              const name = (e.APP_Name ?? e.Name ?? '').trim();
+
+              const department = (
+                e.DepartmentName ??
+                e.DEP_DESC ??
+                e.Department ??
+                ''
+              ).trim();
+
+              const designation = (
+                e.DesignationName ??
+                e.DES_DESC ??
+                e.Designation ??
+                ''
+              ).trim();
+
+              return {
+                value: id,
+                label: name,
+                searchText: `${id} ${name}`,
+
+                // ✅ META (exact keys as optionColumns)
+                meta: {
+                  id,
+                  name,
+                  department,
+                  designation,
+                },
+              };
+            })
+          )
+        ),
+      };
     }
+
+    // 🔑 single immutable update
+    this.formConfig = { ...this.formConfig, fields };
   }
 }

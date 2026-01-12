@@ -324,7 +324,6 @@ export class DeliveryRouteBindingComponent implements OnInit {
         }
 
         if (f.key === 'branchId') {
-          // ✅ IMPORTANT: edit mode = ONLY routeBranches (never all branches)
           const opts = this.isEditMode
             ? this.routeBranches ?? []
             : (this.branches ?? []).map((b: any) => ({
@@ -349,10 +348,15 @@ export class DeliveryRouteBindingComponent implements OnInit {
       }),
     };
 
+    // ✅ FIX: OnPush child ko update karne ke liye NEW reference do (no mutation)
     if (this.isEditMode && this.showModal) {
-      if (this.formConfig)
-        (this.formConfig as any).fields = this.editFormConfig.fields;
-      else this.formConfig = { ...this.editFormConfig };
+      this.formConfig = {
+        ...this.editFormConfig,
+        fields: [...this.editFormConfig.fields],
+      };
+
+      // optional: ensure data reference bhi fresh rahe
+      this.data = { ...this.data };
     }
   }
 

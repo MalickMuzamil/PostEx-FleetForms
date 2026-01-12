@@ -74,7 +74,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
       shareReplay(1)
     );
     // this.loadDropdowns();
-    this.warmupDropdownCaches();
+    // this.warmupDropdownCaches();
     this.loadTable();
   }
 
@@ -308,21 +308,32 @@ export class BranchGeneralEmployeeBinding implements OnInit {
   }
 
   // ================= MODES =================
-  private setMode(mode: 'create' | 'update') {
-    this.formConfig.mode = mode;
-
-    for (const f of this.formConfig.fields) {
+  private applyMode(cfg: any, mode: 'create' | 'update') {
+    const fields = cfg.fields.map((f: any) => {
       if (f.key === 'employeeId' || f.key === 'branchId') {
-        f.disabled = mode === 'update';
+        return { ...f, disabled: mode === 'update' };
       }
-    }
+      return { ...f };
+    });
+
+    return { ...cfg, mode, fields };
   }
 
   openAddForm() {
     this.selectedId = null;
     this.data = { statusFlag: 1, effectiveDate: null };
-    this.setMode('create');
     this.showModal = true;
+
+    setTimeout(() => {
+      // 1) reset + mode in one go
+      this.formConfig = this.applyMode(
+        { ...BRANCH_GENERAL_EMP_BINDING_FORM },
+        'create'
+      );
+
+      // 2) then bind dropdowns
+      this.warmupDropdownCaches();
+    }, 0);
   }
 
   edit(row: any) {
@@ -338,9 +349,16 @@ export class BranchGeneralEmployeeBinding implements OnInit {
           : +(row.statusFlag ?? 1),
     };
 
-    this.setMode('update');
-
     this.showModal = true;
+
+    setTimeout(() => {
+      this.formConfig = this.applyMode(
+        { ...BRANCH_GENERAL_EMP_BINDING_FORM },
+        'update'
+      );
+
+      this.warmupDropdownCaches();
+    }, 0);
   }
 
   closeModal() {
@@ -484,107 +502,172 @@ export class BranchGeneralEmployeeBinding implements OnInit {
   }
 
   private warmupDropdownCaches() {
-    forkJoin({
-      branches: this.branches$,
-      employees: this.employees$,
-    }).subscribe(({ branches, employees }: any) => {
-      // ---------- BRANCH CACHE + OPTIONS ----------
-      this.branchesCache = branches || [];
-      this.branchDetailsMap.clear();
+    const fields = this.formConfig.fields.map((f) => ({ ...f }));
 
-      this.branchOptions = (branches || [])
-        .map((b: any) => {
-          const id = +(b.BranchID ?? b.Branch_ID ?? b.ID);
-          if (Number.isNaN(id)) return null;
+    /* ================= BRANCH ================= */
+    const bIdx = fields.findIndex((f) => f.key === 'branchId');
+    if (bIdx !== -1) {
+      fields[bIdx] = {
+        ...fields[bIdx],
+        searchable: true,
+        // ❌ loading/finalize wala mutation remove
+        options$: this.branches$.pipe(
+          tap((branches: any[]) => {
+            this.branchesCache = branches || [];
+            this.branchDetailsMap.clear();
 
-          const name = (b.BranchName ?? b.Branch_Name ?? b.Name ?? '').trim();
-          const desc = (
-            b.BranchDesc ??
-            b.Branch_Desc ??
-            b.BranchDescription ??
-            ''
-          ).trim();
-          const shortCode = (b.BranchShortCode ?? b.ShortCode ?? '').trim();
-          const phone = (b.BPHONE ?? b.BPhone ?? b.Phone ?? '').trim();
-          const address = (b.BADDRESS ?? b.BAddress ?? b.Address ?? '').trim();
+            (branches || []).forEach((b: any) => {
+              const id = +(b.BranchID ?? b.Branch_ID ?? b.ID);
+              if (Number.isNaN(id)) return;
 
-          const bcId =
-            b.BranchCoordinatorID ??
-            b.BC_Emp_ID ??
-            b.BC_EmpId ??
-            b.BranchCoordinatorEmpId ??
-            null;
+              const name = (
+                b.BranchName ??
+                b.Branch_Name ??
+                b.Name ??
+                ''
+              ).trim();
+              const desc = (
+                b.BranchDesc ??
+                b.Branch_Desc ??
+                b.BranchDescription ??
+                ''
+              ).trim();
+              const shortCode = (b.BranchShortCode ?? b.ShortCode ?? '').trim();
+              const phone = (b.BPHONE ?? b.BPhone ?? b.Phone ?? '').trim();
+              const address = (
+                b.BADDRESS ??
+                b.BAddress ??
+                b.Address ??
+                ''
+              ).trim();
 
-          this.branchDetailsMap.set(id, {
-            id,
-            name,
-            desc,
-            shortCode,
-            phone,
-            address,
-            bcId,
-          });
+              const bcId =
+                b.BranchCoordinatorID ??
+                b.BC_Emp_ID ??
+                b.BC_EmpId ??
+                b.BranchCoordinatorEmpId ??
+                null;
 
-          return {
-            label: name,
-            value: id,
-            searchText:
-              `${id} ${name} ${desc} ${shortCode} ${phone} ${address}`.trim(),
-            meta: { id, name, desc, shortCode, phone, address, bcId },
-          };
-        })
-        .filter(this.notNull);
+              this.branchDetailsMap.set(id, {
+                id,
+                name,
+                desc,
+                shortCode,
+                phone,
+                address,
+                bcId,
+              });
+            });
 
-      this.branchesLoaded = true;
+            this.branchesLoaded = true;
+          }),
+          map((branches: any[]) =>
+            (branches || [])
+              .map((b: any) => {
+                const id = +(b.BranchID ?? b.Branch_ID ?? b.ID);
+                if (Number.isNaN(id)) return null;
 
-      // ---------- EMP CACHE + OPTIONS ----------
-      this.empMap.clear();
-      this.employeeOptions = (employees || [])
-        .map((e: any) => {
-          const id = +(e.EMP_ID ?? e.EmpId ?? e.ID);
-          if (Number.isNaN(id)) return null;
+                const name = (
+                  b.BranchName ??
+                  b.Branch_Name ??
+                  b.Name ??
+                  ''
+                ).trim();
+                const desc = (
+                  b.BranchDesc ??
+                  b.Branch_Desc ??
+                  b.BranchDescription ??
+                  ''
+                ).trim();
+                const shortCode = (
+                  b.BranchShortCode ??
+                  b.ShortCode ??
+                  ''
+                ).trim();
+                const phone = (b.BPHONE ?? b.BPhone ?? b.Phone ?? '').trim();
+                const address = (
+                  b.BADDRESS ??
+                  b.BAddress ??
+                  b.Address ??
+                  ''
+                ).trim();
 
-          const name = (e.APP_Name ?? e.Name ?? '').trim();
-          const department = (e.DepartmentName ?? e.DEP_DESC ?? '').trim();
-          const designation = (e.DesignationName ?? e.DES_DESC ?? '').trim();
+                const bcId =
+                  b.BranchCoordinatorID ??
+                  b.BC_Emp_ID ??
+                  b.BC_EmpId ??
+                  b.BranchCoordinatorEmpId ??
+                  null;
 
-          this.empMap.set(id, name);
-
-          return {
-            label: name,
-            value: id,
-            searchText: `${id} ${name} ${department} ${designation}`.trim(),
-            meta: { id, name, department, designation },
-          };
-        })
-        .filter(this.notNull);
-
-      this.employeesLoaded = true;
-
-      this.bindDropdownOptionsToForm();
-    });
-  }
-
-  private bindDropdownOptionsToForm() {
-    const branchField = this.formConfig.fields.find(
-      (f) => f.key === 'branchId'
-    );
-    if (branchField) {
-      branchField.loading = false;
-      branchField.searchable = true;
-
-      (branchField as any).options = this.branchOptions;
-
-      (branchField as any).options$ = null;
+                return {
+                  label: name,
+                  value: id,
+                  searchText:
+                    `${id} ${name} ${desc} ${shortCode} ${phone} ${address}`.trim(),
+                  // ✅ optionColumns keys: id,name,desc,phone,address (extra fields allowed)
+                  meta: { id, name, desc, shortCode, phone, address, bcId },
+                };
+              })
+              .filter(Boolean)
+          )
+        ),
+      };
     }
 
-    const empField = this.formConfig.fields.find((f) => f.key === 'employeeId');
-    if (empField) {
-      empField.loading = false;
-      empField.searchable = true;
+    /* ================= EMPLOYEE ================= */
+    const eIdx = fields.findIndex((f) => f.key === 'employeeId');
+    if (eIdx !== -1) {
+      fields[eIdx] = {
+        ...fields[eIdx],
+        searchable: true,
+        // ❌ loading/finalize wala mutation remove
+        options$: this.employees$.pipe(
+          tap((employees: any[]) => {
+            this.empMap.clear();
+            (employees || []).forEach((e: any) => {
+              const id = +(e.EMP_ID ?? e.EmpId ?? e.ID);
+              if (Number.isNaN(id)) return;
+              const name = (e.APP_Name ?? e.Name ?? '').trim();
+              this.empMap.set(id, name);
+            });
 
-      (empField as any).options = this.employeeOptions;
-      (empField as any).options$ = null;
+            this.employeesLoaded = true;
+          }),
+          map((employees: any[]) =>
+            (employees || [])
+              .map((e: any) => {
+                const id = +(e.EMP_ID ?? e.EmpId ?? e.ID);
+                if (Number.isNaN(id)) return null;
+
+                const name = (e.APP_Name ?? e.Name ?? '').trim();
+                const department = (
+                  e.DepartmentName ??
+                  e.DEP_DESC ??
+                  e.Department ??
+                  ''
+                ).trim();
+                const designation = (
+                  e.DesignationName ??
+                  e.DES_DESC ??
+                  e.Designation ??
+                  ''
+                ).trim();
+
+                return {
+                  label: name,
+                  value: id,
+                  searchText:
+                    `${id} ${name} ${department} ${designation}`.trim(),
+                  meta: { id, name, department, designation },
+                };
+              })
+              .filter(Boolean)
+          )
+        ),
+      };
     }
+
+    // ✅ single immutable update (Coordinator jaisa)
+    this.formConfig = { ...this.formConfig, fields };
   }
 }

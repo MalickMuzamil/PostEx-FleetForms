@@ -47,7 +47,8 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_FORM: FormConfig = {
       optionColumns: [
         { key: 'id', title: 'ID', width: '80px' },
         { key: 'name', title: 'Name' },
-        { key: 'cnic', title: 'CNIC' },
+        { key: 'departmentName', title: 'Department' },
+        { key: 'designationName', title: 'Designation' },
       ],
     },
 
@@ -68,17 +69,17 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_FORM: FormConfig = {
       validators: [AppValidators.futureDate()],
     },
 
-    {
-      key: 'statusFlag',
-      label: 'Status Flag',
-      type: 'select',
-      required: true,
-      options: [
-        { label: 'Active (1)', value: 1 },
-        { label: 'Inactive (0)', value: 0 },
-      ],
-      defaultValue: 1,
-    },
+    // {
+    //   key: 'statusFlag',
+    //   label: 'Status Flag',
+    //   type: 'select',
+    //   required: true,
+    //   options: [
+    //     { label: 'Active (1)', value: 1 },
+    //     { label: 'Inactive (0)', value: 0 },
+    //   ],
+    //   defaultValue: 1,
+    // },
   ],
 };
 
@@ -101,7 +102,7 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_TABLE: TableConfig = {
     { key: 'employeeName', title: 'Employee' },
     { key: 'email', title: 'Email' },
     { key: 'effectiveDate', title: 'Effective Date' },
-    { key: 'statusText', title: 'Status' },
+    // { key: 'statusText', title: 'Status' },
   ],
 
   actions: [
