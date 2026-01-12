@@ -40,6 +40,10 @@ export class BranchCoordinatorAssignment implements OnInit {
   private empMap = new Map<number, string>();
   private branches$!: any;
   private employees$!: any;
+  private branchOptions: any[] = [];
+  private employeeOptions: any[] = [];
+  private branchesLoaded = false;
+  private employeesLoaded = false;
 
   constructor(
     private service: BranchCoordinatorService,
@@ -74,7 +78,8 @@ export class BranchCoordinatorAssignment implements OnInit {
       shareReplay(1)
     );
 
-    this.loadBranchesAndEmployeesForForm();
+    // this.loadBranchesAndEmployeesForForm();
+    this.warmupDropdownCaches();
     this.loadTable();
   }
 
@@ -308,7 +313,7 @@ export class BranchCoordinatorAssignment implements OnInit {
   openAddForm() {
     this.selectedId = null;
     this.data = {};
-    this.formConfig = { ...this.formConfig, mode: 'create' };
+    this.formConfig.mode = 'create';
     this.showModal = true;
   }
 
@@ -327,7 +332,7 @@ export class BranchCoordinatorAssignment implements OnInit {
       branchAddress: bd?.address ?? '',
     };
 
-    this.formConfig = { ...this.formConfig, mode: 'update' };
+    this.formConfig.mode = 'update';
     this.showModal = true;
   }
 
@@ -403,5 +408,90 @@ export class BranchCoordinatorAssignment implements OnInit {
         });
       },
     });
+  }
+
+  private warmupDropdownCaches() {
+    forkJoin({
+      branches: this.branches$,
+      employees: this.employees$,
+    }).subscribe(({ branches, employees }: any) => {
+      // ---- branches cache ----
+      this.branchDetailsMap.clear();
+      this.branchOptions = (branches || [])
+        .map((b: any) => {
+          const id = +(b.Branch_ID ?? b.BranchID ?? b.ID);
+          if (Number.isNaN(id)) return null;
+
+          const name = (b.Branch_Name ?? b.BranchName ?? b.Name ?? '').trim();
+          const desc = (b.BranchDesc ?? b.Branch_Desc ?? '').trim();
+          const email = (b.BEMAIL ?? b.BEmail ?? b.Email ?? '').trim();
+          const phone = (b.BPHONE ?? b.BPhone ?? b.Phone ?? '').trim();
+          const address = (b.BADDRESS ?? b.BAddress ?? b.Address ?? '').trim();
+
+          this.branchDetailsMap.set(id, {
+            id,
+            name,
+            desc,
+            email,
+            phone,
+            address,
+          });
+
+          return {
+            label: name,
+            value: id,
+            searchText: `${id} ${name} ${desc} ${phone} ${address}`.trim(),
+            meta: { id, name, desc, phone, address },
+          };
+        })
+        .filter(Boolean);
+
+      this.branchesLoaded = true;
+
+      // ---- employees cache ----
+      this.empMap.clear();
+      this.employeeOptions = (employees || [])
+        .map((e: any) => {
+          const id = +(e.EMP_ID ?? e.EmpId ?? e.ID);
+          if (Number.isNaN(id)) return null;
+
+          const name = (e.APP_Name ?? e.Name ?? '').trim();
+          const dept = (e.DepartmentName ?? e.DEP_DESC ?? '').trim();
+          const desig = (e.DesignationName ?? e.DES_DESC ?? '').trim();
+
+          this.empMap.set(id, name);
+
+          return {
+            label: name,
+            value: id,
+            searchText: `${id} ${name} ${dept} ${desig}`.trim(),
+            meta: { id, name, department: dept, designation: desig },
+          };
+        })
+        .filter(Boolean);
+
+      this.employeesLoaded = true;
+
+      // ✅ now bind options to form fields (instant)
+      this.bindDropdownOptionsToForm();
+    });
+  }
+
+  private bindDropdownOptionsToForm() {
+    const branchField = this.formConfig.fields.find(
+      (f) => f.key === 'branchId'
+    );
+    if (branchField) {
+      branchField.loading = false;
+      branchField.searchable = true;
+      branchField.options = this.branchOptions; // ✅ IMPORTANT: plain array
+    }
+
+    const empField = this.formConfig.fields.find((f) => f.key === 'employeeId');
+    if (empField) {
+      empField.loading = false;
+      empField.searchable = true;
+      empField.options = this.employeeOptions; // ✅ IMPORTANT: plain array
+    }
   }
 }

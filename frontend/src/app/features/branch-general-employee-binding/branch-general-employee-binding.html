@@ -12,6 +12,5 @@
     </app-table>
 </div>
 
-<app-modal [visible]="showModal" [title]="formConfig.title" [formConfig]="formConfig" [data]="data"
-    (submit)="onSubmit($event)" (cancel)="closeModal()" (formChange)="onFormChange($event)">
-</app-modal>
+<app-modal *ngIf="showModal" [visible]="showModal" [title]="formConfig.title" [formConfig]="formConfig" [data]="data"
+    (submit)="onSubmit($event)" (cancel)="closeModal()" (formChange)="onFormChange($event)"></app-modal>
