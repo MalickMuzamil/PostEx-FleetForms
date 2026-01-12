@@ -1,0 +1,17 @@
+<div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">CNC Level Definition</h5>
+
+        <button nz-button nzType="primary" class="nz-button-primary p-1" (click)="openAddForm()">
+            <i class="fa fa-plus me-2"></i>
+            Add CNC Level
+        </button>
+    </div>
+
+    <app-table [config]="tableConfig" [data]="tableData" (edit)="openEditForm($event)" (delete)="delete($event)">
+    </app-table>
+</div>
+
+<app-modal *ngIf="showModal" [visible]="showModal" [title]="formConfig.title" [formConfig]="formConfig" [data]="data"
+    (submit)="onSubmit($event)" (cancel)="closeModal()" (formChange)="onFormChange($event)">
+</app-modal>

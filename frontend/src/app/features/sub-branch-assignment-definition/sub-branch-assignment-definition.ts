@@ -416,14 +416,27 @@ export class SubBranchAssignmentDefinition implements OnInit {
 
   // ================= ACTIONS =================
   delete(row: any) {
-    if (!confirm('Delete this assignment?')) return;
-
-    this.service.delete(Number(row.id)).subscribe({
-      next: () => {
-        this.notification.success('Success', 'Deleted');
-        this.loadTable();
+    this.modal.confirm({
+      nzTitle: 'Confirm Delete',
+      nzContent: `
+      <p>Are you sure you want to delete this assignment?</p>
+      <p><strong>Sub Branch:</strong> ${row.subBranchName ?? ''}</p>
+      <p><strong>Employee:</strong> ${row.employeeName ?? ''}</p>
+    `,
+      nzOkText: 'Yes',
+      nzOkDanger: true,
+      nzCancelText: 'No',
+      nzOnOk: () => {
+        this.service.delete(Number(row.id)).subscribe({
+          next: () => {
+            this.notification.success('Success', 'Deleted');
+            this.loadTable();
+          },
+          error: () => {
+            this.notification.error('Error', 'Delete failed');
+          },
+        });
       },
-      error: () => this.notification.error('Error', 'Delete failed'),
     });
   }
 

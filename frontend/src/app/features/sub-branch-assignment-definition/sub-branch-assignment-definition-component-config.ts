@@ -107,7 +107,7 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_TABLE: TableConfig = {
 
   actions: [
     { label: 'Edit', action: 'edit' },
-    { label: 'Delete', action: 'delete' },
+    // { label: 'Delete', action: 'delete' },
   ],
 
   pagination: true,
