@@ -92,11 +92,16 @@ class SubBranchAssignmentDefinitionService {
 
         ROW_NUMBER() OVER (
           PARTITION BY a.Sub_Branch_ID
-          ORDER BY 
+          ORDER BY a.EffectiveDate DESC, a.ID DESC
+        ) AS rn_latest_any,
+
+        ROW_NUMBER() OVER (
+          PARTITION BY a.Sub_Branch_ID
+          ORDER BY
             CASE WHEN a.EffectiveDate <= GETDATE() THEN 0 ELSE 1 END,
             a.EffectiveDate DESC,
             a.ID DESC
-        ) AS rn_latest_prefer_past
+        ) AS rn_current_prefer_past
       FROM GoGreen.OPS.Sub_Branch_Assignment_Definition a
     )
     SELECT
@@ -107,14 +112,13 @@ class SubBranchAssignmentDefinitionService {
       br.BranchName             AS BranchName,
       A.Sub_Branch_Emp_ID       AS EmployeeId,
       e.APP_Name                AS EmployeeName,
-      e.APP_ACTIVE              AS EmployeeActive,
       A.Sub_Branch_Email        AS Email,
       A.EffectiveDate           AS EffectiveDate,
 
       CASE
-        WHEN A.EffectiveDate > GETDATE() THEN 'FUTURE'
-        WHEN A.rn_latest_prefer_past = 1 AND A.EffectiveDate <= GETDATE() THEN 'ACTIVE'
-        ELSE 'INACTIVE'
+        WHEN A.EffectiveDate > GETDATE() THEN 'UPCOMING'
+        WHEN A.rn_current_prefer_past = 1 THEN 'CURRENT'
+        ELSE 'PAST'
       END AS Status
 
     FROM A
@@ -124,11 +128,12 @@ class SubBranchAssignmentDefinitionService {
       ON br.BranchID = sb.BranchID
     LEFT JOIN HRM.HR.Employees e
       ON e.EMP_ID = A.Sub_Branch_Emp_ID
-    ORDER BY A.ID DESC
+    ORDER BY A.Sub_Branch_ID, A.EffectiveDate DESC, A.ID DESC
   `);
 
     return result.recordset;
   }
+
 
 
   async getAssignmentById(id) {
@@ -161,7 +166,7 @@ class SubBranchAssignmentDefinitionService {
     if (!sbId) { const e = new Error("Sub-Branch is required."); e.code = "SUB_BRANCH_REQUIRED"; e.status = 400; throw e; }
     if (!empId) { const e = new Error("Employee is required."); e.code = "EMP_REQUIRED"; e.status = 400; throw e; }
 
-    const eff = this.ensureFutureDate(effectiveDate);
+    const eff = this.parseEffectiveDate(effectiveDate);
     const mail = this.validateEmail(email);
 
     const pool = await getPool();
@@ -175,48 +180,58 @@ class SubBranchAssignmentDefinitionService {
       {
         const req = new sql.Request(tx);
         req.input("subBranchId", sql.Int, sbId);
+
         const r = await req.query(`
-          SELECT TOP 1 sb.Sub_Branch_ID AS SubBranchID, sb.BranchID AS BranchID
-          FROM GoGreen.OPS.Sub_Branch_Definition sb
-          WHERE sb.Sub_Branch_ID = @subBranchId
-        `);
+        SELECT TOP 1 sb.Sub_Branch_ID AS SubBranchID, sb.BranchID AS BranchID
+        FROM GoGreen.OPS.Sub_Branch_Definition sb
+        WHERE sb.Sub_Branch_ID = @subBranchId
+      `);
+
         const sb = r.recordset?.[0];
         if (!sb) { const e = new Error("Selected Sub-Branch does not exist."); e.code = "SUB_BRANCH_NOT_FOUND"; e.status = 404; throw e; }
+
         branchId = Number(sb.BranchID) || null;
         if (!branchId) { const e = new Error("Branch not found for selected Sub-Branch."); e.code = "BRANCH_NOT_FOUND"; e.status = 404; throw e; }
       }
 
-      // 2) Employee exists + active + branch match
       {
         const req = new sql.Request(tx);
         req.input("employeeId", sql.Int, empId);
+
         const er = await req.query(`
-          SELECT TOP 1 EMP_ID, APP_ACTIVE, BranchID
-          FROM HRM.HR.Employees
-          WHERE EMP_ID = @employeeId
-        `);
+        SELECT TOP 1 EMP_ID, APP_ACTIVE, BranchID
+        FROM HRM.HR.Employees
+        WHERE EMP_ID = @employeeId
+      `);
+
         const emp = er.recordset?.[0];
         if (!emp) { const e = new Error("Employee not found."); e.code = "EMP_NOT_FOUND"; e.status = 404; throw e; }
-        if (Number(emp.APP_ACTIVE) !== 1) { const e = new Error("Selected user is not active. Please select an active user."); e.code = "EMP_INACTIVE"; e.status = 400; throw e; }
-        if (Number(emp.BranchID) !== Number(branchId)) { const e = new Error("Employee does not belong to selected Branch."); e.code = "EMP_BRANCH_MISMATCH"; e.status = 400; throw e; }
+
+        if (Number(emp.APP_ACTIVE) !== 1) { const e = new Error("Selected user is not active."); e.code = "EMP_INACTIVE"; e.status = 400; throw e; }
+
+        if (Number(emp.BranchID) !== Number(branchId)) {
+          const e = new Error("Employee does not belong to selected Branch.");
+          e.code = "EMP_BRANCH_MISMATCH";
+          e.status = 400;
+          throw e;
+        }
       }
 
-      // 3) Same SubBranch + same date not allowed
       {
         const req = new sql.Request(tx);
         req.input("subBranchId", sql.Int, sbId);
         req.input("effectiveDate", sql.DateTime, eff);
 
         const dup = await req.query(`
-          SELECT TOP 1 ID, EffectiveDate
-          FROM GoGreen.OPS.Sub_Branch_Assignment_Definition WITH (UPDLOCK, HOLDLOCK)
-          WHERE Sub_Branch_ID = @subBranchId
-            AND CONVERT(date, EffectiveDate) = CONVERT(date, @effectiveDate)
-          ORDER BY ID DESC
-        `);
+        SELECT TOP 1 ID, EffectiveDate
+        FROM GoGreen.OPS.Sub_Branch_Assignment_Definition WITH (UPDLOCK, HOLDLOCK)
+        WHERE Sub_Branch_ID = @subBranchId
+          AND CONVERT(date, EffectiveDate) = CONVERT(date, @effectiveDate)
+        ORDER BY ID DESC
+      `);
 
         if (dup.recordset?.[0]) {
-          const e = new Error("A binding already exists for this Sub-Branch with the same effective date.");
+          const e = new Error("This Sub-Branch already has an assignment on the selected effective date.");
           e.code = "DUPLICATE_EFFECTIVE_DATE";
           e.status = 409;
           e.conflict = { ID: dup.recordset[0].ID, ExistingEffectiveDate: dup.recordset[0].EffectiveDate };
@@ -224,18 +239,6 @@ class SubBranchAssignmentDefinitionService {
         }
       }
 
-      // 4) If already a FUTURE definition exists for this SubBranch, deactivate it (delete)
-      {
-        const req = new sql.Request(tx);
-        req.input("subBranchId", sql.Int, sbId);
-        await req.query(`
-          DELETE FROM GoGreen.OPS.Sub_Branch_Assignment_Definition
-          WHERE Sub_Branch_ID = @subBranchId
-            AND EffectiveDate > GETDATE()
-        `);
-      }
-
-      // 5) Insert new future definition
       {
         const insertReq = new sql.Request(tx);
         insertReq.input("subBranchId", sql.Int, sbId);
@@ -244,22 +247,22 @@ class SubBranchAssignmentDefinitionService {
         insertReq.input("effectiveDate", sql.DateTime, eff);
 
         const ins = await insertReq.query(`
-          INSERT INTO GoGreen.OPS.Sub_Branch_Assignment_Definition
-            (Sub_Branch_ID, Sub_Branch_Emp_ID, Sub_Branch_Email, EffectiveDate)
-          OUTPUT INSERTED.*
-          VALUES
-            (@subBranchId, @employeeId, @email, @effectiveDate)
-        `);
+        INSERT INTO GoGreen.OPS.Sub_Branch_Assignment_Definition
+          (Sub_Branch_ID, Sub_Branch_Emp_ID, Sub_Branch_Email, EffectiveDate)
+        OUTPUT INSERTED.*
+        VALUES
+          (@subBranchId, @employeeId, @email, @effectiveDate)
+      `);
 
         await tx.commit();
         return ins.recordset?.[0] || null;
       }
-
     } catch (e) {
       try { await tx.rollback(); } catch (_) { }
       throw e;
     }
   }
+
 
 
   // ===========================
@@ -281,6 +284,7 @@ class SubBranchAssignmentDefinitionService {
         ? this.validateEmail(payload.email)
         : this.validateEmail(current.Email);
 
+    // ✅ Future-only (as per your rule)
     const finalEffective =
       payload?.effectiveDate
         ? this.ensureFutureDate(payload.effectiveDate)
@@ -297,13 +301,16 @@ class SubBranchAssignmentDefinitionService {
       {
         const req = new sql.Request(tx);
         req.input("subBranchId", sql.Int, finalSubBranchId);
+
         const r = await req.query(`
-          SELECT TOP 1 sb.Sub_Branch_ID AS SubBranchID, sb.BranchID AS BranchID
-          FROM GoGreen.OPS.Sub_Branch_Definition sb
-          WHERE sb.Sub_Branch_ID = @subBranchId
-        `);
+        SELECT TOP 1 sb.Sub_Branch_ID AS SubBranchID, sb.BranchID AS BranchID
+        FROM GoGreen.OPS.Sub_Branch_Definition sb
+        WHERE sb.Sub_Branch_ID = @subBranchId
+      `);
+
         const sb = r.recordset?.[0];
         if (!sb) { const e = new Error("Selected Sub-Branch does not exist."); e.code = "SUB_BRANCH_NOT_FOUND"; e.status = 404; throw e; }
+
         branchId = Number(sb.BranchID) || null;
         if (!branchId) { const e = new Error("Branch not found for selected Sub-Branch."); e.code = "BRANCH_NOT_FOUND"; e.status = 404; throw e; }
       }
@@ -312,18 +319,25 @@ class SubBranchAssignmentDefinitionService {
       {
         const req = new sql.Request(tx);
         req.input("employeeId", sql.Int, finalEmployeeId);
+
         const er = await req.query(`
-          SELECT TOP 1 EMP_ID, APP_ACTIVE, BranchID
-          FROM HRM.HR.Employees
-          WHERE EMP_ID = @employeeId
-        `);
+        SELECT TOP 1 EMP_ID, APP_ACTIVE, BranchID
+        FROM HRM.HR.Employees
+        WHERE EMP_ID = @employeeId
+      `);
+
         const emp = er.recordset?.[0];
         if (!emp) { const e = new Error("Employee not found."); e.code = "EMP_NOT_FOUND"; e.status = 404; throw e; }
-        if (Number(emp.APP_ACTIVE) !== 1) { const e = new Error("Selected user is not active. Please select an active user."); e.code = "EMP_INACTIVE"; e.status = 400; throw e; }
-        if (Number(emp.BranchID) !== Number(branchId)) { const e = new Error("Employee does not belong to selected Branch."); e.code = "EMP_BRANCH_MISMATCH"; e.status = 400; throw e; }
+        if (Number(emp.APP_ACTIVE) !== 1) { const e = new Error("Selected user is not active."); e.code = "EMP_INACTIVE"; e.status = 400; throw e; }
+        if (Number(emp.BranchID) !== Number(branchId)) {
+          const e = new Error("Employee does not belong to selected Branch.");
+          e.code = "EMP_BRANCH_MISMATCH";
+          e.status = 400;
+          throw e;
+        }
       }
 
-      // 3) same SubBranch + same date not allowed (exclude current row)
+      // 3) Same SubBranch + same date not allowed (exclude current row)
       {
         const req = new sql.Request(tx);
         req.input("id", sql.Int, Number(id));
@@ -331,16 +345,16 @@ class SubBranchAssignmentDefinitionService {
         req.input("effectiveDate", sql.DateTime, finalEffective);
 
         const dup = await req.query(`
-          SELECT TOP 1 ID, EffectiveDate
-          FROM GoGreen.OPS.Sub_Branch_Assignment_Definition WITH (UPDLOCK, HOLDLOCK)
-          WHERE Sub_Branch_ID = @subBranchId
-            AND CONVERT(date, EffectiveDate) = CONVERT(date, @effectiveDate)
-            AND ID <> @id
-          ORDER BY ID DESC
-        `);
+        SELECT TOP 1 ID, EffectiveDate
+        FROM GoGreen.OPS.Sub_Branch_Assignment_Definition WITH (UPDLOCK, HOLDLOCK)
+        WHERE Sub_Branch_ID = @subBranchId
+          AND CONVERT(date, EffectiveDate) = CONVERT(date, @effectiveDate)
+          AND ID <> @id
+        ORDER BY ID DESC
+      `);
 
         if (dup.recordset?.[0]) {
-          const e = new Error("A binding already exists for this Sub-Branch with the same effective date.");
+          const e = new Error("This Sub-Branch already has an assignment on the selected effective date.");
           e.code = "DUPLICATE_EFFECTIVE_DATE";
           e.status = 409;
           e.conflict = { ID: dup.recordset[0].ID, ExistingEffectiveDate: dup.recordset[0].EffectiveDate };
@@ -348,20 +362,8 @@ class SubBranchAssignmentDefinitionService {
         }
       }
 
-      // 4) Deactivate any other FUTURE definition for this subbranch (delete), except current row
-      {
-        const req = new sql.Request(tx);
-        req.input("id", sql.Int, Number(id));
-        req.input("subBranchId", sql.Int, finalSubBranchId);
-        await req.query(`
-          DELETE FROM GoGreen.OPS.Sub_Branch_Assignment_Definition
-          WHERE Sub_Branch_ID = @subBranchId
-            AND EffectiveDate > GETDATE()
-            AND ID <> @id
-        `);
-      }
-
-      // 5) Update
+      // ✅ 4) NO DELETE of other rows — history stays
+      // ✅ 5) Update only this row
       {
         const req = new sql.Request(tx);
         req.input("id", sql.Int, Number(id));
@@ -371,26 +373,24 @@ class SubBranchAssignmentDefinitionService {
         req.input("effectiveDate", sql.DateTime, finalEffective);
 
         const result = await req.query(`
-          UPDATE GoGreen.OPS.Sub_Branch_Assignment_Definition
-          SET
-            Sub_Branch_ID = @subBranchId,
-            Sub_Branch_Emp_ID = @employeeId,
-            Sub_Branch_Email = @email,
-            EffectiveDate = @effectiveDate
-          OUTPUT INSERTED.*
-          WHERE ID = @id
-        `);
+        UPDATE GoGreen.OPS.Sub_Branch_Assignment_Definition
+        SET
+          Sub_Branch_ID = @subBranchId,
+          Sub_Branch_Emp_ID = @employeeId,
+          Sub_Branch_Email = @email,
+          EffectiveDate = @effectiveDate
+        OUTPUT INSERTED.*
+        WHERE ID = @id
+      `);
 
         await tx.commit();
         return result.recordset?.[0] || null;
       }
-
     } catch (e) {
       try { await tx.rollback(); } catch (_) { }
       throw e;
     }
   }
-
 
 
   // ===========================

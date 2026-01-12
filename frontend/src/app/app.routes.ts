@@ -95,6 +95,13 @@ export const routes: Routes = [
             './features/sub-branch-assignment-definition/sub-branch-assignment-definition'
           ).then((m) => m.SubBranchAssignmentDefinition),
       },
+      {
+        path: 'CNC-Form',
+        loadComponent: () =>
+          import(
+            './features/cnc-level/cnc-level'
+          ).then((m) => m.CncLevel),
+      },
     ],
   },
 ];
