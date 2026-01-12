@@ -32,6 +32,14 @@ export class BranchGeneralEmployeeBinding implements OnInit {
   private empMap = new Map<number, string>();
   private branches$!: any;
   private employees$!: any;
+  private branchOptions: any[] = [];
+  private employeeOptions: any[] = [];
+  private branchesLoaded = false;
+  private employeesLoaded = false;
+
+  private notNull<T>(x: T | null): x is T {
+    return x !== null;
+  }
 
   constructor(
     private service: BranchGeneralEmployeeService,
@@ -65,8 +73,9 @@ export class BranchGeneralEmployeeBinding implements OnInit {
       map((res: any) => res?.data ?? res ?? []),
       shareReplay(1)
     );
-    this.loadDropdowns(); // ✅ dropdowns (cached)
-    this.loadTable(); // ✅ table (cached)
+    // this.loadDropdowns();
+    this.warmupDropdownCaches();
+    this.loadTable();
   }
 
   // ================= TABLE =================
@@ -300,40 +309,24 @@ export class BranchGeneralEmployeeBinding implements OnInit {
 
   // ================= MODES =================
   private setMode(mode: 'create' | 'update') {
-    this.formConfig = {
-      ...this.formConfig,
-      mode,
-      fields: this.formConfig.fields.map((f) => {
-        if (
-          mode === 'update' &&
-          (f.key === 'employeeId' || f.key === 'branchId')
-        )
-          return { ...f, disabled: true };
+    this.formConfig.mode = mode;
 
-        if (
-          mode === 'create' &&
-          (f.key === 'employeeId' || f.key === 'branchId')
-        )
-          return { ...f, disabled: false };
-
-        return f;
-      }),
-    };
+    for (const f of this.formConfig.fields) {
+      if (f.key === 'employeeId' || f.key === 'branchId') {
+        f.disabled = mode === 'update';
+      }
+    }
   }
 
   openAddForm() {
     this.selectedId = null;
-    this.data = {
-      statusFlag: 1,
-      effectiveDate: null,
-    };
+    this.data = { statusFlag: 1, effectiveDate: null };
     this.setMode('create');
     this.showModal = true;
   }
 
   edit(row: any) {
     this.selectedId = row.id;
-
     this.data = {
       ...row,
       effectiveDate: this.asLocalDate(row.effectiveDate),
@@ -346,6 +339,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
     };
 
     this.setMode('update');
+
     this.showModal = true;
   }
 
@@ -353,8 +347,6 @@ export class BranchGeneralEmployeeBinding implements OnInit {
     this.showModal = false;
   }
 
-  // ================= FORM CHANGE (PERF FIX) =================
-  // ✅ IMPORTANT: email typing should NOT spread/replace whole object
   onFormChange(ev: any) {
     if (!ev || !ev.key) return;
 
@@ -489,5 +481,110 @@ export class BranchGeneralEmployeeBinding implements OnInit {
         });
       },
     });
+  }
+
+  private warmupDropdownCaches() {
+    forkJoin({
+      branches: this.branches$,
+      employees: this.employees$,
+    }).subscribe(({ branches, employees }: any) => {
+      // ---------- BRANCH CACHE + OPTIONS ----------
+      this.branchesCache = branches || [];
+      this.branchDetailsMap.clear();
+
+      this.branchOptions = (branches || [])
+        .map((b: any) => {
+          const id = +(b.BranchID ?? b.Branch_ID ?? b.ID);
+          if (Number.isNaN(id)) return null;
+
+          const name = (b.BranchName ?? b.Branch_Name ?? b.Name ?? '').trim();
+          const desc = (
+            b.BranchDesc ??
+            b.Branch_Desc ??
+            b.BranchDescription ??
+            ''
+          ).trim();
+          const shortCode = (b.BranchShortCode ?? b.ShortCode ?? '').trim();
+          const phone = (b.BPHONE ?? b.BPhone ?? b.Phone ?? '').trim();
+          const address = (b.BADDRESS ?? b.BAddress ?? b.Address ?? '').trim();
+
+          const bcId =
+            b.BranchCoordinatorID ??
+            b.BC_Emp_ID ??
+            b.BC_EmpId ??
+            b.BranchCoordinatorEmpId ??
+            null;
+
+          this.branchDetailsMap.set(id, {
+            id,
+            name,
+            desc,
+            shortCode,
+            phone,
+            address,
+            bcId,
+          });
+
+          return {
+            label: name,
+            value: id,
+            searchText:
+              `${id} ${name} ${desc} ${shortCode} ${phone} ${address}`.trim(),
+            meta: { id, name, desc, shortCode, phone, address, bcId },
+          };
+        })
+        .filter(this.notNull);
+
+      this.branchesLoaded = true;
+
+      // ---------- EMP CACHE + OPTIONS ----------
+      this.empMap.clear();
+      this.employeeOptions = (employees || [])
+        .map((e: any) => {
+          const id = +(e.EMP_ID ?? e.EmpId ?? e.ID);
+          if (Number.isNaN(id)) return null;
+
+          const name = (e.APP_Name ?? e.Name ?? '').trim();
+          const department = (e.DepartmentName ?? e.DEP_DESC ?? '').trim();
+          const designation = (e.DesignationName ?? e.DES_DESC ?? '').trim();
+
+          this.empMap.set(id, name);
+
+          return {
+            label: name,
+            value: id,
+            searchText: `${id} ${name} ${department} ${designation}`.trim(),
+            meta: { id, name, department, designation },
+          };
+        })
+        .filter(this.notNull);
+
+      this.employeesLoaded = true;
+
+      this.bindDropdownOptionsToForm();
+    });
+  }
+
+  private bindDropdownOptionsToForm() {
+    const branchField = this.formConfig.fields.find(
+      (f) => f.key === 'branchId'
+    );
+    if (branchField) {
+      branchField.loading = false;
+      branchField.searchable = true;
+
+      (branchField as any).options = this.branchOptions;
+
+      (branchField as any).options$ = null;
+    }
+
+    const empField = this.formConfig.fields.find((f) => f.key === 'employeeId');
+    if (empField) {
+      empField.loading = false;
+      empField.searchable = true;
+
+      (empField as any).options = this.employeeOptions;
+      (empField as any).options$ = null;
+    }
   }
 }

@@ -13,5 +13,5 @@
 </div>
 
 <!-- ================= MODAL FORM ================= -->
-<app-modal [visible]="showModal" [title]="formConfig.title" [formConfig]="formConfig" [data]="data"
+<app-modal *ngIf="showModal" [visible]="showModal" [title]="formConfig.title" [formConfig]="formConfig" [data]="data"
     (submit)="onSubmit($event)" (formChange)="onFormChange($any($event))" (cancel)="closeModal()"></app-modal>

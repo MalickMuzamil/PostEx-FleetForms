@@ -1,10 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  FormsModule,
-  ReactiveFormsModule,
-  FormControl,
-} from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 
 import * as Papa from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -22,6 +18,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
 
 interface BulkRow {
   rowNo: number;
+  uid: number;
 
   branchId: number | null;
   subBranchId: number | null;
@@ -73,6 +70,7 @@ interface BulkRow {
 })
 export class DeliveryRouteBulkPreviewComponent implements OnInit {
   file!: File;
+  private uidCounter = 0;
 
   // ---------- ERROR MESSAGES ----------
   private readonly DUP_ROUTE_ERR = 'Duplicate Delivery Route ID found in file';
@@ -151,14 +149,17 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   }
 
   // ✅ trackBy (smooth UI)
-  trackByRow = (_: number, r: BulkRow) => r.rowNo;
+  trackByRow = (_: number, r: BulkRow) => r.uid;
 
   toast(type: 'success' | 'error' | 'warning', title: string, msg: string) {
     this.notification[type](title, msg);
   }
 
   // ---------------- CONFIRM MODAL ----------------
-  private confirmOverwrite(message: string, existingDate?: string | null): Promise<boolean> {
+  private confirmOverwrite(
+    message: string,
+    existingDate?: string | null
+  ): Promise<boolean> {
     return new Promise((resolve) => {
       this.modal.confirm({
         nzTitle: 'Confirmation Required',
@@ -207,7 +208,8 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   private isConfirmOverwriteError(err: any): boolean {
     const { status, code, message } = this.parseBackendError(err);
     if (status === 409) return true;
-    if (code === 'CONFIRM_OVERWRITE' || code === 'CONFIRM_OVERWRITE_BULK') return true;
+    if (code === 'CONFIRM_OVERWRITE' || code === 'CONFIRM_OVERWRITE_BULK')
+      return true;
     return /confirm overwrite/i.test(message);
   }
 
@@ -242,9 +244,11 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
         next: (res: any) => {
           const list = res?.data ?? [];
           this.deliveryRoutes = list.map((r: any) => ({
-            DeliveryRouteID: Number(r.DeliveryRouteID ?? r.RouteID ?? r.RouteId) || null,
+            DeliveryRouteID:
+              Number(r.DeliveryRouteID ?? r.RouteID ?? r.RouteId) || null,
             DeliveryRouteNo: r.DeliveryRouteNo ?? r.RouteNo ?? '',
-            DeliveryRouteDescription: r.DeliveryRouteDescription ?? r.RouteDescription ?? '',
+            DeliveryRouteDescription:
+              r.DeliveryRouteDescription ?? r.RouteDescription ?? '',
             BranchID: Number(r.BranchID ?? r.BranchId) || null,
           }));
           resolve();
@@ -337,6 +341,9 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
 
   // ✅ MAIN IMPORT MAPPING
   mapRows(data: any[]) {
+    // ✅ ensure unique stable ids
+    if (!this.uidCounter) this.uidCounter = Date.now();
+
     this.rows = data.map((r, i) => {
       const errors: string[] = [];
       const get = (k: string) => r?.[this.columnMap[k]];
@@ -384,7 +391,8 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       if (!(flagNum === 0 || flagNum === 1)) errors.push(this.INVALID_FLAG);
 
       const row: BulkRow = {
-        rowNo: i + 1,
+        uid: ++this.uidCounter, // ✅ stable key (never changes)
+        rowNo: i + 1, // (optional) display only
 
         branchId,
         subBranchId,
@@ -397,7 +405,9 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
         deliveryRouteControl: new FormControl(routeId, { nonNullable: false }),
 
         effectiveDate: date,
-        effectiveDateControl: new FormControl(date, [AppValidators.futureDate()]),
+        effectiveDateControl: new FormControl(date, [
+          AppValidators.futureDate(),
+        ]),
 
         requiredReportsFlag,
         checked: false,
@@ -420,7 +430,6 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     this.loadBranchesForAllRowsBulk(() => {
       this.loadSubBranchesForAllRowsBulk(() => {
         this.isLoading = false;
-        // after options arrive, validations refresh so UI correct
         this.applyLocalValidationsSafe();
         this.updateHasValidRow();
         this.scheduleServerValidation();
@@ -488,7 +497,9 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
           .map((r) => {
             const routeId = Number(r.deliveryRouteControl.value) || 0;
             const branchId = Number(r.branchId) || 0;
-            return routeId > 0 && branchId > 0 ? `${routeId}|${branchId}` : null;
+            return routeId > 0 && branchId > 0
+              ? `${routeId}|${branchId}`
+              : null;
           })
           .filter(Boolean) as string[]
       )
@@ -681,12 +692,17 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
           branchId: r.branchId,
           subBranchId: r.subBranchId,
           deliveryRouteId: r.deliveryRouteControl.value,
-          effectiveDate: r.effectiveDateControl.value?.toISOString().split('T')[0],
+          effectiveDate: r.effectiveDateControl.value
+            ?.toISOString()
+            .split('T')[0],
           requiredReportsFlag: r.requiredReportsFlag,
           correctDescriptionForReports: descText,
         };
       })
-      .filter((p) => p.branchId && p.subBranchId && p.deliveryRouteId && p.effectiveDate);
+      .filter(
+        (p) =>
+          p.branchId && p.subBranchId && p.deliveryRouteId && p.effectiveDate
+      );
 
     if (!payloads.length) return;
 
@@ -706,9 +722,11 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
         }
 
         for (const inv of invalidRows) {
-          const k = `${Number(inv.branchId) || 0}|${Number(inv.subBranchId) || 0}|${
-            Number(inv.deliveryRouteId) || 0
-          }|${String(inv.effectiveDate || '')}`;
+          const k = `${Number(inv.branchId) || 0}|${
+            Number(inv.subBranchId) || 0
+          }|${Number(inv.deliveryRouteId) || 0}|${String(
+            inv.effectiveDate || ''
+          )}`;
           const match = rowMap.get(k);
           if (!match) continue;
 
@@ -821,31 +839,37 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     if (this.subBranchesInFlight.has(key)) return;
     this.subBranchesInFlight.add(key);
 
-    this.bindingService.getSubBranchesByRoutesAndBranches([{ routeId, branchId }]).subscribe({
-      next: (res: any) => {
-        const map = res?.data ?? {};
-        const list = map[key] ?? [];
-        const normalized = (list || []).map((sb: any) => ({
-          value: Number(sb.SubBranchID ?? sb.Sub_Branch_ID ?? sb.subBranchId),
-          label:
-            sb.SubBranchName ??
-            sb.Sub_Branch_Name ??
-            sb.name ??
-            String(sb.SubBranchID ?? sb.Sub_Branch_ID ?? ''),
-          ...sb,
-        }));
-        this.subBranchesCache.set(key, normalized);
-        this.subBranchesInFlight.delete(key);
+    this.bindingService
+      .getSubBranchesByRoutesAndBranches([{ routeId, branchId }])
+      .subscribe({
+        next: (res: any) => {
+          const map = res?.data ?? {};
+          const list = map[key] ?? [];
+          const normalized = (list || []).map((sb: any) => ({
+            value: Number(sb.SubBranchID ?? sb.Sub_Branch_ID ?? sb.subBranchId),
+            label:
+              sb.SubBranchName ??
+              sb.Sub_Branch_Name ??
+              sb.name ??
+              String(sb.SubBranchID ?? sb.Sub_Branch_ID ?? ''),
+            ...sb,
+          }));
+          this.subBranchesCache.set(key, normalized);
+          this.subBranchesInFlight.delete(key);
 
-        this.applySubBranchesToRow(row);
-        this.applyLocalValidationsSafe();
-        this.updateHasValidRow();
-      },
-      error: () => {
-        this.subBranchesInFlight.delete(key);
-        this.toast('error', 'Error', 'Failed to load sub branches (bulk single)');
-      },
-    });
+          this.applySubBranchesToRow(row);
+          this.applyLocalValidationsSafe();
+          this.updateHasValidRow();
+        },
+        error: () => {
+          this.subBranchesInFlight.delete(key);
+          this.toast(
+            'error',
+            'Error',
+            'Failed to load sub branches (bulk single)'
+          );
+        },
+      });
   }
 
   // ---------------- VALIDATION ----------------
@@ -913,7 +937,9 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
         branchId: r.branchId,
         subBranchId: r.subBranchId,
         deliveryRouteId: r.deliveryRouteControl.value,
-        effectiveDate: r.effectiveDateControl.value?.toISOString().split('T')[0],
+        effectiveDate: r.effectiveDateControl.value
+          ?.toISOString()
+          .split('T')[0],
         requiredReportsFlag: r.requiredReportsFlag,
         correctDescriptionForReports: descText,
       };
@@ -982,7 +1008,9 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       branchId: row.branchId,
       subBranchId: row.subBranchId,
       deliveryRouteId: row.deliveryRouteControl.value,
-      effectiveDate: row.effectiveDateControl.value?.toISOString().split('T')[0],
+      effectiveDate: row.effectiveDateControl.value
+        ?.toISOString()
+        .split('T')[0],
       requiredReportsFlag: row.requiredReportsFlag,
       correctDescriptionForReports: descText,
       force: false,
@@ -1020,7 +1048,11 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
               row.saving = false;
               row.checked = false;
               this.checkAll = false;
-              this.toast('success', 'Saved', `Row ${row.rowNo} saved successfully`);
+              this.toast(
+                'success',
+                'Saved',
+                `Row ${row.rowNo} saved successfully`
+              );
               this.removeRowRef(row);
             },
             error: (e2) => {
@@ -1066,7 +1098,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       }
     });
 
-    this.updateHasValidRow();
+    // this.updateHasValidRow();
   }
 
   hasDuplicateRouteError(row: BulkRow): boolean {
@@ -1145,10 +1177,10 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     if (idx === -1) return;
 
     this.rows.splice(idx, 1);
-    this.rows.forEach((r, i) => (r.rowNo = i + 1));
 
     this.checkAll =
       this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+
     this.validateDuplicateRouteIds();
     this.updateHasValidRow();
   }
@@ -1156,10 +1188,10 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   private removeRowsRef(rowsToRemove: BulkRow[]) {
     const set = new Set(rowsToRemove);
     this.rows = this.rows.filter((r) => !set.has(r));
-    this.rows.forEach((r, i) => (r.rowNo = i + 1));
 
     this.checkAll =
       this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+
     this.validateDuplicateRouteIds();
     this.updateHasValidRow();
   }
