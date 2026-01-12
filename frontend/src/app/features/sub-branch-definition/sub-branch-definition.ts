@@ -185,35 +185,15 @@ export class SubBranchDefinitionComponent implements OnInit {
 
   // ================= FORM CHANGE (KEY FIX) =================
   onFormChange(ev: any) {
-    // ✅ branchId nikaalo even if key missing
-    const newBranchId =
-      ev?.key === 'branchId' ? +ev?.value : +(ev?.formValue?.branchId ?? 0);
+    if (ev?.formValue) this.data = { ...this.data, ...ev.formValue };
 
-    // merge latest form state
-    if (ev?.formValue) {
-      this.data = { ...this.data, ...ev.formValue };
-    }
-
-    // ✅ if branchId valid nahi, exit
+    const newBranchId = +(this.data?.branchId ?? 0);
     if (!newBranchId) return;
-
-    // ✅ detect change using tracker (NOT this.data.branchId)
     if (newBranchId === this.lastBranchId) return;
 
-    // ✅ update tracker
     this.lastBranchId = newBranchId;
+    this.data = { ...this.data, subBranchName: null };
 
-    const bd = this.branchMap.get(newBranchId);
-
-    this.data = {
-      ...this.data,
-      branchId: newBranchId,
-      branchName: bd?.name,
-      branchDesc: bd?.desc,
-      subBranchName: null,
-    };
-
-    // ✅ HIT API always on branch change
     this.loadSubBranchDropdown(newBranchId, true);
   }
 
@@ -225,8 +205,9 @@ export class SubBranchDefinitionComponent implements OnInit {
     this.formConfig = { ...SUB_BRANCH_DEFINITION_FORM, mode: 'create' };
     this.showModal = true;
 
-    // ✅ Do NOT call getAll here
-    this.loadSubBranchDropdown(0, true); // or just clear options without API
+    this.loadBranchDropdown();
+
+    this.loadSubBranchDropdown(0, true);
   }
 
   edit(row: any) {

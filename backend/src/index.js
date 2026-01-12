@@ -19,6 +19,7 @@ import subBranchRoutes from "./routes/sub-branch-definition-routes.js";
 import deliveryRouteRoutes from "./routes/delivery-route-definition-routes.js";
 import deliveryRouteBindingRoutes from "./routes/delivery-route-binding-routes.js";
 import branchesRoutes from "./routes/branches-routes.js";
+import subBranchAssignmentDefinitionRoute from "./routes/sub-branch-assignment-definition-routes.js";
 
 dotenv.config();
 
@@ -58,6 +59,7 @@ app.use("/sub-branches", subBranchRoutes);
 app.use("/delivery-routes", deliveryRouteRoutes);
 app.use("/delivery-route-bindings", deliveryRouteBindingRoutes);
 app.use("/branches", branchesRoutes);
+app.use("/sub-branch-assignment-definition", subBranchAssignmentDefinitionRoute);
 
 
 // error handler (last)

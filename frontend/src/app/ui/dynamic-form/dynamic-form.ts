@@ -126,6 +126,7 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
   }
 
   createForm() {
+    // cleanup old
     this.valueSub?.unsubscribe();
 
     const group: any = {};
@@ -158,17 +159,36 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
 
     this.form = new FormGroup(group);
 
-    // ✅ DON'T keep empty valueChanges subscription (extra work)
-    // If you ever need it, subscribe with debounce.
-    this.valueSub = undefined;
+    // ✅ IMPORTANT: emit ONLY subBranchId changes (safe + minimal)
+    // const sb = this.form.get('subBranchId');
+    // if (sb) {
+    //   this.valueSub = sb.valueChanges.subscribe((val) => {
+    //     this.formChange.emit({
+    //       key: 'subBranchId',
+    //       value: val,
+    //       formValue: this.form.getRawValue(),
+    //     });
+    //   });
+    // } else {
+    //   this.valueSub = undefined;
+    // }
+
+    this.valueSub = this.form.valueChanges.subscribe(() => {
+      this.formChange.emit({
+        key: '__form__',
+        value: null,
+        formValue: this.form.getRawValue(),
+      });
+    });
+
+    // OnPush refresh
+    this.cdr.markForCheck();
   }
 
-  // ✅ called from (nzValueChange) in HTML
   onSelectChange(key: string, value: any) {
     this.formChange.emit({ key, value, formValue: this.form.getRawValue() });
   }
 
-  // ✅ search: nzTitle (searchText) + nzLabel
   filterOption = (input: string, option: any): boolean => {
     const val = (input || '').toLowerCase().trim();
 

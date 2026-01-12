@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { of, map } from 'rxjs';
 
 import { Table } from '../../ui/table/table';
 import { Modal } from '../../ui/modal/modal';
@@ -12,7 +13,6 @@ import {
   SUB_BRANCH_ASSIGNMENT_DEFINITION_TABLE,
 } from './sub-branch-assignment-definition-component-config';
 import { SubBranchAssignmentDefinitionService } from '../../core/services/sub-branch-assignment-definition-service';
-
 
 @Component({
   selector: 'app-sub-branch-assignment-definition',
@@ -101,39 +101,42 @@ export class SubBranchAssignmentDefinition implements OnInit {
       next: (res: any) => {
         const rows = res?.data ?? res ?? [];
 
-        this.subBranches = rows
+        this.subBranches = (rows || [])
           .map((x: any) => {
-            const id =
-              Number(x.SubBranchID ?? x.Sub_Branch_ID ?? x.Id ?? x.value) ||
-              null;
-            const name = String(
-              x.SubBranchName ?? x.Sub_Branch_Name ?? x.Name ?? x.label ?? ''
-            ).trim();
-            const branchId = Number(x.BranchID ?? x.BranchId) || null;
-            const branchName = String(
-              x.BranchName ?? x.Branch_Name ?? ''
-            ).trim();
+            const id = Number(x.SubBranchID) || null;
+            const name = String(x.SubBranchName ?? '').trim();
+
+            // ✅ EXACT backend keys
+            const branchId =
+              x.BranchID !== undefined && x.BranchID !== null
+                ? Number(x.BranchID)
+                : null;
+
+            const branchName =
+              x.BranchName !== undefined && x.BranchName !== null
+                ? String(x.BranchName).trim()
+                : '';
 
             if (!id || !name) return null;
 
             return {
               value: id,
-              label: `${id} - ${name}`,
+              label: `${branchName} - (${name})`,
               id,
               name,
               branchId,
               branchName,
-
-              // for optionColumns
-              subBranchId: id,
-              subBranchName: name,
-
+              meta: { id, name, branchId, branchName },
+              searchText: `${id} ${name} ${
+                branchId ?? ''
+              } ${branchName}`.trim(),
               raw: x,
             };
           })
           .filter(Boolean);
 
         this.patchFormOptions();
+        this.formConfig = { ...this.formConfig };
       },
       error: () =>
         this.notification.error('Error', 'Failed to load sub-branches'),
@@ -153,23 +156,33 @@ export class SubBranchAssignmentDefinition implements OnInit {
       next: (res: any) => {
         const list = res?.data ?? res ?? [];
 
-        this.employees = list
-          .filter((e: any) => Number(e.APP_ACTIVE ?? e.Active ?? 1) === 1)
+        this.employees = (list || [])
+          .filter((e: any) => Number(e.APP_ACTIVE ?? 1) === 1)
           .map((e: any) => {
-            const id = Number(e.EMP_ID ?? e.EmployeeId ?? e.Id) || null;
-            const name = String(e.APP_Name ?? e.Name ?? '').trim();
-            const cnic = String(e.CNIC ?? e.Cnic ?? '').trim();
+            const id = Number(e.EMP_ID) || null;
+            if (!id) return null;
+
+            const name = String(
+              e.EmployeeName ?? e.APP_Name ?? e.AppName ?? ''
+            ).trim();
+            const departmentName = String(e.DepartmentName ?? '').trim();
+            const designationName = String(e.DesignationName ?? '').trim();
 
             return {
               value: id,
-              label: `${id} - ${name}`.trim(),
-              id,
-              name,
-              cnic,
+              label: `${name}`,
+              searchText:
+                `${id} ${name} ${departmentName} ${designationName}`.trim(),
+              meta: {
+                id,
+                name,
+                departmentName,
+                designationName,
+              },
               raw: e,
             };
           })
-          .filter((x: any) => !!x.value);
+          .filter(Boolean);
 
         this.patchFormOptions();
 
@@ -188,24 +201,42 @@ export class SubBranchAssignmentDefinition implements OnInit {
   private patchFormOptions() {
     const base = SUB_BRANCH_ASSIGNMENT_DEFINITION_FORM;
 
-    const patched = {
-      ...base,
+    this.formConfig = {
+      ...this.formConfig,
       title: this.formConfig?.title ?? base.title,
       fields: base.fields.map((f: any) => {
-        if (f.key === 'subBranchId')
-          return { ...f, options: this.subBranches ?? [] };
-        if (f.key === 'employeeId')
-          return { ...f, options: this.employees ?? [] };
+        if (f.key === 'subBranchId') {
+          return {
+            ...f,
+            searchable: true,
+            options$: of(this.subBranches ?? []).pipe(
+              map((opts) =>
+                (opts || []).map((o: any) => ({
+                  ...o,
+                  // ✅ VERY IMPORTANT: columns are rendered from meta
+                  meta: {
+                    id: o.id,
+                    name: o.name,
+                    branchId: o.branchId,
+                    branchName: o.branchName,
+                  },
+                }))
+              )
+            ),
+          };
+        }
+
+        if (f.key === 'employeeId') {
+          return {
+            ...f,
+            searchable: true,
+            options$: of(this.employees ?? []),
+          };
+        }
+
         return f;
       }),
     };
-
-    // ✅ if modal is open, don't break reference too aggressively
-    if (this.showModal && this.formConfig) {
-      (this.formConfig as any).fields = patched.fields;
-    } else {
-      this.formConfig = patched;
-    }
   }
 
   // ================= MODAL =================
@@ -275,15 +306,22 @@ export class SubBranchAssignmentDefinition implements OnInit {
 
   // ================= FORM CHANGE =================
   onFormChange(evt: { key: string; value: any; formValue: any }) {
-    // Avoid overwriting blur-pending controls: apply only changed key
-    if (evt?.key) this.data = { ...this.data, [evt.key]: evt.value };
-    else if (evt?.formValue) this.data = { ...this.data, ...evt.formValue };
+    const prevSub = Number(this.data?.subBranchId) || null;
 
-    // ✅ When Sub-Branch changes => auto fill details + load employees by branch
-    if (evt.key === 'subBranchId') {
-      const subId = Number(evt.value) || null;
+    // merge latest form
+    if (evt?.formValue) this.data = { ...this.data, ...evt.formValue };
+    if (evt?.key && evt.key !== '__form__')
+      this.data = { ...this.data, [evt.key]: evt.value };
 
-      // reset dependent fields
+    // ✅ NEW: __form__ se bhi subBranchId change detect
+    const nextSub = Number(this.data?.subBranchId) || null;
+
+    if (
+      evt.key === 'subBranchId' ||
+      (evt.key === '__form__' && prevSub !== nextSub)
+    ) {
+      const subId = nextSub;
+
       this.data = {
         ...this.data,
         subBranchName: '',
@@ -307,11 +345,8 @@ export class SubBranchAssignmentDefinition implements OnInit {
         branchName: sb?.branchName ?? '',
       };
 
-      // load active employees of that branch
       this.loadEmployeesByBranch(branchId, false);
-      return;
     }
-
   }
 
   // ================= SUBMIT =================
