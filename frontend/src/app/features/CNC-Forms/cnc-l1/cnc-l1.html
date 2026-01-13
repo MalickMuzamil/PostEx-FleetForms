@@ -1,0 +1,23 @@
+<!-- ops-cnc-l1-definition.component.html -->
+
+<div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">CnC Definition - L1</h5>
+
+        <div class="d-flex gap-2">
+            <button nz-button nzType="primary" class="nz-button-primary p-1" (click)="openAdd()">
+                <i class="fa fa-plus me-2"></i>
+                Add New
+            </button>
+        </div>
+    </div>
+
+    <!-- ✅ Table -->
+    <app-table [config]="tableConfig" [data]="rows" (delete)="onDelete($event)" (edit)="openEdit($event)">
+    </app-table>
+</div>
+
+<!-- ✅ Modal + Dynamic Form -->
+<app-modal [visible]="showForm" [title]="formConfig.title" [formConfig]="formConfig" [data]="formData"
+    (submit)="onSubmit($event)" (cancel)="closeForm()">
+</app-modal>

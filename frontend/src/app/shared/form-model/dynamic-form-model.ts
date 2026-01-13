@@ -49,6 +49,7 @@ export interface FormField {
   accept?: string; // ".csv,.xls,.xlsx"
   enabledWhen?: string[];
   disabledWhen?: string[];
+  mask?: 'SHORT_CODE_3_2';
 }
 
 export interface FormConfig {

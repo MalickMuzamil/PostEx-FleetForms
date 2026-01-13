@@ -49,9 +49,30 @@
         <span *ngIf="!collapsed">Sub Branch Assignment Definition</span>
     </li>
 
-    <li nz-menu-item routerLink="/CNC-Form" routerLinkActive="nz-menu-item-selected">
-        <i class="fas fa-file-alt me-2"></i>
-        <span *ngIf="!collapsed">CNC-Form</span>
+
+    <li nz-submenu nzTitle="CNC Forms" nzIcon="cluster">
+        <ul>
+            <li nz-menu-item routerLink="/cnc-Level1" routerLinkActive="nz-menu-item-selected">
+                <i class="fas fa-layer-group me-2"></i>
+                <span *ngIf="!collapsed">CNC L1 Definition</span>
+            </li>
+
+            <li nz-menu-item routerLink="/cnc-Level2" routerLinkActive="nz-menu-item-selected">
+                <i class="fas fa-layer-group me-2"></i>
+                <span *ngIf="!collapsed">CNC L2 Definition</span>
+            </li>
+
+            <li nz-menu-item routerLink="/cnc-Level3" routerLinkActive="nz-menu-item-selected">
+                <i class="fas fa-layer-group me-2"></i>
+                <span *ngIf="!collapsed">CNC L3 Definition</span>
+            </li>
+
+            <li nz-menu-item routerLink="/cnc-Level4" routerLinkActive="nz-menu-item-selected">
+                <i class="fas fa-layer-group me-2"></i>
+                <span *ngIf="!collapsed">CNC L4 Definition</span>
+            </li>
+        </ul>
     </li>
+
 
 </ul>
