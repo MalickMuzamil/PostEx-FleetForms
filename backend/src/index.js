@@ -20,6 +20,10 @@ import deliveryRouteRoutes from "./routes/delivery-route-definition-routes.js";
 import deliveryRouteBindingRoutes from "./routes/delivery-route-binding-routes.js";
 import branchesRoutes from "./routes/branches-routes.js";
 import subBranchAssignmentDefinitionRoute from "./routes/sub-branch-assignment-definition-routes.js";
+import cnclevel1 from './routes/cnc-l1-definition-routes.js';
+import cncL2 from "./routes/cnc-l2-definition-routes.js";
+import cncL3 from "./routes/cnc-l3-definition-routes.js";
+import cncL4 from "./routes/cnc-l4-definition-routes.js"
 
 dotenv.config();
 
@@ -60,6 +64,10 @@ app.use("/delivery-routes", deliveryRouteRoutes);
 app.use("/delivery-route-bindings", deliveryRouteBindingRoutes);
 app.use("/branches", branchesRoutes);
 app.use("/sub-branch-assignment-definition", subBranchAssignmentDefinitionRoute);
+app.use("/cnc-level1", cnclevel1);
+app.use("/cnc-level2", cncL2);
+app.use("/cnc-level3", cncL3);
+app.use("/cnc-level4", cncL4);
 
 
 // error handler (last)

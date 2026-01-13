@@ -33,6 +33,7 @@ import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { Subscription } from 'rxjs';
+import { ShortCodeMaskDirective } from '../../types/short-code-mask-directive';
 
 @Component({
   selector: 'app-dynamic-form',
@@ -49,10 +50,10 @@ import { Subscription } from 'rxjs';
     NzCheckboxModule,
     NzSpinModule,
     NzProgressModule,
+    ShortCodeMaskDirective
   ],
   templateUrl: './dynamic-form.html',
   styleUrl: './dynamic-form.css',
-  // ✅ BIG perf win when you have heavy selects
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DynamicForm implements OnInit, OnChanges, OnDestroy {
@@ -82,7 +83,6 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
   ngOnChanges(changes: SimpleChanges) {
     if (changes['config']) {
       this.createForm();
-      // ✅ OnPush: ensure template refresh
       this.cdr.markForCheck();
     }
 
@@ -90,7 +90,6 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
       const src = this.data || {};
       const patch: any = {};
 
-      // find focused control (if any)
       let focusedControl: string | null = null;
       try {
         const active = document?.activeElement as HTMLElement | null;
@@ -126,7 +125,6 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
   }
 
   createForm() {
-    // cleanup old
     this.valueSub?.unsubscribe();
 
     const group: any = {};
@@ -141,7 +139,6 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
         value = field.defaultValue;
       }
 
-      // ✅ date values safely
       if (field.type === 'date' && value) {
         value = value instanceof Date ? value : new Date(value);
       }
@@ -159,7 +156,7 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
 
     this.form = new FormGroup(group);
 
-    // ✅ IMPORTANT: emit ONLY subBranchId changes (safe + minimal)
+    // It's my mistake
     // const sb = this.form.get('subBranchId');
     // if (sb) {
     //   this.valueSub = sb.valueChanges.subscribe((val) => {

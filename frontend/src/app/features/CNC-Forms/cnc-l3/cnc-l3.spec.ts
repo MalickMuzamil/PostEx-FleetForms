@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { CncLevel } from './cnc-level';
+import { CncL3 } from './cnc-l3';
 
-describe('CncLevel', () => {
-  let component: CncLevel;
-  let fixture: ComponentFixture<CncLevel>;
+describe('CncL3', () => {
+  let component: CncL3;
+  let fixture: ComponentFixture<CncL3>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CncLevel]
+      imports: [CncL3]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(CncLevel);
+    fixture = TestBed.createComponent(CncL3);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

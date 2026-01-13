@@ -95,13 +95,39 @@ export const routes: Routes = [
             './features/sub-branch-assignment-definition/sub-branch-assignment-definition'
           ).then((m) => m.SubBranchAssignmentDefinition),
       },
+
       {
-        path: 'CNC-Form',
+        path: 'cnc-Level1',
         loadComponent: () =>
           import(
-            './features/cnc-level/cnc-level'
-          ).then((m) => m.CncLevel),
+            './features/CNC-Forms/cnc-l1/cnc-l1'
+          ).then((m) => m.CncL1),
       },
+
+      {
+        path: 'cnc-Level2',
+        loadComponent: () =>
+          import(
+            './features/CNC-Forms/cnc-l2/cnc-l2'
+          ).then((m) => m.CncL2),
+      },
+
+      {
+        path: 'cnc-Level3',
+        loadComponent: () =>
+          import(
+            './features/CNC-Forms/cnc-l3/cnc-l3'
+          ).then((m) => m.CncL3),
+      },
+
+      {
+        path: 'cnc-Level4',
+        loadComponent: () =>
+          import(
+            './features/CNC-Forms/cnc-l4/cnc-l4'
+          ).then((m) => m.CncL4),
+      },
+      
     ],
   },
 ];

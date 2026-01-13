@@ -2,6 +2,7 @@
   <form [formGroup]="form" (ngSubmit)="submit()">
     <div class="form-grid">
       <ng-container *ngFor="let field of config.fields">
+
         <!-- TEXT -->
         <nz-form-item *ngIf="field.type === 'text'">
           <nz-form-label [nzRequired]="field.required">
@@ -9,13 +10,27 @@
           </nz-form-label>
 
           <nz-form-control>
-            <input nz-input [type]="field.key === 'email' ? 'email' : 'text'" [formControlName]="field.key"
-              [disabled]="!!field.disabled" [attr.maxlength]="field.key === 'email' ? 50 : null" autocomplete="off"
-              spellcheck="false" />
+            <!-- ✅ Default input (all existing forms) -->
+            <ng-container *ngIf="field.mask !== 'SHORT_CODE_3_2'; else shortCodeInput">
+              <input nz-input [type]="field.key === 'email' ? 'email' : 'text'" [formControlName]="field.key"
+                [disabled]="!!field.disabled" [attr.maxlength]="field.key === 'email' ? 50 : null" autocomplete="off"
+                spellcheck="false" />
+            </ng-container>
+
+            <!-- ✅ Masked input (only L1–L6 where field.mask set) -->
+            <ng-template #shortCodeInput>
+              <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="6"
+                autocomplete="off" spellcheck="false" appShortCodeMask />
+            </ng-template>
 
             <!-- REQUIRED -->
             <div class="text-danger mt-1" *ngIf="hasError(field.key, 'required')">
               {{ field.label }} is required
+            </div>
+
+            <!-- NAME SHORT CODE FORMAT -->
+            <div class="text-danger mt-1" *ngIf="field.mask === 'SHORT_CODE_3_2' && hasError(field.key, 'invalidName')">
+              Name must be in format <b>HHH-HH</b> (letters only)
             </div>
 
             <!-- EMAIL FORMAT (Angular built-in key) -->
@@ -30,10 +45,11 @@
 
             <!-- MAX LENGTH -->
             <div class="text-danger mt-1" *ngIf="field.key === 'email' && hasError(field.key, 'maxlength')">
-              Maximum 50 characters allowed
+              Maximum 13 characters allowed
             </div>
           </nz-form-control>
         </nz-form-item>
+
 
         <!-- NUMBER -->
         <nz-form-item *ngIf="field.type === 'number'">
