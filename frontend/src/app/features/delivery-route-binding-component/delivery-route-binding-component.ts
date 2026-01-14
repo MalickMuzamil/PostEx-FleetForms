@@ -320,7 +320,11 @@ export class DeliveryRouteBindingComponent implements OnInit {
       ...DELIVERY_ROUTE_BINDING_EDIT_FORM,
       fields: DELIVERY_ROUTE_BINDING_EDIT_FORM.fields.map((f: any) => {
         if (f.key === 'deliveryRouteId') {
-          return { ...f, options: this.deliveryRoutes ?? [] };
+          return {
+            ...f,
+            options: this.deliveryRoutes ?? [],
+            disabled: this.isEditMode,
+          };
         }
 
         if (f.key === 'branchId') {
@@ -332,7 +336,7 @@ export class DeliveryRouteBindingComponent implements OnInit {
                 ...b,
               }));
 
-          return { ...f, options: opts };
+          return { ...f, options: opts, disabled: this.isEditMode };
         }
 
         if (f.key === 'subBranchId') {
@@ -365,7 +369,7 @@ export class DeliveryRouteBindingComponent implements OnInit {
     this.isEditMode = false;
     this.editingRow = null;
 
-    this.formConfig = { ...this.bulkFormConfig };
+    this.formConfig = this.applyMode({ ...this.bulkFormConfig }, 'create');
     this.data = {};
     this.showModal = true;
   }
@@ -404,7 +408,7 @@ export class DeliveryRouteBindingComponent implements OnInit {
       deliveryRouteId: routeId,
     };
 
-    this.formConfig = { ...this.editFormConfig };
+    this.formConfig = this.applyMode({ ...this.editFormConfig }, 'update');
     this.showModal = true;
 
     this.loadBranchesByRouteId(routeId);
@@ -747,5 +751,16 @@ export class DeliveryRouteBindingComponent implements OnInit {
 
     const dt = new Date(v);
     return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  private applyMode(cfg: any, mode: 'create' | 'update') {
+    const fields = cfg.fields.map((f: any) => {
+      if (f.key === 'deliveryRouteId' || f.key === 'branchId') {
+        return { ...f, disabled: mode === 'update' };
+      }
+      return { ...f };
+    });
+
+    return { ...cfg, mode, fields };
   }
 }
