@@ -25,6 +25,7 @@ import cncL2 from "./routes/cnc-l2-definition-routes.js";
 import cncL3 from "./routes/cnc-l3-definition-routes.js";
 import cncL4 from "./routes/cnc-l4-definition-routes.js";
 import cncL5 from "./routes/cnc-l5-definition-routes.js";
+import cncL6 from "./routes/cnc-l6-definition-routes.js";
 
 
 dotenv.config();
@@ -71,6 +72,7 @@ app.use("/cnc-level2", cncL2);
 app.use("/cnc-level3", cncL3);
 app.use("/cnc-level4", cncL4);
 app.use("/cnc-level5", cncL5);
+app.use("/cnc-level6", cncL6);
 
 
 // error handler (last)
