@@ -46,7 +46,14 @@ export class CncL2 implements OnInit {
     this.loading = true;
     this.service.getAll().subscribe({
       next: (res: any) => {
-        this.rows = Array.isArray(res) ? res : res?.data ?? [];
+        const data = Array.isArray(res) ? res : res?.data ?? [];
+
+        this.rows = data.map((r: any) => ({
+          ...r,
+          enteredOn: this.onlyDate(r?.enteredOn),
+          editedOn: this.onlyDate(r?.editedOn),
+        }));
+
         this.loading = false;
       },
       error: (err) => {
@@ -90,7 +97,7 @@ export class CncL2 implements OnInit {
 
     this.modal.confirm({
       nzTitle: 'Confirm Delete',
-      nzContent: `Are you sure you want to delete ID ${id}?`,
+      nzContent: `Are you sure you want to delete ?`,
       nzOkText: 'Delete',
       nzOkDanger: true,
       nzCancelText: 'Cancel',
@@ -225,5 +232,13 @@ export class CncL2 implements OnInit {
       const u = (raw || '').toString().trim();
       return u || 'Admin';
     }
+  }
+
+  private onlyDate(v: any): string {
+    if (!v) return '';
+    if (typeof v === 'string') return v.split('T')[0] || v;
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().split('T')[0];
   }
 }

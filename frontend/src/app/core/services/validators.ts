@@ -95,7 +95,7 @@ export class AppValidators {
       return null;
     };
   }
-  
+
   static notOnlyNumbers(): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
       const value = (control.value ?? '').toString().trim();
@@ -146,6 +146,26 @@ export class AppValidators {
 
       // length 6: must be 3 letters + dash + 2 letters
       return /^[A-Za-z]{3}-[A-Za-z]{2}$/.test(v) ? null : { invalidName: true };
+    };
+  }
+
+  static alpha5DashRoman(): ValidatorFn {
+    return (control: AbstractControl) => {
+      const v = (control.value ?? '').toString().trim().toUpperCase();
+      if (!v) return null;
+
+      const regex = /^[A-Z]{5}-(I|II|III|IV|V|VI|VII|VIII|IX|X)$/;
+      return regex.test(v) ? null : { invalidName: true };
+    };
+  }
+
+  static alpha3Dash3(): ValidatorFn {
+    return (control: AbstractControl) => {
+      const v = (control.value ?? '').toString().trim().toUpperCase();
+      if (!v) return null;
+
+      const regex = /^[A-Z]{3}-[A-Z]{3}$/;
+      return regex.test(v) ? null : { invalidName: true };
     };
   }
 }

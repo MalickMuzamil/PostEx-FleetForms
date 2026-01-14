@@ -2,8 +2,8 @@ import { FormConfig } from '../../../shared/form-model/dynamic-form-model';
 import { TableConfig } from '../../../shared/form-model/data-table-model';
 import { AppValidators } from '../../../core/services/validators';
 
-export const OPS_CNC_L3_DEFINITION_FORM: FormConfig = {
-  title: 'CnC Definition - L3',
+export const OPS_CNC_L5_DEFINITION_FORM: FormConfig = {
+  title: 'CnC Definition - L5',
   fields: [
     {
       key: 'role',
@@ -16,10 +16,8 @@ export const OPS_CNC_L3_DEFINITION_FORM: FormConfig = {
       label: 'Name',
       type: 'text',
       required: true,
-       mask: 'ALPHA5_ROMAN',
-      validators: [
-        AppValidators.alpha5DashRoman(),
-      ],
+      mask: 'AAA_AAA',   
+      validators: [ AppValidators.alpha3Dash3(),],
       updateOn: 'change',
     },
     {
@@ -56,7 +54,7 @@ export const OPS_CNC_L3_DEFINITION_FORM: FormConfig = {
   ],
 };
 
-export const OPS_CNC_L3_DEFINITION_TABLE: TableConfig = {
+export const OPS_CNC_L5_DEFINITION_TABLE: TableConfig = {
   globalSearch: {
     placeholder: 'Search by name/description',
     keys: ['name', 'description', 'role', 'enteredBy', 'editedBy'],
