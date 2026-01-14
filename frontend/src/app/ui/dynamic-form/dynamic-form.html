@@ -10,17 +10,37 @@
           </nz-form-label>
 
           <nz-form-control>
-            <!-- ✅ Default input (all existing forms) -->
-            <ng-container *ngIf="field.mask !== 'SHORT_CODE_3_2'; else shortCodeInput">
+            <!-- Default input (all existing forms) -->
+            <ng-container
+              *ngIf="field.mask !== 'SHORT_CODE_3_2' && field.mask !== 'ALPHA5_ROMAN' && field.mask !== 'AAA_AAA'; else maskedInput">
               <input nz-input [type]="field.key === 'email' ? 'email' : 'text'" [formControlName]="field.key"
                 [disabled]="!!field.disabled" [attr.maxlength]="field.key === 'email' ? 50 : null" autocomplete="off"
                 spellcheck="false" />
             </ng-container>
 
-            <!-- ✅ Masked input (only L1–L6 where field.mask set) -->
-            <ng-template #shortCodeInput>
-              <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="6"
-                autocomplete="off" spellcheck="false" appShortCodeMask />
+            <!-- Masked input -->
+            <ng-template #maskedInput>
+
+              <!-- SHORT_CODE_3_2 -->
+              <ng-container *ngIf="field.mask === 'SHORT_CODE_3_2'; else alpha5RomanInput">
+                <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="6"
+                  autocomplete="off" spellcheck="false" [appShortCodeMask]="'SHORT_CODE_3_2'" />
+              </ng-container>
+
+              <!-- ALPHA5_ROMAN -->
+              <ng-template #alpha5RomanInput>
+                <ng-container *ngIf="field.mask === 'ALPHA5_ROMAN'; else aaaAaaInput">
+                  <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="10"
+                    autocomplete="off" spellcheck="false" [appShortCodeMask]="'ALPHA5_ROMAN'" />
+                </ng-container>
+              </ng-template>
+
+              <!-- AAA_AAA -->
+              <ng-template #aaaAaaInput>
+                <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="7"
+                  autocomplete="off" spellcheck="false" [appShortCodeMask]="'AAA_AAA'" />
+              </ng-template>
+
             </ng-template>
 
             <!-- REQUIRED -->
@@ -28,9 +48,19 @@
               {{ field.label }} is required
             </div>
 
-            <!-- NAME SHORT CODE FORMAT -->
+            <!-- SHORT_CODE_3_2 FORMAT -->
             <div class="text-danger mt-1" *ngIf="field.mask === 'SHORT_CODE_3_2' && hasError(field.key, 'invalidName')">
               Name must be in format <b>HHH-HH</b> (letters only)
+            </div>
+
+            <!-- ALPHA5_ROMAN FORMAT -->
+            <div class="text-danger mt-1" *ngIf="field.mask === 'ALPHA5_ROMAN' && hasError(field.key, 'invalidName')">
+              Name must be in format <b>AAAAA-II</b> (5 letters + - + Roman)
+            </div>
+
+            <!-- AAA_AAA FORMAT -->
+            <div class="text-danger mt-1" *ngIf="field.mask === 'AAA_AAA' && hasError(field.key, 'invalidName')">
+              Name must be in format <b>AAA-AAA</b> (letters only)
             </div>
 
             <!-- EMAIL FORMAT (Angular built-in key) -->
@@ -45,11 +75,10 @@
 
             <!-- MAX LENGTH -->
             <div class="text-danger mt-1" *ngIf="field.key === 'email' && hasError(field.key, 'maxlength')">
-              Maximum 13 characters allowed
+              Maximum 50 characters allowed
             </div>
           </nz-form-control>
         </nz-form-item>
-
 
         <!-- NUMBER -->
         <nz-form-item *ngIf="field.type === 'number'">
@@ -74,7 +103,7 @@
           </nz-form-control>
         </nz-form-item>
 
-        <!-- ✅ SELECT -->
+        <!-- SELECT -->
         <nz-form-item *ngIf="field.type === 'select'">
           <nz-form-label [nzRequired]="field.required">
             {{ field.label }}

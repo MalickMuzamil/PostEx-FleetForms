@@ -2,7 +2,10 @@ import { Component } from '@angular/core';
 import { OpsCnCL4DefinitionService } from '../../../core/services/ops-cnc-L4-service';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { NzModalService } from 'ng-zorro-antd/modal';
-import { OPS_CNC_L4_DEFINITION_FORM, OPS_CNC_L4_DEFINITION_TABLE } from './cnc-l4-definition-config';
+import {
+  OPS_CNC_L4_DEFINITION_FORM,
+  OPS_CNC_L4_DEFINITION_TABLE,
+} from './cnc-l4-definition-config';
 import { Modal } from '../../../ui/modal/modal';
 import { Table } from '../../../ui/table/table';
 import { CommonModule } from '@angular/common';
@@ -41,7 +44,14 @@ export class CncL4 {
     this.loading = true;
     this.service.getAll().subscribe({
       next: (res: any) => {
-        this.rows = Array.isArray(res) ? res : res?.data ?? [];
+        const data = Array.isArray(res) ? res : res?.data ?? [];
+
+        this.rows = data.map((r: any) => ({
+          ...r,
+          enteredOn: this.onlyDate(r?.enteredOn),
+          editedOn: this.onlyDate(r?.editedOn),
+        }));
+
         this.loading = false;
       },
       error: (err) => {
@@ -83,7 +93,7 @@ export class CncL4 {
 
     this.modal.confirm({
       nzTitle: 'Confirm Delete',
-      nzContent: `Are you sure you want to delete ID ${id}?`,
+      nzContent: `Are you sure you want to delete ?`,
       nzOkText: 'Delete',
       nzOkDanger: true,
       nzCancelText: 'Cancel',
@@ -200,5 +210,13 @@ export class CncL4 {
       const u = (raw || '').toString().trim();
       return u || 'Admin';
     }
+  }
+
+  private onlyDate(v: any): string {
+    if (!v) return '';
+    if (typeof v === 'string') return v.split('T')[0] || v;
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().split('T')[0];
   }
 }

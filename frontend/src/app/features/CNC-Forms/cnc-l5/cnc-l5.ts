@@ -1,25 +1,25 @@
 import { Component, OnInit } from '@angular/core';
-import { OpsCnCL1DefinitionService } from '../../../core/services/ops-cnc-L1.service';
-import {
-  OPS_CNC_L1_DEFINITION_FORM,
-  OPS_CNC_L1_DEFINITION_TABLE,
-} from './cnc-l1-definition.config';
-import { Table } from '../../../ui/table/table';
-import { Modal } from '../../../ui/modal/modal';
-import { CommonModule } from '@angular/common';
+import { OpsCnCL5DefinitionService } from '../../../core/services/ops-cnc-L5-service';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import {
+  OPS_CNC_L5_DEFINITION_FORM,
+  OPS_CNC_L5_DEFINITION_TABLE,
+} from './cnc-l5-definition-config';
+import { CommonModule } from '@angular/common';
+import { Table } from '../../../ui/table/table';
+import { Modal } from '../../../ui/modal/modal';
 
 @Component({
-  selector: 'app-cnc-l1',
-  imports: [Table, Modal, CommonModule],
+  selector: 'app-cnc-l5',
+  imports: [CommonModule, Table, Modal],
   standalone: true,
-  templateUrl: './cnc-l1.html',
-  styleUrl: './cnc-l1.css',
+  templateUrl: './cnc-l5.html',
+  styleUrl: './cnc-l5.css',
 })
-export class CncL1 implements OnInit {
-  formConfig = OPS_CNC_L1_DEFINITION_FORM;
-  tableConfig = OPS_CNC_L1_DEFINITION_TABLE;
+export class CncL5 implements OnInit {
+  formConfig = OPS_CNC_L5_DEFINITION_FORM;
+  tableConfig = OPS_CNC_L5_DEFINITION_TABLE;
 
   rows: any[] = [];
   loading = false;
@@ -31,7 +31,7 @@ export class CncL1 implements OnInit {
   formData: any = {};
 
   constructor(
-    private service: OpsCnCL1DefinitionService,
+    private service: OpsCnCL5DefinitionService,
     private notification: NzNotificationService,
     private modal: NzModalService
   ) {}
@@ -73,15 +73,10 @@ export class CncL1 implements OnInit {
     this.service.getRoles().subscribe({
       next: (res: any) => {
         const roles = Array.isArray(res?.data) ? res.data : [];
-        this.formData = {
-          ...this.formData,
-          role: roles?.[0]?.role ?? null,
-        };
+        this.formData = { ...this.formData, role: roles?.[0]?.role ?? null };
         this.showForm = true;
       },
-      error: () => {
-        this.showForm = true;
-      },
+      error: () => (this.showForm = true),
     });
   }
 
@@ -98,7 +93,7 @@ export class CncL1 implements OnInit {
 
     this.modal.confirm({
       nzTitle: 'Confirm Delete',
-      nzContent: `Are you sure you want to delete ?`,
+      nzContent: `Are you sure you want to delete ID ?`,
       nzOkText: 'Delete',
       nzOkDanger: true,
       nzCancelText: 'Cancel',
@@ -122,30 +117,12 @@ export class CncL1 implements OnInit {
     });
   }
 
-  private formatNameShortCode(value: any): string | null {
-    const raw = (value ?? '').toString().toUpperCase();
-    const lettersOnly = raw.replace(/[^A-Z]/g, '').slice(0, 5);
-    if (!lettersOnly) return null;
-    if (lettersOnly.length <= 3) return lettersOnly;
-    return `${lettersOnly.slice(0, 3)}-${lettersOnly.slice(3, 5)}`;
-  }
-
   onSubmit(payload: any): void {
     const currentUser = this.getCurrentUser();
     const nowIso = new Date().toISOString();
 
-    const formattedName = this.formatNameShortCode(payload?.name);
-
-    if (!formattedName || formattedName.length !== 6) {
-      this.notification.error(
-        'Error',
-        'Name must be in format AAA-AA (letters only).'
-      );
-      return;
-    }
-
     const base = {
-      name: formattedName,
+      name: (payload?.name ?? '').toString().trim(),
       description: payload?.description,
       role: payload?.role ?? this.formData?.role ?? null,
     };
@@ -162,11 +139,11 @@ export class CncL1 implements OnInit {
 
       this.service.create(body).subscribe({
         next: (res: any) => {
-          const id = res?.data?.Ops_CnC_L1_Id ?? res?.data?.id;
+          const newId = res?.data?.Ops_CnC_L5_Id ?? res?.data?.id;
           this.notification.success(
             'Success',
-            id
-              ? `${res?.message || 'Created successfully'} (ID: ${id})`
+            newId
+              ? `${res?.message || 'Created successfully'} (ID: ${newId})`
               : res?.message || 'Created successfully'
           );
           this.showForm = false;
@@ -180,7 +157,7 @@ export class CncL1 implements OnInit {
         },
       });
 
-      return; // ✅ IMPORTANT: stop here, don't run update
+      return;
     }
 
     // ✅ UPDATE
@@ -220,17 +197,18 @@ export class CncL1 implements OnInit {
     const raw =
       localStorage.getItem('currentUser') ||
       localStorage.getItem('user') ||
-      localStorage.getItem('username');
-
-    if (!raw) {
-      return 'admin';
-    }
+      localStorage.getItem('username') ||
+      '';
 
     try {
       const obj = JSON.parse(raw);
-      return obj?.username || obj?.name || obj?.email || 'admin';
+      const u = (obj?.username || obj?.name || obj?.email || '')
+        .toString()
+        .trim();
+      return u || 'Admin';
     } catch {
-      return raw?.trim() ? raw : 'admin';
+      const u = (raw || '').toString().trim();
+      return u || 'Admin';
     }
   }
 

@@ -127,6 +127,14 @@ export const routes: Routes = [
             './features/CNC-Forms/cnc-l4/cnc-l4'
           ).then((m) => m.CncL4),
       },
+
+      {
+        path: 'cnc-Level5',
+        loadComponent: () =>
+          import(
+            './features/CNC-Forms/cnc-l5/cnc-l5'
+          ).then((m) => m.CncL5),
+      },
       
     ],
   },

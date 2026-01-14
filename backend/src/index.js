@@ -23,7 +23,9 @@ import subBranchAssignmentDefinitionRoute from "./routes/sub-branch-assignment-d
 import cnclevel1 from './routes/cnc-l1-definition-routes.js';
 import cncL2 from "./routes/cnc-l2-definition-routes.js";
 import cncL3 from "./routes/cnc-l3-definition-routes.js";
-import cncL4 from "./routes/cnc-l4-definition-routes.js"
+import cncL4 from "./routes/cnc-l4-definition-routes.js";
+import cncL5 from "./routes/cnc-l5-definition-routes.js";
+
 
 dotenv.config();
 
@@ -68,6 +70,7 @@ app.use("/cnc-level1", cnclevel1);
 app.use("/cnc-level2", cncL2);
 app.use("/cnc-level3", cncL3);
 app.use("/cnc-level4", cncL4);
+app.use("/cnc-level5", cncL5);
 
 
 // error handler (last)

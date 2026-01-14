@@ -16,8 +16,8 @@ export const OPS_CNC_L4_DEFINITION_FORM: FormConfig = {
       label: 'Name',
       type: 'text',
       required: true,
-      // L4 names look like CENTER-III, NORTH-I etc. => keep flexible
-      validators: [AppValidators.maxLen(15)],
+      mask: 'ALPHA5_ROMAN',
+      validators: [AppValidators.alpha5DashRoman()],
       updateOn: 'change',
     },
     {
