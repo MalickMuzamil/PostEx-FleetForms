@@ -50,7 +50,7 @@ import { ShortCodeMaskDirective } from '../../types/short-code-mask-directive';
     NzCheckboxModule,
     NzSpinModule,
     NzProgressModule,
-    ShortCodeMaskDirective
+    ShortCodeMaskDirective,
   ],
   templateUrl: './dynamic-form.html',
   styleUrl: './dynamic-form.css',
@@ -114,7 +114,6 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
 
       if (Object.keys(patch).length) {
         this.form.patchValue(patch, { emitEvent: false });
-        // ✅ OnPush: data patch ke baad refresh
         this.cdr.markForCheck();
       }
     }
@@ -155,6 +154,12 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
     });
 
     this.form = new FormGroup(group);
+
+    queueMicrotask(() => {
+      this.form.updateValueAndValidity({ emitEvent: false });
+      this.form.markAllAsTouched();
+      this.cdr.markForCheck();
+    });
 
     // It's my mistake
     // const sb = this.form.get('subBranchId');

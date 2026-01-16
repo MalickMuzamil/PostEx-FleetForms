@@ -128,7 +128,7 @@ class SubBranchAssignmentDefinitionService {
       ON br.BranchID = sb.BranchID
     LEFT JOIN HRM.HR.Employees e
       ON e.EMP_ID = A.Sub_Branch_Emp_ID
-    ORDER BY A.Sub_Branch_ID, A.EffectiveDate DESC, A.ID DESC
+    ORDER BY A.ID DESC
   `);
 
     return result.recordset;

@@ -1,16 +1,16 @@
 import sql from "mssql";
 import { getPool } from "../config/sql-config.js";
 
-
 const normalize = (v) => (v || "").trim().toUpperCase();
 
 class SubBranchDefinitionService {
-
-
-  async listSubBranchesByBranchId(branchId) {
+  // ---------- LIST BY BRANCH (ONLY ACTIVE) ----------
+  async listSubBranchesByBranchId(branchId, includeInactive = false) {
     const pool = await getPool();
     const request = pool.request();
     request.input("branchId", sql.Int, Number(branchId));
+
+    const activeFilter = includeInactive ? "" : "AND ISNULL(s.IsActive, 1) = 1";
 
     const result = await request.query(`
     SELECT
@@ -19,6 +19,7 @@ class SubBranchDefinitionService {
       s.BranchID               AS BranchID,
       s.Sub_Branch_Name        AS SubBranchName,
       s.Sub_Branch_Description AS SubBranchDesc,
+      ISNULL(s.IsActive,1)     AS IsActive,
 
       s.EnteredOn              AS EnteredOn,
       s.EnteredBy              AS EnteredBy,
@@ -31,12 +32,12 @@ class SubBranchDefinitionService {
     LEFT JOIN HRM.HR.Branches br
       ON br.BranchID = s.BranchID
     WHERE s.BranchID = @branchId
-    ORDER BY s.Sub_Branch_ID DESC
+      ${activeFilter}
+    ORDER BY s.Sub_Branch_ID ASC
   `);
 
     return result.recordset;
   }
-
 
   // ---------- BRANCHES (Dropdown) ----------
   async listBranches() {
@@ -49,58 +50,60 @@ class SubBranchDefinitionService {
     return result.recordset;
   }
 
-  // ---------- LIST ALL SUB-BRANCHES ----------
+  // ---------- LIST ALL SUB-BRANCHES (ONLY ACTIVE) ----------
   async listSubBranches() {
     const pool = await getPool();
     const result = await pool.request().query(`
-    SELECT
-      s.Sub_Branch_ID          AS ID,         
-      s.Sub_Branch_ID          AS SubBranchID, 
-      s.BranchID               AS BranchID,
-      s.Sub_Branch_Name        AS SubBranchName,
-      s.Sub_Branch_Description AS SubBranchDesc,
+      SELECT
+        s.Sub_Branch_ID          AS ID,
+        s.Sub_Branch_ID          AS SubBranchID,
+        s.BranchID               AS BranchID,
+        s.Sub_Branch_Name        AS SubBranchName,
+        s.Sub_Branch_Description AS SubBranchDesc,
 
-      s.EnteredOn              AS EnteredOn,
-      s.EnteredBy              AS EnteredBy,
-      s.EditedOn               AS EditedOn,
-      s.EditedBy               AS EditedBy,
+        s.EnteredOn              AS EnteredOn,
+        s.EnteredBy              AS EnteredBy,
+        s.EditedOn               AS EditedOn,
+        s.EditedBy               AS EditedBy,
 
-      br.BranchName            AS BranchName,
-      br.BranchDesc            AS BranchDesc
-    FROM GoGreen.OPS.Sub_Branch_Definition s
-    LEFT JOIN HRM.HR.Branches br
-      ON br.BranchID = s.BranchID
-    ORDER BY s.Sub_Branch_ID DESC
-  `);
+        br.BranchName            AS BranchName,
+        br.BranchDesc            AS BranchDesc
+      FROM GoGreen.OPS.Sub_Branch_Definition s
+      LEFT JOIN HRM.HR.Branches br
+        ON br.BranchID = s.BranchID
+      WHERE ISNULL(s.IsActive, 1) = 1
+      ORDER BY s.Sub_Branch_ID ASC
+    `);
     return result.recordset;
   }
 
-  // ---------- GET BY ID ----------
+  // ---------- GET BY ID (ONLY ACTIVE) ----------
   async getSubBranchById(id) {
     const pool = await getPool();
     const request = pool.request();
     request.input("id", sql.Int, id);
 
     const result = await request.query(`
-    SELECT TOP 1
-      s.Sub_Branch_ID          AS ID,
-      s.Sub_Branch_ID          AS SubBranchID,
-      s.BranchID               AS BranchID,
-      s.Sub_Branch_Name        AS SubBranchName,
-      s.Sub_Branch_Description AS SubBranchDesc,
+      SELECT TOP 1
+        s.Sub_Branch_ID          AS ID,
+        s.Sub_Branch_ID          AS SubBranchID,
+        s.BranchID               AS BranchID,
+        s.Sub_Branch_Name        AS SubBranchName,
+        s.Sub_Branch_Description AS SubBranchDesc,
 
-      s.EnteredOn              AS EnteredOn,
-      s.EnteredBy              AS EnteredBy,
-      s.EditedOn               AS EditedOn,
-      s.EditedBy               AS EditedBy,
+        s.EnteredOn              AS EnteredOn,
+        s.EnteredBy              AS EnteredBy,
+        s.EditedOn               AS EditedOn,
+        s.EditedBy               AS EditedBy,
 
-      br.BranchName            AS BranchName,
-      br.BranchDesc            AS BranchDesc
-    FROM GoGreen.OPS.Sub_Branch_Definition s
-    LEFT JOIN HRM.HR.Branches br
-      ON br.BranchID = s.BranchID
-    WHERE s.Sub_Branch_ID = @id
-  `);
+        br.BranchName            AS BranchName,
+        br.BranchDesc            AS BranchDesc
+      FROM GoGreen.OPS.Sub_Branch_Definition s
+      LEFT JOIN HRM.HR.Branches br
+        ON br.BranchID = s.BranchID
+      WHERE s.Sub_Branch_ID = @id
+        AND ISNULL(s.IsActive, 1) = 1
+    `);
 
     return result.recordset?.[0] || null;
   }
@@ -114,17 +117,17 @@ class SubBranchDefinitionService {
     const request = pool.request();
 
     request.input("branchId", sql.Int, branchId);
-    request.input("subBranchName", sql.NVarChar(100), subBranchName.trim());
-    request.input("subBranchDesc", sql.NVarChar(200), ""); // 👈 ADD THIS
+    request.input("subBranchName", sql.NVarChar(100), normalize(subBranchName));
+    request.input("subBranchDesc", sql.NVarChar(200), "");
     request.input("enteredBy", sql.NVarChar(100), (enteredBy || "Admin").trim());
 
     const result = await request.query(`
-    INSERT INTO GoGreen.OPS.Sub_Branch_Definition
-      (BranchID, Sub_Branch_Name, Sub_Branch_Description, EnteredOn, EnteredBy)
-    OUTPUT INSERTED.*
-    VALUES
-      (@branchId, @subBranchName, @subBranchDesc, GETDATE(), @enteredBy)
-  `);
+      INSERT INTO GoGreen.OPS.Sub_Branch_Definition
+        (BranchID, Sub_Branch_Name, Sub_Branch_Description, EnteredOn, EnteredBy, IsActive)
+      OUTPUT INSERTED.*
+      VALUES
+        (@branchId, @subBranchName, @subBranchDesc, GETDATE(), @enteredBy, 1)
+    `);
 
     return result.recordset?.[0] || null;
   }
@@ -137,24 +140,18 @@ class SubBranchDefinitionService {
     const finalBranchId = Number(branchId ?? current.BranchID);
 
     const finalName =
-      typeof subBranchName === "string"
-        ? subBranchName
-        : current.SubBranchName;
+      typeof subBranchName === "string" ? subBranchName : current.SubBranchName;
 
-    const nameChanged =
-      normalize(finalName) !== normalize(current.SubBranchName);
+    const nameChanged = normalize(finalName) !== normalize(current.SubBranchName);
+    const branchChanged = Number(finalBranchId) !== Number(current.BranchID);
 
-    const branchChanged =
-      Number(finalBranchId) !== Number(current.BranchID);
-
-    // ✅ DUPLICATE CHECK (ONLY WHEN NEEDED)
     if (nameChanged || branchChanged) {
       this.validateNameFormat(finalName);
 
       await this.ensureNoDuplicate({
-        id: Number(id),                 // 👈 ignore current record
-        branchId: finalBranchId,        // 👈 same branch check
-        subBranchName: finalName,       // 👈 new name
+        id: Number(id),
+        branchId: finalBranchId,
+        subBranchName: finalName,
       });
     }
 
@@ -162,72 +159,63 @@ class SubBranchDefinitionService {
     const request = pool.request();
 
     request.input("id", sql.Int, Number(id));
-    request.input(
-      "editedBy",
-      sql.NVarChar(100),
-      (editedBy || "Admin").trim()
-    );
+    request.input("editedBy", sql.NVarChar(100), (editedBy || "Admin").trim());
 
-    if (branchChanged) {
-      request.input("branchId", sql.Int, finalBranchId);
-    }
-
-    if (nameChanged) {
-      request.input(
-        "subBranchName",
-        sql.NVarChar(100),
-        normalize(finalName)
-      );
-    }
+    if (branchChanged) request.input("branchId", sql.Int, finalBranchId);
+    if (nameChanged) request.input("subBranchName", sql.NVarChar(100), normalize(finalName));
 
     const result = await request.query(`
-    UPDATE GoGreen.OPS.Sub_Branch_Definition
-    SET
-      ${branchChanged ? "BranchID = @branchId," : ""}
-      ${nameChanged ? "Sub_Branch_Name = @subBranchName," : ""}
-      EditedOn = GETDATE(),
-      EditedBy = @editedBy
-    OUTPUT INSERTED.*
-    WHERE Sub_Branch_ID = @id
-  `);
-
-    return result.recordset?.[0] || null;
-  }
-
-
-  // ---------- DELETE ----------
-  async deleteSubBranch(id) {
-    const pool = await getPool();
-    const request = pool.request();
-    request.input("id", sql.Int, id);
-
-    const result = await request.query(`
-      DELETE FROM GoGreen.OPS.Sub_Branch_Definition
-      OUTPUT DELETED.*
+      UPDATE GoGreen.OPS.Sub_Branch_Definition
+      SET
+        ${branchChanged ? "BranchID = @branchId," : ""}
+        ${nameChanged ? "Sub_Branch_Name = @subBranchName," : ""}
+        EditedOn = GETDATE(),
+        EditedBy = @editedBy
+      OUTPUT INSERTED.*
       WHERE Sub_Branch_ID = @id
+        AND ISNULL(IsActive, 1) = 1
     `);
 
     return result.recordset?.[0] || null;
   }
 
-  // ---------- DUPLICATE CHECK ----------
+  // ---------- DELETE (SOFT DELETE) ----------
+  async deleteSubBranch(id, deletedBy = "Admin") {
+    const pool = await getPool();
+    const request = pool.request();
+
+    request.input("id", sql.Int, id);
+    request.input("deletedBy", sql.NVarChar(100), (deletedBy || "Admin").trim());
+
+    const result = await request.query(`
+      UPDATE GoGreen.OPS.Sub_Branch_Definition
+      SET
+        IsActive = 0,
+        DeletedOn = GETDATE(),
+        DeletedBy = @deletedBy
+      OUTPUT INSERTED.*
+      WHERE Sub_Branch_ID = @id
+        AND ISNULL(IsActive, 1) = 1
+    `);
+
+    return result.recordset?.[0] || null;
+  }
+
+  // ---------- DUPLICATE CHECK (ONLY ACTIVE) ----------
   async ensureNoDuplicate({ id = null, branchId, subBranchName }) {
     const pool = await getPool();
     const request = pool.request();
 
     request.input("branchId", sql.Int, Number(branchId));
-    request.input(
-      "subBranchName",
-      sql.NVarChar(100),
-      normalize(subBranchName)
-    );
+    request.input("subBranchName", sql.NVarChar(100), normalize(subBranchName));
 
     let query = `
-    SELECT TOP 1 Sub_Branch_ID
-    FROM GoGreen.OPS.Sub_Branch_Definition
-    WHERE BranchID = @branchId
-      AND UPPER(LTRIM(RTRIM(Sub_Branch_Name))) = @subBranchName
-  `;
+      SELECT TOP 1 Sub_Branch_ID
+      FROM GoGreen.OPS.Sub_Branch_Definition
+      WHERE BranchID = @branchId
+        AND ISNULL(IsActive, 1) = 1
+        AND UPPER(LTRIM(RTRIM(Sub_Branch_Name))) = @subBranchName
+    `;
 
     if (id) {
       request.input("id", sql.Int, Number(id));
@@ -247,9 +235,6 @@ class SubBranchDefinitionService {
   // ---------- FORMAT VALIDATION ----------
   validateNameFormat(name) {
     const cleaned = (name || "").trim();
-
-    // allow: letters/digits/space/hyphen/parentheses, 1..100
-    // (aap data me codes like LHE-H01-ICH aur text with ( ) hai)
     const ok = /^[A-Za-z0-9\- ()]{1,100}$/.test(cleaned);
 
     if (!ok) {

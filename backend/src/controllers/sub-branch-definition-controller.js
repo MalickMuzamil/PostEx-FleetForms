@@ -1,3 +1,4 @@
+// controllers/sub-branch-definition-controller.js
 import { subBranchDefinitionService } from "../services/sub-branch-definition-service.js";
 
 class SubBranchDefinitionController {
@@ -11,16 +12,19 @@ class SubBranchDefinitionController {
         }
     };
 
-    // ---------- LIST ALL ----------
     getAll = async (req, res, next) => {
         try {
+            console.log("QUERY:", req.query);
 
-            console.log("QUERY:", req.query); 
             const branchId = req.query.branchId ? Number(req.query.branchId) : null;
+            const includeInactive = req.query.includeInactive === "1";
 
             const data = branchId
-                ? await subBranchDefinitionService.listSubBranchesByBranchId(branchId)
-                : await subBranchDefinitionService.listSubBranches();
+                ? await subBranchDefinitionService.listSubBranchesByBranchId(
+                    branchId,
+                    includeInactive
+                )
+                : await subBranchDefinitionService.listSubBranches(); // active only (table/view)
 
             res.json({ data });
         } catch (err) {
@@ -35,7 +39,8 @@ class SubBranchDefinitionController {
             if (!id) return res.status(400).json({ message: "Invalid id." });
 
             const data = await subBranchDefinitionService.getSubBranchById(id);
-            if (!data) return res.status(404).json({ message: "Sub-Branch not found." });
+            if (!data)
+                return res.status(404).json({ message: "Sub-Branch not found." });
 
             res.json({ data });
         } catch (err) {
@@ -54,9 +59,8 @@ class SubBranchDefinitionController {
                 });
             }
 
-            // frontend localStorage -> enteredBy bhejega, warna Admin
             const finalEnteredBy =
-                (enteredBy || req.user?.username || req.user?.id || "Admin");
+                enteredBy || req.user?.username || req.user?.id || "Admin";
 
             const data = await subBranchDefinitionService.createSubBranch({
                 branchId,
@@ -92,9 +96,7 @@ class SubBranchDefinitionController {
             const { branchId, subBranchName, editedBy } = req.body;
 
             const idNum = Number(id);
-            if (!idNum) {
-                return res.status(400).json({ message: "Invalid id." });
-            }
+            if (!idNum) return res.status(400).json({ message: "Invalid id." });
 
             if (!branchId && !subBranchName) {
                 return res.status(400).json({
@@ -111,9 +113,8 @@ class SubBranchDefinitionController {
                 editedBy: finalEditedBy,
             });
 
-            if (!data) {
+            if (!data)
                 return res.status(404).json({ message: "Sub-Branch not found." });
-            }
 
             res.json({
                 message: "Sub-Branch updated successfully.",
@@ -136,14 +137,20 @@ class SubBranchDefinitionController {
         }
     };
 
-    // ---------- DELETE ----------
+    // ---------- DELETE (SOFT DELETE) ----------
     delete = async (req, res, next) => {
         try {
             const { id } = req.params;
             if (!id) return res.status(400).json({ message: "Invalid id." });
 
-            const data = await subBranchDefinitionService.deleteSubBranch(id);
-            if (!data) return res.status(404).json({ message: "Sub-Branch not found." });
+            // ✅ deletedBy (frontend bheje ya na bheje, fallback Admin)
+            const deletedBy =
+                req.body?.deletedBy || req.user?.username || req.user?.id;
+
+            const data = await subBranchDefinitionService.deleteSubBranch(id, deletedBy);
+
+            if (!data)
+                return res.status(404).json({ message: "Sub-Branch not found." });
 
             res.json({
                 message: "Sub-Branch deleted successfully.",
