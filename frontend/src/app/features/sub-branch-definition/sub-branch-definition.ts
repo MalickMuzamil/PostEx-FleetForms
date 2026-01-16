@@ -142,34 +142,46 @@ export class SubBranchDefinitionComponent implements OnInit {
 
     if (clearSelection) this.data = { ...this.data, subBranchName: null };
 
-    // clear options immediately
     const fieldsA = [...this.formConfig.fields];
-    fieldsA[idx] = { ...fieldsA[idx], loading: false, options: [] };
+    fieldsA[idx] = { ...fieldsA[idx], loading: true, options: [] };
     this.formConfig = { ...this.formConfig, fields: fieldsA };
 
-    const hasBranch = !!branchId;
+    if (!branchId) {
+      const fieldsStop = [...this.formConfig.fields];
+      fieldsStop[idx] = { ...fieldsStop[idx], loading: false };
+      this.formConfig = { ...this.formConfig, fields: fieldsStop };
+      return;
+    }
 
-    // ✅ If no branch -> stop (no API)
-    if (!hasBranch) return;
-
-    // ✅ Always hit API for selected branch
-    const req$ = this.service.getSubBranchesByBranchId(branchId!);
+    const req$ = this.service.getSubBranchesByBranchId(branchId, true);
 
     req$
       .pipe(
         map((res: any) => res?.data ?? res ?? []),
-        map((rows: any[]) =>
-          rows
-            .map((r) => (r.SubBranchName ?? '').trim())
-            .filter(Boolean)
-            .filter((v, i, a) => a.indexOf(v) === i)
-            .map((name) => ({
-              label: name,
-              value: name,
-              searchText: name,
-              meta: { name },
-            }))
-        ),
+        map((rows: any[]) => {
+          const mapByName = new Map<
+            string,
+            { name: string; isActive: number }
+          >();
+
+          for (const r of rows) {
+            const name = String(r?.SubBranchName ?? '').trim();
+            if (!name) continue;
+
+            const isActive = Number(r?.IsActive ?? 1);
+            const prev = mapByName.get(name);
+            if (!prev || (prev.isActive === 0 && isActive === 1)) {
+              mapByName.set(name, { name, isActive });
+            }
+          }
+
+          return Array.from(mapByName.values()).map((x) => ({
+            label: x.isActive ? x.name : `${x.name} (Deleted)`,
+            value: x.name,
+            searchText: x.name,
+            meta: { name: x.name, isActive: x.isActive },
+          }));
+        }),
         finalize(() => {
           const fieldsB = [...this.formConfig.fields];
           fieldsB[idx] = { ...fieldsB[idx], loading: false };

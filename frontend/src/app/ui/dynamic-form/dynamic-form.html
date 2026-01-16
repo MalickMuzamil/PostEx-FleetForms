@@ -165,6 +165,10 @@
           <nz-form-control>
             <nz-date-picker style="width: 100%" [formControlName]="field.key" [nzDisabled]="!!field.disabled"
               [nzDisabledDate]="getDisabledDateFn(field.key)" [nzInputReadOnly]="true"></nz-date-picker>
+
+            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'pastDateNotAllowed')">
+              Effective Date must be in the future
+            </div>
           </nz-form-control>
         </nz-form-item>
 
