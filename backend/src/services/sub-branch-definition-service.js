@@ -4,7 +4,7 @@ import { getPool } from "../config/sql-config.js";
 const normalize = (v) => (v || "").trim().toUpperCase();
 
 class SubBranchDefinitionService {
-  // ---------- LIST BY BRANCH (ONLY ACTIVE) ----------
+  // ---------- LIST BY BRAN    CH (ONLY ACTIVE) ----------
   async listSubBranchesByBranchId(branchId, includeInactive = false) {
     const pool = await getPool();
     const request = pool.request();
@@ -110,26 +110,43 @@ class SubBranchDefinitionService {
 
   // ---------- CREATE ----------
   async createSubBranch({ branchId, subBranchName, enteredBy }) {
-    await this.ensureNoDuplicate({ branchId, subBranchName });
     this.validateNameFormat(subBranchName);
 
     const pool = await getPool();
     const request = pool.request();
 
-    request.input("branchId", sql.Int, branchId);
+    request.input("branchId", sql.Int, Number(branchId));
     request.input("subBranchName", sql.NVarChar(100), normalize(subBranchName));
-    request.input("subBranchDesc", sql.NVarChar(200), "");
     request.input("enteredBy", sql.NVarChar(100), (enteredBy || "Admin").trim());
 
-    const result = await request.query(`
-      INSERT INTO GoGreen.OPS.Sub_Branch_Definition
-        (BranchID, Sub_Branch_Name, Sub_Branch_Description, EnteredOn, EnteredBy, IsActive)
-      OUTPUT INSERTED.*
-      VALUES
-        (@branchId, @subBranchName, @subBranchDesc, GETDATE(), @enteredBy, 1)
-    `);
+    // 1) If exists but inactive -> revive it (no new row)
+    const revive = await request.query(`
+    UPDATE GoGreen.OPS.Sub_Branch_Definition
+    SET
+      IsActive = 1,
+      EditedOn = NULL,
+      EditedBy = NULL
+    OUTPUT INSERTED.*
+    WHERE BranchID = @branchId
+      AND UPPER(LTRIM(RTRIM(Sub_Branch_Name))) = @subBranchName
+      AND ISNULL(IsActive, 1) = 0
+  `);
 
-    return result.recordset?.[0] || null;
+    if (revive.recordset?.length) return revive.recordset[0];
+
+    // 2) Otherwise block duplicates among active
+    await this.ensureNoDuplicate({ branchId, subBranchName });
+
+    // 3) Insert new
+    const inserted = await request.query(`
+    INSERT INTO GoGreen.OPS.Sub_Branch_Definition
+      (BranchID, Sub_Branch_Name, Sub_Branch_Description, EnteredOn, EnteredBy, IsActive)
+    OUTPUT INSERTED.*
+    VALUES
+      (@branchId, @subBranchName, '', GETDATE(), @enteredBy, 1)
+  `);
+
+    return inserted.recordset?.[0] || null;
   }
 
   // ---------- UPDATE ----------
