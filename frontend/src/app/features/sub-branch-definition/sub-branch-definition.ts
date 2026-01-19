@@ -33,7 +33,7 @@ export class SubBranchDefinitionComponent implements OnInit {
   constructor(
     private service: SubBranchDefinitionService,
     private notification: NzNotificationService,
-    private modal: NzModalService
+    private modal: NzModalService,
   ) {}
 
   ngOnInit() {
@@ -53,14 +53,14 @@ export class SubBranchDefinitionComponent implements OnInit {
         const enteredOnDisplay = entered
           ? `${entered.getFullYear()}-${String(entered.getMonth() + 1).padStart(
               2,
-              '0'
+              '0',
             )}-${String(entered.getDate()).padStart(2, '0')}`
           : '';
 
         const editedOnDisplay = edited
           ? `${edited.getFullYear()}-${String(edited.getMonth() + 1).padStart(
               2,
-              '0'
+              '0',
             )}-${String(edited.getDate()).padStart(2, '0')}`
           : '';
 
@@ -88,7 +88,7 @@ export class SubBranchDefinitionComponent implements OnInit {
   // ================= BRANCH DROPDOWN =================
   loadBranchDropdown() {
     const branchField = this.formConfig.fields.find(
-      (f) => f.key === 'branchId'
+      (f) => f.key === 'branchId',
     );
     if (!branchField) return;
 
@@ -104,7 +104,7 @@ export class SubBranchDefinitionComponent implements OnInit {
         });
       }),
       shareReplay(1),
-      finalize(() => (branchField.loading = false))
+      finalize(() => (branchField.loading = false)),
     );
 
     branchField.options$ = branches$.pipe(
@@ -114,8 +114,8 @@ export class SubBranchDefinitionComponent implements OnInit {
           value: +b.BranchID,
           searchText: `${b.BranchID} ${b.BranchName} ${b.BranchDesc}`,
           meta: { id: +b.BranchID, name: b.BranchName, desc: b.BranchDesc },
-        }))
-      )
+        })),
+      ),
     ) as any;
 
     branchField.searchable = true;
@@ -136,7 +136,7 @@ export class SubBranchDefinitionComponent implements OnInit {
   // ================= SUB-BRANCH DROPDOWN =================
   loadSubBranchDropdown(branchId?: number, clearSelection: boolean = true) {
     const idx = this.formConfig.fields.findIndex(
-      (f) => f.key === 'subBranchName'
+      (f) => f.key === 'subBranchName',
     );
     if (idx === -1) return;
 
@@ -186,7 +186,7 @@ export class SubBranchDefinitionComponent implements OnInit {
           const fieldsB = [...this.formConfig.fields];
           fieldsB[idx] = { ...fieldsB[idx], loading: false };
           this.formConfig = { ...this.formConfig, fields: fieldsB };
-        })
+        }),
       )
       .subscribe((opts) => {
         const fieldsC = [...this.formConfig.fields];
@@ -278,7 +278,7 @@ export class SubBranchDefinitionComponent implements OnInit {
         if (err?.status === 409) {
           this.notification.error(
             'Duplicate',
-            'Sub-Branch Name already exists for this branch'
+            'Sub-Branch Name already exists for this branch',
           );
           return;
         }
