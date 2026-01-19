@@ -1,11 +1,3 @@
-// ✅ services/delivery-route-binding-service.js  (UPDATED - FULL)
-// ✅ Fixes:
-// 1) Bulk dedupe now keeps SAME key but DIFFERENT EffectiveDate (no silent overwrite)
-// 2) Confirmation rule updated:
-//    - If ANY ACTIVE (Required_for_Reports=1) exists for same (Branch+SubBranch+Route)
-//      AND new EffectiveDate is DIFFERENT => CONFIRM required (single + update + bulk)
-//    - (Future date validation remains future-only, as per your current rule)
-
 import sql from "mssql";
 import { getPool } from "../config/sql-config.js";
 

@@ -175,9 +175,6 @@ ORDER BY E.APP_Name;
       throw err;
     }
   }
-
-
-
 }
 
 export const bindingService = new BindingService();
