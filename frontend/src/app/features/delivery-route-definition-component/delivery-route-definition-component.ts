@@ -8,7 +8,6 @@ import { DeliveryRouteDefinitionService } from '../../core/services/delivery-rou
 import { Table } from '../../ui/table/table';
 import { Modal } from '../../ui/modal/modal';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
-import { NzModalService } from 'ng-zorro-antd/modal';
 
 @Component({
   selector: 'app-delivery-route-definition',
@@ -21,13 +20,15 @@ export class DeliveryRouteDefinitionComponent implements OnInit {
   tableConfig = DELIVERY_ROUTE_DEFINITION_TABLE;
 
   showModal = false;
+
+  // holds current form model
   data: any = {};
+
   tableData: any[] = [];
 
   constructor(
     private service: DeliveryRouteDefinitionService,
     private notification: NzNotificationService,
-    private modal: NzModalService
   ) {}
 
   ngOnInit() {
@@ -37,10 +38,9 @@ export class DeliveryRouteDefinitionComponent implements OnInit {
   loadTable() {
     this.service.getAll().subscribe((res: any) => {
       const rows = res?.data ?? res ?? [];
-
       this.tableData = rows.map((r: any) => ({
-        id: r.Id,
-        Id: r.Id,
+        id: r.Id, // internal id for actions
+        Id: r.Id, // shown in table
         CorrectionDescriptionforReports: r.CorrectionDescriptionforReports,
       }));
     });
@@ -48,7 +48,18 @@ export class DeliveryRouteDefinitionComponent implements OnInit {
 
   openAddForm() {
     this.data = { routeId: null, routeDescription: '' };
-    this.formConfig = { ...this.formConfig, mode: 'create' };
+    this.formConfig = { ...DELIVERY_ROUTE_DEFINITION_FORM, mode: 'create' };
+    this.showModal = true;
+  }
+
+  openEditForm(row: any) {
+    this.data = {
+      routeId: row?.Id ?? row?.id,
+      routeDescription: row?.CorrectionDescriptionforReports ?? '',
+    };
+
+    // ✅ "edit" nahi, "update"
+    this.formConfig = { ...DELIVERY_ROUTE_DEFINITION_FORM, mode: 'update' };
     this.showModal = true;
   }
 
@@ -64,6 +75,47 @@ export class DeliveryRouteDefinitionComponent implements OnInit {
       localStorage.getItem('name') ||
       'Admin';
 
+    const mode = (this.formConfig as any)?.mode || 'create';
+
+    if (mode === 'update') {
+      const id = this.data?.routeId;
+      if (!id) {
+        this.notification.error('Error', 'Invalid record id for update');
+        return;
+      }
+
+      const body: any = {
+        routeDescription: payload.routeDescription,
+        editedOn: now,
+        editedBy: user,
+      };
+
+      this.service.update(id, body).subscribe({
+        next: () => {
+          this.notification.success('Success', 'Updated successfully');
+          this.showModal = false;
+          this.loadTable();
+        },
+        error: (err) => {
+          if (err?.status === 409) {
+            this.notification.error(
+              'Duplicate',
+              err?.error?.message ||
+                'The Delivery Route Description already exists.',
+            );
+            return;
+          }
+          this.notification.error(
+            'Error',
+            err?.error?.message || 'Something went wrong',
+          );
+        },
+      });
+
+      return;
+    }
+
+    // CREATE
     const body: any = {
       routeDescription: payload.routeDescription,
       enteredOn: now,
@@ -81,37 +133,14 @@ export class DeliveryRouteDefinitionComponent implements OnInit {
           this.notification.error(
             'Duplicate',
             err?.error?.message ||
-              'The Delivery Route Description already exists.'
+              'The Delivery Route Description already exists.',
           );
           return;
         }
-
         this.notification.error(
           'Error',
-          err?.error?.message || 'Something went wrong'
+          err?.error?.message || 'Something went wrong',
         );
-      },
-    });
-  }
-
-  delete(row: any) {
-    this.modal.confirm({
-      nzTitle: 'Delete Confirmation',
-      nzContent: 'Are you sure you want to delete this record?',
-      nzOkText: 'Yes, Delete',
-      nzOkDanger: true,
-      nzCancelText: 'Cancel',
-
-      nzOnOk: () => {
-        this.service.delete(row.id).subscribe({
-          next: () => {
-            this.notification.success('Deleted', 'Record deleted');
-            this.loadTable();
-          },
-          error: () => {
-            this.notification.error('Error', 'Something went wrong');
-          },
-        });
       },
     });
   }

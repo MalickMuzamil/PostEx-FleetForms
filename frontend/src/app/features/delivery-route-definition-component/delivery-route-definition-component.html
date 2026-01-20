@@ -10,11 +10,11 @@
     </div>
 
     <!-- ===== TABLE ===== -->
-    <app-table [config]="tableConfig" [data]="tableData" (delete)="delete($event)">
+    <app-table [config]="tableConfig" [data]="tableData" (edit)="openEditForm($event)">
     </app-table>
 </div>
 
 <!-- ===== MODAL FORM ===== -->
 <app-modal [visible]="showModal" [title]="formConfig.title" [formConfig]="formConfig" [data]="data"
-    (submit)="onSubmit($event)" (cancel)="closeModal()">
+    (submit)="onSubmit($event)" (edit)="openEditForm($event)" (cancel)="closeModal()">
 </app-modal>
