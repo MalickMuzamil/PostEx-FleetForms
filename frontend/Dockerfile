@@ -10,7 +10,7 @@ RUN npm ci
 COPY . .
 
 # Builds Angular (expects "build" script in package.json)
-RUN npm run build
+RUN npm run build -- --configuration=production
 
 # ---- Runtime stage (Nginx) ----
 FROM nginx:alpine
@@ -18,7 +18,7 @@ FROM nginx:alpine
 # Copy built Angular output to nginx html directory
 # NOTE: Angular usually outputs to /app/dist/<project-name>
 # We'll copy the whole dist folder contents.
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/dist/postex-fleetforms/browser /usr/share/nginx/html
 
 # Nginx config (SPA + /api proxy)
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
