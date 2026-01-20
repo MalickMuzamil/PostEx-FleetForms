@@ -66,48 +66,40 @@ ORDER BY E.APP_Name;
     `);
     return result.recordset;
   }
-
   async createBinding({ branchId, empId, email, effectiveDate, status = 1 }) {
-    await this.ensureNoDuplicate({ branchId, empId, email });
-
     const pool = await getPool();
-    const request = pool.request();
 
-    request.input("branchId", sql.Int, branchId);
-    request.input("empId", sql.Int, empId);
-    request.input("email", sql.VarChar(150), email);
-    request.input("effectiveDate", sql.DateTime, effectiveDate);
-    request.input("status", sql.Int, status);
+    const checkReq = pool.request();
+    checkReq.input("branchId", sql.Int, Number(branchId));
+    checkReq.input("empId", sql.Int, Number(empId));
 
-    const result = await request.query(`
-      INSERT INTO GoGreen.OPS.Branch_GeneralEmp_Binding
-        (BranchID, Emp_ID, Email, EffectiveDate, Status)
-      OUTPUT INSERTED.*
-      VALUES
-        (@branchId, @empId, @email, @effectiveDate, @status)
-    `);
+    const existingRes = await checkReq.query(`
+    SELECT TOP 1 *
+    FROM GoGreen.OPS.Branch_GeneralEmp_Binding
+    WHERE BranchID = @branchId
+      AND Emp_ID = @empId
+    ORDER BY ID DESC
+  `);
 
-    return result.recordset?.[0];
-  }
+    const existing = existingRes.recordset?.[0];
 
-  async updateBinding(id, { branchId, empId, email, effectiveDate, status }) {
-    await this.ensureNoDuplicate({ id: Number(id), branchId, empId, email });
+    if (existing) {
+      if (Number(existing.Status) === 1) {
+        const err = new Error("Duplicate binding");
+        err.code = "DUPLICATE_BINDING";
+        err.existingId = existing.ID;
+        throw err;
+      }
 
-    const pool = await getPool();
-    const request = pool.request();
+      const reactReq = pool.request();
+      reactReq.input("id", sql.Int, existing.ID);
+      reactReq.input("email", sql.VarChar(150), (email || existing.Email || "").trim());
+      reactReq.input("effectiveDate", sql.DateTime, effectiveDate ?? existing.EffectiveDate ?? null);
+      reactReq.input("status", sql.Int, 1);
 
-    request.input("id", sql.Int, id);
-    request.input("branchId", sql.Int, branchId);
-    request.input("empId", sql.Int, empId);
-    request.input("email", sql.VarChar(150), email);
-    request.input("effectiveDate", sql.DateTime, effectiveDate);
-    request.input("status", sql.Int, status);
-
-    const result = await request.query(`
+      const updated = await reactReq.query(`
       UPDATE GoGreen.OPS.Branch_GeneralEmp_Binding
       SET
-        BranchID = @branchId,
-        Emp_ID = @empId,
         Email = @email,
         EffectiveDate = @effectiveDate,
         Status = @status
@@ -115,50 +107,132 @@ ORDER BY E.APP_Name;
       WHERE ID = @id
     `);
 
+      return updated.recordset?.[0];
+    }
+
+    const request = pool.request();
+    request.input("branchId", sql.Int, Number(branchId));
+    request.input("empId", sql.Int, Number(empId));
+    request.input("email", sql.VarChar(150), (email || "").trim());
+    request.input("effectiveDate", sql.DateTime, effectiveDate ?? null);
+    request.input("status", sql.Int, Number(status ?? 1));
+
+    const result = await request.query(`
+    INSERT INTO GoGreen.OPS.Branch_GeneralEmp_Binding
+      (BranchID, Emp_ID, Email, EffectiveDate, Status)
+    OUTPUT INSERTED.*
+    VALUES
+      (@branchId, @empId, @email, @effectiveDate, @status)
+  `);
+
     return result.recordset?.[0];
   }
 
-  // 🔹 Delete
+  // ✅ update: prevent making (BranchID+Emp_ID) duplicate with another ACTIVE row
+  async updateBinding(id, { branchId, empId, email, effectiveDate, status }) {
+    const pool = await getPool();
+    const numericId = Number(id);
+
+    // ✅ load existing row (for missing branchId/empId/status)
+    const curReq = pool.request();
+    curReq.input("id", sql.Int, numericId);
+
+    const curRes = await curReq.query(`
+    SELECT TOP 1 *
+    FROM GoGreen.OPS.Branch_GeneralEmp_Binding
+    WHERE ID = @id
+  `);
+
+    const current = curRes.recordset?.[0];
+    if (!current) return null;
+
+    const finalBranchId = Number(branchId ?? current.BranchID);
+    const finalEmpId = Number(empId ?? current.Emp_ID);
+    const finalEmail = (email ?? current.Email ?? "").trim();
+    const finalEffectiveDate = effectiveDate ?? current.EffectiveDate ?? null;
+    const finalStatus = Number(status ?? current.Status ?? 1);
+
+    // ✅ prevent duplicate active pair on other row
+    const dupReq = pool.request();
+    dupReq.input("id", sql.Int, numericId);
+    dupReq.input("branchId", sql.Int, finalBranchId);
+    dupReq.input("empId", sql.Int, finalEmpId);
+
+    const dup = await dupReq.query(`
+    SELECT TOP 1 ID
+    FROM GoGreen.OPS.Branch_GeneralEmp_Binding
+    WHERE BranchID = @branchId
+      AND Emp_ID = @empId
+      AND Status = 1
+      AND ID <> @id
+    ORDER BY ID DESC
+  `);
+
+    if (dup.recordset?.[0]?.ID) {
+      const err = new Error("Duplicate binding");
+      err.code = "DUPLICATE_BINDING";
+      err.existingId = dup.recordset[0].ID;
+      throw err;
+    }
+
+    const request = pool.request();
+    request.input("id", sql.Int, numericId);
+    request.input("branchId", sql.Int, finalBranchId);
+    request.input("empId", sql.Int, finalEmpId);
+    request.input("email", sql.VarChar(150), finalEmail);
+    request.input("effectiveDate", sql.DateTime, finalEffectiveDate);
+    request.input("status", sql.Int, finalStatus);
+
+    const result = await request.query(`
+    UPDATE GoGreen.OPS.Branch_GeneralEmp_Binding
+    SET
+      BranchID = @branchId,
+      Emp_ID = @empId,
+      Email = @email,
+      EffectiveDate = @effectiveDate,
+      Status = @status
+    OUTPUT INSERTED.*
+    WHERE ID = @id
+  `);
+
+    return result.recordset?.[0];
+  }
+
+
+  // ✅ delete => soft delete (Status=0)
   async deleteBinding(id) {
     const pool = await getPool();
     const request = pool.request();
 
-    request.input("id", sql.Int, id);
+    request.input("id", sql.Int, Number(id));
 
     const result = await request.query(`
-      DELETE FROM GoGreen.OPS.Branch_GeneralEmp_Binding
-      OUTPUT DELETED.*
-      WHERE ID = @id
-    `);
+    UPDATE GoGreen.OPS.Branch_GeneralEmp_Binding
+    SET Status = 0
+    OUTPUT INSERTED.*
+    WHERE ID = @id
+  `);
 
     return result.recordset?.[0];
   }
 
-  async ensureNoDuplicate({ id = null, branchId, empId, email }) {
+  // ✅ duplicate check: ONLY BranchID + Emp_ID (ignore email/effectiveDate)
+  async ensureNoDuplicate({ id = null, branchId, empId }) {
     const pool = await getPool();
     const request = pool.request();
 
     request.input("id", sql.Int, id);
-    request.input("branchId", sql.Int, branchId);
-    request.input("empId", sql.Int, empId);
-    request.input("email", sql.VarChar(150), (email || "").trim());
+    request.input("branchId", sql.Int, Number(branchId));
+    request.input("empId", sql.Int, Number(empId));
 
     const result = await request.query(`
-      SELECT TOP 1 ID
-      FROM GoGreen.OPS.Branch_GeneralEmp_Binding
-      WHERE
-        (@id IS NULL OR ID <> @id)
-        AND (
-          -- Rule A: same employee + same email (main)
-          (Emp_ID = @empId AND Email = @email)
-
-          -- Rule B (recommended): same branch + same employee
-          OR (BranchID = @branchId AND Emp_ID = @empId)
-
-          -- Rule C (optional): same branch + same email
-          -- OR (BranchID = @branchId AND Email = @email)
-        )
-    `);
+    SELECT TOP 1 ID
+    FROM GoGreen.OPS.Branch_GeneralEmp_Binding
+    WHERE BranchID = @branchId
+      AND Emp_ID = @empId
+      AND (@id IS NULL OR ID <> @id)
+    ORDER BY ID DESC
+  `);
 
     if (result.recordset?.length) {
       const err = new Error("Duplicate binding");

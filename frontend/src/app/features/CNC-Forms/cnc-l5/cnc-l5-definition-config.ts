@@ -65,14 +65,10 @@ export const OPS_CNC_L5_DEFINITION_TABLE: TableConfig = {
     { key: 'name', title: 'Name' },
     { key: 'description', title: 'Description' },
     { key: 'role', title: 'Role' },
-    { key: 'enteredOn', title: 'Entered On' },
-    { key: 'enteredBy', title: 'Entered By' },
-    { key: 'editedOn', title: 'Edited On' },
-    { key: 'editedBy', title: 'Edited By' },
   ],
   actions: [
     { label: 'Edit', action: 'edit' },
-    { label: 'Delete', action: 'delete' },
+    // { label: 'Delete', action: 'delete' },
   ],
   pagination: true,
 };

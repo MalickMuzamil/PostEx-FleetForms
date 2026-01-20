@@ -99,10 +99,12 @@ class BranchDashboardBindingService {
     request.input("id", sql.Int, id);
 
     const result = await request.query(`
-      DELETE FROM GoGreen.OPS.Branch_RequiredinDashboard_Binding
-      OUTPUT DELETED.*
-      WHERE ID = @id
-    `);
+    UPDATE GoGreen.OPS.Branch_RequiredinDashboard_Binding
+    SET
+      Req_Con_Call = 0
+    OUTPUT INSERTED.*
+    WHERE ID = @id
+  `);
 
     return result.recordset?.[0];
   }
@@ -115,11 +117,12 @@ class BranchDashboardBindingService {
     request.input("branchId", sql.Int, branchId);
 
     const result = await request.query(`
-      SELECT TOP 1 ID
-      FROM GoGreen.OPS.Branch_RequiredinDashboard_Binding
-      WHERE BranchID = @branchId
-        AND (@id IS NULL OR ID <> @id)
-    `);
+    SELECT TOP 1 ID
+    FROM GoGreen.OPS.Branch_RequiredinDashboard_Binding
+    WHERE BranchID = @branchId
+      AND Req_Con_Call = 1   -- 👈 ONLY ACTIVE RECORDS
+      AND (@id IS NULL OR ID <> @id)
+  `);
 
     if (result.recordset?.length) {
       const err = new Error("This branch has already been bound. No new entry allowed.");
