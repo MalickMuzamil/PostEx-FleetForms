@@ -11,16 +11,18 @@
 
           <nz-form-control>
             <!-- Default input (all existing forms) -->
-            <ng-container
-              *ngIf="field.mask !== 'SHORT_CODE_3_2' && field.mask !== 'ALPHA5_ROMAN' && field.mask !== 'AAA_AAA'; else maskedInput">
+            <ng-container *ngIf="field.mask !== 'SHORT_CODE_3_2'
+        && field.mask !== 'ALPHA5_ROMAN'
+        && field.mask !== 'AAA_AAA'
+        && field.mask !== 'AAA_AAA_AAA';
+        else maskedInput">
               <input nz-input [type]="field.key === 'email' ? 'email' : 'text'" [formControlName]="field.key"
                 [disabled]="!!field.disabled" [attr.maxlength]="field.key === 'email' ? 50 : null" autocomplete="off"
                 spellcheck="false" />
             </ng-container>
 
-            <!--  Masked input -->
+            <!-- Masked input -->
             <ng-template #maskedInput>
-
               <!-- SHORT_CODE_3_2 -->
               <ng-container *ngIf="field.mask === 'SHORT_CODE_3_2'; else alpha5RomanInput">
                 <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="6"
@@ -35,12 +37,21 @@
                 </ng-container>
               </ng-template>
 
-              <!-- AAA_AAA -->
+              <!-- AAA_AAA / AAA_AAA_AAA -->
               <ng-template #aaaAaaInput>
-                <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="7"
-                  autocomplete="off" spellcheck="false" [appShortCodeMask]="'AAA_AAA'" />
-              </ng-template>
+                <!-- ✅ AAA_AAA_AAA (prefix-lock enabled) -->
+                <ng-container *ngIf="field.mask === 'AAA_AAA_AAA'; else aaaAaa6Input">
+                  <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="20"
+                    autocomplete="off" spellcheck="false" [appShortCodeMask]="'AAA_AAA_AAA'"
+                    [prefix]="((form.get(field.key)?.value || '').toString().split('-')[0] || '').trim()" />
+                </ng-container>
 
+                <!-- AAA_AAA -->
+                <ng-template #aaaAaa6Input>
+                  <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="7"
+                    autocomplete="off" spellcheck="false" [appShortCodeMask]="'AAA_AAA'" />
+                </ng-template>
+              </ng-template>
             </ng-template>
 
             <!-- REQUIRED -->
@@ -61,6 +72,11 @@
             <!-- AAA_AAA FORMAT -->
             <div class="text-danger mt-1" *ngIf="field.mask === 'AAA_AAA' && hasError(field.key, 'invalidName')">
               Name must be in format <b>AAA-AAA</b> (letters only)
+            </div>
+
+            <!-- AAA_AAA_AAA FORMAT -->
+            <div class="text-danger mt-1" *ngIf="field.mask === 'AAA_AAA_AAA' && hasError(field.key, 'invalidName')">
+              Name must be in format <b>AAA-AAA-AAA</b> (letters only)
             </div>
 
             <!-- EMAIL FORMAT (Angular built-in key) -->

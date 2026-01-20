@@ -38,8 +38,8 @@ class BindingService {
   }
 
   async listBindings() {
-  const pool = await getPool();
-  const result = await pool.request().query(`
+    const pool = await getPool();
+    const result = await pool.request().query(`
     ;WITH x AS (
       SELECT
         b.ID,
@@ -89,8 +89,8 @@ class BindingService {
     ORDER BY BranchID, EffectiveDate DESC, ID DESC;
   `);
 
-  return result.recordset;
-}
+    return result.recordset;
+  }
 
 
   async searchBindings({ empId, branchId, email, name }) {
@@ -129,27 +129,38 @@ class BindingService {
   ========================== */
 
   async createBinding({ branchId, empId, email, effectiveDate }) {
+    if (!branchId || !empId || !email || !effectiveDate) {
+      const err = new Error("branchId, empId, email, effectiveDate are required.");
+      err.code = "VALIDATION_ERROR";
+      throw err;
+    }
+
+    const finalBranchId = Number(branchId);
+    const finalEmpId = Number(empId);
+    const finalEmail = (email || "").trim();
+    const finalEffectiveDate = effectiveDate;
+
     await this.ensureNoDuplicate({
-      branchId,
-      empId,
-      effectiveDate,
+      branchId: finalBranchId,
+      empId: finalEmpId,
+      effectiveDate: finalEffectiveDate,
     });
 
     const pool = await getPool();
     const request = pool.request();
 
-    request.input("branchId", sql.Int, branchId);
-    request.input("empId", sql.Int, empId);
-    request.input("email", sql.VarChar, email);
-    request.input("effectiveDate", sql.DateTime, effectiveDate);
+    request.input("branchId", sql.Int, finalBranchId);
+    request.input("empId", sql.Int, finalEmpId);
+    request.input("email", sql.VarChar, finalEmail);
+    request.input("effectiveDate", sql.DateTime, finalEffectiveDate);
 
     const result = await request.query(`
-      INSERT INTO GoGreen.OPS.Branch_BC_Binding
-        (BranchID, BC_Emp_ID, BC_Email, EffectiveDate)
-      OUTPUT INSERTED.*
-      VALUES
-        (@branchId, @empId, @email, @effectiveDate)
-    `);
+    INSERT INTO GoGreen.OPS.Branch_BC_Binding
+      (BranchID, BC_Emp_ID, BC_Email, EffectiveDate)
+    OUTPUT INSERTED.*
+    VALUES
+      (@branchId, @empId, @email, @effectiveDate)
+  `);
 
     return result.recordset?.[0];
   }
@@ -157,37 +168,62 @@ class BindingService {
   async updateBinding(id, body) {
     const numericId = Number(id);
 
-    const branchId = Number(body.branchId);
+    const inputBranchId = Number(body.branchId); // UI se aa raha
     const empId = Number(body.empId);
-    const email = body.email;
+    const email = (body.email || "").trim();
     const effectiveDate = body.effectiveDate;
 
+    const pool = await getPool();
+
+    // ✅ 1) Record must exist + Branch change NOT allowed
+    const existingRes = await pool
+      .request()
+      .input("id", sql.Int, numericId)
+      .query(`
+      SELECT ID, BranchID
+      FROM GoGreen.OPS.Branch_BC_Binding
+      WHERE ID = @id
+    `);
+
+    const existing = existingRes.recordset?.[0];
+    if (!existing) {
+      const err = new Error("Record not found.");
+      err.code = "NOT_FOUND";
+      throw err;
+    }
+
+    const existingBranchId = Number(existing.BranchID);
+
+    if (inputBranchId !== existingBranchId) {
+      const err = new Error("Branch cannot be changed in update.");
+      err.code = "BRANCH_CHANGE_NOT_ALLOWED";
+      throw err;
+    }
+
+    // ✅ 2) Run validations (same rules, but update-safe)
     await this.ensureNoDuplicate({
       id: numericId,
-      branchId,
+      branchId: existingBranchId, // enforce original branch
       empId,
       effectiveDate,
     });
 
-    const pool = await getPool();
+    // ✅ 3) Update (branch remains same)
     const request = pool.request();
-
     request.input("id", sql.Int, numericId);
-    request.input("branchId", sql.Int, branchId);
     request.input("empId", sql.Int, empId);
     request.input("email", sql.VarChar, email);
     request.input("effectiveDate", sql.DateTime, effectiveDate);
 
     const result = await request.query(`
-      UPDATE GoGreen.OPS.Branch_BC_Binding
-      SET
-        BranchID = @branchId,
-        BC_Emp_ID = @empId,
-        BC_Email = @email,
-        EffectiveDate = @effectiveDate
-      OUTPUT INSERTED.*
-      WHERE ID = @id
-    `);
+    UPDATE GoGreen.OPS.Branch_BC_Binding
+    SET
+      BC_Emp_ID = @empId,
+      BC_Email = @email,
+      EffectiveDate = @effectiveDate
+    OUTPUT INSERTED.*
+    WHERE ID = @id
+  `);
 
     return result.recordset?.[0];
   }
@@ -198,93 +234,149 @@ class BindingService {
 
   async ensureNoDuplicate({ id = null, branchId, empId, effectiveDate }) {
     const pool = await getPool();
-    const request = pool.request();
-
-    request.input("id", sql.Int, id);
-    request.input("branchId", sql.Int, branchId);
-    request.input("empId", sql.Int, empId);
-    request.input("effectiveDate", sql.DateTime, effectiveDate);
-
-    // 1) Find previous assignment as-of effectiveDate
-    // 2) Find next assignment after effectiveDate
-    const result = await request.query(`
-    ;WITH PrevRow AS (
-      SELECT TOP 1 ID, BC_Emp_ID, EffectiveDate
-      FROM GoGreen.OPS.Branch_BC_Binding
-      WHERE BranchID = @branchId
-        AND EffectiveDate <= @effectiveDate
-        AND (@id IS NULL OR ID <> @id)
-      ORDER BY EffectiveDate DESC, ID DESC
-    ),
-    NextRow AS (
-      SELECT TOP 1 ID, BC_Emp_ID, EffectiveDate
-      FROM GoGreen.OPS.Branch_BC_Binding
-      WHERE BranchID = @branchId
-        AND EffectiveDate > @effectiveDate
-        AND (@id IS NULL OR ID <> @id)
-      ORDER BY EffectiveDate ASC, ID ASC
-    )
-    SELECT
-      (SELECT ID FROM PrevRow) AS PrevID,
-      (SELECT BC_Emp_ID FROM PrevRow) AS PrevEmp,
-      (SELECT EffectiveDate FROM PrevRow) AS PrevDate,
-      (SELECT ID FROM NextRow) AS NextID,
-      (SELECT BC_Emp_ID FROM NextRow) AS NextEmp,
-      (SELECT EffectiveDate FROM NextRow) AS NextDate
-  `);
-
-    const row = result.recordset?.[0] || {};
-    const prevEmp = row.PrevEmp != null ? Number(row.PrevEmp) : null;
-    const nextEmp = row.NextEmp != null ? Number(row.NextEmp) : null;
     const newEmp = Number(empId);
 
-    // RULE A: If already owner at that timeline, don't allow duplicate
-    if (prevEmp !== null && prevEmp === newEmp) {
-      const err = new Error(
-        "Duplicate: This branch is already assigned to this employee for this timeline."
-      );
-      err.code = "DUPLICATE_BINDING";
-      err.existingId = row.PrevID;
-      throw err;
-    }
+    // ✅ DATE-ONLY normalization (avoid time issues)
+    const toDateOnly = (val) => {
+      const d = new Date(val);
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    };
 
-    // RULE B: If next assignment is same employee, this insertion is redundant (creates A ... A)
-    // Example: you insert A at 2025, but next is already A at 2026 => pointless/duplicate timeline
-    if (nextEmp !== null && nextEmp === newEmp) {
-      const err = new Error(
-        "Duplicate: A future assignment already assigns this branch to the same employee. Update the existing future row instead."
-      );
-      err.code = "DUPLICATE_BINDING_FUTURE";
-      err.existingId = row.NextID;
-      throw err;
-    }
+    const newDate = toDateOnly(effectiveDate);
 
-    // Optional but recommended:
-    // RULE C: Prevent exact same effectiveDate record for same branch (date collision)
-    // (If you want strict: one row per branch per effectiveDate)
+    /* =====================================
+       1) SAME-DAY COLLISION (NO ENTRY ON SAME DATE)
+       - Applies to CREATE + UPDATE
+    ====================================== */
     const collisionReq = pool.request();
     collisionReq.input("id", sql.Int, id);
     collisionReq.input("branchId", sql.Int, branchId);
     collisionReq.input("effectiveDate", sql.DateTime, effectiveDate);
 
     const collision = await collisionReq.query(`
-    SELECT TOP 1 ID
+    SELECT TOP 1
+      ID,
+      CONVERT(varchar(10), CAST(EffectiveDate AS date), 23) AS ExistingDate
     FROM GoGreen.OPS.Branch_BC_Binding
     WHERE BranchID = @branchId
-      AND EffectiveDate = @effectiveDate
+      AND CAST(EffectiveDate AS date) = CAST(@effectiveDate AS date)
       AND (@id IS NULL OR ID <> @id)
-    ORDER BY ID DESC
+    ORDER BY ID DESC;
   `);
 
     if (collision.recordset?.[0]?.ID) {
-      const err = new Error("Duplicate: This branch already has an assignment on the same effective date.");
+      const err = new Error(
+        `Duplicate: This branch already has an assignment on the same date (${collision.recordset[0].ExistingDate}).`
+      );
       err.code = "EFFECTIVE_DATE_COLLISION";
       err.existingId = collision.recordset[0].ID;
       throw err;
     }
+
+    /* =====================================
+       2) EARLIEST DATE LOCK
+       Requirement:
+         - CREATE: cannot add on/before first ever EffectiveDate (keeps past unchanged)
+         - UPDATE: allow editing the earliest row on the same date, but not earlier than it
+       This DOES NOT break add/create logic.
+    ====================================== */
+    const minReq = pool.request();
+    minReq.input("id", sql.Int, id);
+    minReq.input("branchId", sql.Int, branchId);
+
+    const minRes = await minReq.query(`
+    SELECT MIN(CAST(EffectiveDate AS date)) AS MinD
+    FROM GoGreen.OPS.Branch_BC_Binding
+    WHERE BranchID = @branchId
+      AND (@id IS NULL OR ID <> @id);
+  `);
+
+    const minD = minRes.recordset?.[0]?.MinD ? toDateOnly(minRes.recordset[0].MinD) : null;
+
+    // ✅ First ever entry allowed (no data yet for this branch)
+    if (!minD) return;
+
+    if (id == null) {
+      // ✅ CREATE: block on/before minD
+      if (newDate <= minD) {
+        const err = new Error(
+          `Date is reserved. You can only add AFTER ${minD.toISOString().slice(0, 10)}.`
+        );
+        err.code = "PAST_LOCKED";
+        throw err;
+      }
+    } else {
+      // ✅ UPDATE: allow equal to minD (editing earliest row), but not earlier
+      if (newDate < minD) {
+        const err = new Error(
+          `Date is reserved. You can only set ON/AFTER ${minD.toISOString().slice(0, 10)}.`
+        );
+        err.code = "PAST_LOCKED";
+        throw err;
+      }
+    }
+
+    /* =====================================
+       3) FIND IMMEDIATE PREV / NEXT (NEIGHBORS)
+    ====================================== */
+    const neighborsReq = pool.request();
+    neighborsReq.input("id", sql.Int, id);
+    neighborsReq.input("branchId", sql.Int, branchId);
+    neighborsReq.input("effectiveDate", sql.DateTime, effectiveDate);
+
+    const neighbors = await neighborsReq.query(`
+    ;WITH PrevRow AS (
+      SELECT TOP 1 ID, BC_Emp_ID, CAST(EffectiveDate AS date) AS D
+      FROM GoGreen.OPS.Branch_BC_Binding
+      WHERE BranchID = @branchId
+        AND CAST(EffectiveDate AS date) < CAST(@effectiveDate AS date)
+        AND (@id IS NULL OR ID <> @id)
+      ORDER BY CAST(EffectiveDate AS date) DESC, ID DESC
+    ),
+    NextRow AS (
+      SELECT TOP 1 ID, BC_Emp_ID, CAST(EffectiveDate AS date) AS D
+      FROM GoGreen.OPS.Branch_BC_Binding
+      WHERE BranchID = @branchId
+        AND CAST(EffectiveDate AS date) > CAST(@effectiveDate AS date)
+        AND (@id IS NULL OR ID <> @id)
+      ORDER BY CAST(EffectiveDate AS date) ASC, ID ASC
+    )
+    SELECT
+      (SELECT ID FROM PrevRow) AS PrevID,
+      (SELECT BC_Emp_ID FROM PrevRow) AS PrevEmp,
+      (SELECT ID FROM NextRow) AS NextID,
+      (SELECT BC_Emp_ID FROM NextRow) AS NextEmp;
+  `);
+
+    const nb = neighbors.recordset?.[0] || {};
+    const prevEmp = nb.PrevEmp != null ? Number(nb.PrevEmp) : null;
+    const nextEmp = nb.NextEmp != null ? Number(nb.NextEmp) : null;
+
+    /* =====================================
+       4) CORE RULE: NO CONSECUTIVE DUPLICATE (A > A not allowed)
+       - Block if newEmp equals immediate previous OR immediate next.
+       - Allows A > B > A.
+    ====================================== */
+    if (prevEmp !== null && newEmp === prevEmp) {
+      const err = new Error("Duplicate: Same employee cannot be consecutive (A > A not allowed).");
+      err.code = "CONSECUTIVE_DUPLICATE";
+      err.existingId = nb.PrevID;
+      throw err;
+    }
+
+    if (nextEmp !== null && newEmp === nextEmp) {
+      const err = new Error("Duplicate: Same employee cannot be consecutive (A > A not allowed).");
+      err.code = "CONSECUTIVE_DUPLICATE";
+      err.existingId = nb.NextID;
+      throw err;
+    }
+
+    // ✅ Passed
   }
 
 
 }
 
 export const bindingService = new BindingService();
+
+

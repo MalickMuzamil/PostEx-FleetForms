@@ -1,15 +1,8 @@
 import sql from "mssql";
 import { getPool } from "../config/sql-config.js";
 
-/**
- * Table:
- * GoGreen.OPS.Branch_GeneralEmp_Binding
- * Columns:
- * ID, BranchID, Emp_ID, Email, EffectiveDate, Status
- */
 class BranchGeneralEmpBindingService {
 
-  // 🔹 Active employees (dropdown)
   async listActiveEmployees() {
     const pool = await getPool();
     const result = await pool.request().query(`
@@ -33,7 +26,6 @@ ORDER BY E.APP_Name;
     return result.recordset;
   }
 
-  // 🔹 Branches (dropdown)
   async listBranches() {
     const pool = await getPool();
     const result = await pool.request().query(`
@@ -44,7 +36,6 @@ ORDER BY E.APP_Name;
     return result.recordset;
   }
 
-  // 🔹 Table/List
   async listBindings() {
     const pool = await getPool();
     const result = await pool.request().query(`
@@ -66,6 +57,7 @@ ORDER BY E.APP_Name;
     `);
     return result.recordset;
   }
+
   async createBinding({ branchId, empId, email, effectiveDate, status = 1 }) {
     const pool = await getPool();
 
@@ -128,7 +120,6 @@ ORDER BY E.APP_Name;
     return result.recordset?.[0];
   }
 
-  // ✅ update: prevent making (BranchID+Emp_ID) duplicate with another ACTIVE row
   async updateBinding(id, { branchId, empId, email, effectiveDate, status }) {
     const pool = await getPool();
     const numericId = Number(id);
@@ -199,7 +190,6 @@ ORDER BY E.APP_Name;
   }
 
 
-  // ✅ delete => soft delete (Status=0)
   async deleteBinding(id) {
     const pool = await getPool();
     const request = pool.request();
@@ -216,7 +206,6 @@ ORDER BY E.APP_Name;
     return result.recordset?.[0];
   }
 
-  // ✅ duplicate check: ONLY BranchID + Emp_ID (ignore email/effectiveDate)
   async ensureNoDuplicate({ id = null, branchId, empId }) {
     const pool = await getPool();
     const request = pool.request();

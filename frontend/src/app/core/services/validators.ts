@@ -168,4 +168,50 @@ export class AppValidators {
       return regex.test(v) ? null : { invalidName: true };
     };
   }
+
+  static subBranchNameWithBranch(getBranchCode: () => string): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const v = (control.value ?? '').toString().trim().toUpperCase();
+      if (!v) return null;
+
+      const code = (getBranchCode?.() ?? '').toString().trim().toUpperCase();
+      if (!code) return { branchRequiredForSubBranch: true };
+
+      // must start with PREFIX-
+      if (!v.startsWith(code + '-')) {
+        return { prefixMismatch: true };
+      }
+
+      // only letters and dash allowed
+      if (!/^[A-Z-]+$/.test(v)) {
+        return { invalidName: true };
+      }
+
+      const afterPrefix = v.slice(code.length + 1); // part after "LHE-"
+
+      // ✅ NEW: prefix ke baad max allowed = "AAA-AAA" (7 chars)
+      if (afterPrefix.length > 7) {
+        return { invalidName: true };
+      }
+
+      // allow typing: "", "A", "AB", "ABC", "ABC-", "ABC-X", "ABC-XY", "ABC-XYZ"
+      if (!afterPrefix) return null;
+
+      // block more than one dash after prefix
+      if ((afterPrefix.match(/-/g) || []).length > 1) {
+        return { invalidName: true };
+      }
+
+      // STRICT FINAL FORMAT: CODE-AAA-AAA
+      const finalRegex = new RegExp(`^${code}-[A-Z]{3}-[A-Z]{3}$`);
+
+      // if fully typed (7 chars after prefix) → must match exactly
+      if (afterPrefix.length === 7) {
+        return finalRegex.test(v) ? null : { invalidName: true };
+      }
+
+      // otherwise allow partial typing (no error while typing)
+      return null;
+    };
+  }
 }
