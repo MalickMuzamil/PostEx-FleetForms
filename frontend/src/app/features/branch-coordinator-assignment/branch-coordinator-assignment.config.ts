@@ -113,9 +113,9 @@ export const BRANCH_COORDINATOR_ASSIGNMENT_TABLE: TableConfig = {
     { key: 'employeeName', title: 'Employee Name' },
     { key: 'email', title: 'Email' },
     { key: 'effectiveDateDisplay', title: 'Effective Date' },
-    { key: 'prevOwner', title: 'Prev Owner' },
-    { key: 'employeeName', title: 'Current Owner' },
-    { key: 'nextOwner', title: 'Next Owner' },
+    // { key: 'prevOwner', title: 'Prev Owner' },
+    // { key: 'employeeName', title: 'Current Owner' },
+    // { key: 'nextOwner', title: 'Next Owner' },
   ],
 
   actions: [

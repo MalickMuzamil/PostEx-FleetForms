@@ -1,16 +1,22 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+
 import {
   SUB_BRANCH_DEFINITION_FORM,
   SUB_BRANCH_DEFINITION_TABLE,
 } from './sub-branch-definition-config';
+
 import { SubBranchDefinitionService } from '../../core/services/sub-branch-definition-service';
 import { Table } from '../../ui/table/table';
 import { Modal } from '../../ui/modal/modal';
-import { map, tap, finalize, shareReplay } from 'rxjs';
-import { take } from 'rxjs/operators';
+
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { NzModalService } from 'ng-zorro-antd/modal';
+
+import { map, tap, finalize, shareReplay } from 'rxjs';
+import { take } from 'rxjs/operators';
+
+import { AppValidators } from '../../core/services/validators';
 
 @Component({
   selector: 'app-sub-branch-definition',
@@ -24,11 +30,12 @@ export class SubBranchDefinitionComponent implements OnInit {
 
   showModal = false;
   selectedId: number | null = null;
+
   data: any = {};
   tableData: any[] = [];
 
   private branchMap = new Map<number, any>();
-  private lastBranchId = 0; // ✅ IMPORTANT: branch change tracking
+  private lastBranchId = 0;
 
   constructor(
     private service: SubBranchDefinitionService,
@@ -39,6 +46,7 @@ export class SubBranchDefinitionComponent implements OnInit {
   ngOnInit() {
     this.loadTable();
     this.loadBranchDropdown();
+    this.applySubBranchValidator(); // safe init
   }
 
   // ================= TABLE =================
@@ -68,16 +76,18 @@ export class SubBranchDefinitionComponent implements OnInit {
           id: r.ID,
           subBranchId: r.SubBranchID,
           branchId: r.BranchID,
-          branchName: r.BranchName,
-          subBranchName: r.SubBranchName,
 
-          // keep originals (optional)
+          branchName: r.BranchName,
+          branchDesc: r.BranchDesc,
+
+          subBranchName: r.SubBranchName,
+          subBranchDesc: r.SubBranchDesc,
+
           enteredOn: r.EnteredOn,
           enteredBy: r.EnteredBy,
           editedOn: r.EditedOn,
           editedBy: r.EditedBy,
 
-          // ✅ new display fields
           enteredOnDisplay,
           editedOnDisplay,
         };
@@ -120,120 +130,175 @@ export class SubBranchDefinitionComponent implements OnInit {
 
     branchField.searchable = true;
 
-    // ✅ default selection only in CREATE mode / when modal open
-    branches$.pipe(take(1)).subscribe((branches: any[]) => {
-      const firstId = +branches?.[0]?.BranchID || 0;
-      if (!firstId) return;
-
-      if (!this.selectedId && this.showModal && !this.data?.branchId) {
-        this.data = { ...this.data, branchId: firstId };
-        this.lastBranchId = firstId; // ✅
-        this.loadSubBranchDropdown(firstId, true);
-      }
-    });
+    // ✅ IMPORTANT: default selection OFF (no auto select)
+    // (Removed take(1) auto set first branch)
   }
 
-  // ================= SUB-BRANCH DROPDOWN =================
-  loadSubBranchDropdown(branchId?: number, clearSelection: boolean = true) {
+  // ================= Helpers =================
+  private getSelectedBranchCode(): string {
+    const branchId = +(this.data?.branchId ?? 0);
+    const b = this.branchMap.get(branchId);
+
+    // b.name example: "LHE - 1" or "FSD - 1"
+    const name = (b?.name ?? '').toString();
+    const code = name.split('-')[0].trim().toUpperCase(); // "LHE"
+    return code || '';
+  }
+
+  private applySubBranchValidator() {
     const idx = this.formConfig.fields.findIndex(
       (f) => f.key === 'subBranchName',
     );
     if (idx === -1) return;
 
-    if (clearSelection) this.data = { ...this.data, subBranchName: null };
+    const fields = [...this.formConfig.fields];
+    fields[idx] = {
+      ...fields[idx],
+      // ✅ placeholder removed
+      validators: [
+        AppValidators.subBranchNameWithBranch(() =>
+          this.getSelectedBranchCode(),
+        ),
+      ],
+    };
 
-    const fieldsA = [...this.formConfig.fields];
-    fieldsA[idx] = { ...fieldsA[idx], loading: true, options: [] };
-    this.formConfig = { ...this.formConfig, fields: fieldsA };
-
-    if (!branchId) {
-      const fieldsStop = [...this.formConfig.fields];
-      fieldsStop[idx] = { ...fieldsStop[idx], loading: false };
-      this.formConfig = { ...this.formConfig, fields: fieldsStop };
-      return;
-    }
-
-    const req$ = this.service.getSubBranchesByBranchId(branchId, true);
-
-    req$
-      .pipe(
-        map((res: any) => res?.data ?? res ?? []),
-        map((rows: any[]) => {
-          const mapByName = new Map<
-            string,
-            { name: string; isActive: number }
-          >();
-
-          for (const r of rows) {
-            const name = String(r?.SubBranchName ?? '').trim();
-            if (!name) continue;
-
-            const isActive = Number(r?.IsActive ?? 1);
-            const prev = mapByName.get(name);
-            if (!prev || (prev.isActive === 0 && isActive === 1)) {
-              mapByName.set(name, { name, isActive });
-            }
-          }
-
-          return Array.from(mapByName.values()).map((x) => ({
-            label: x.isActive ? x.name : `${x.name} (Deleted)`,
-            value: x.name,
-            searchText: x.name,
-            meta: { name: x.name, isActive: x.isActive },
-          }));
-        }),
-        finalize(() => {
-          const fieldsB = [...this.formConfig.fields];
-          fieldsB[idx] = { ...fieldsB[idx], loading: false };
-          this.formConfig = { ...this.formConfig, fields: fieldsB };
-        }),
-      )
-      .subscribe((opts) => {
-        const fieldsC = [...this.formConfig.fields];
-        fieldsC[idx] = { ...fieldsC[idx], options: opts };
-        this.formConfig = { ...this.formConfig, fields: fieldsC };
-      });
+    this.formConfig = { ...this.formConfig, fields };
   }
 
-  // ================= FORM CHANGE (KEY FIX) =================
+  // ================= FORM CHANGE =================
   onFormChange(ev: any) {
     if (ev?.formValue) this.data = { ...this.data, ...ev.formValue };
 
     const newBranchId = +(this.data?.branchId ?? 0);
-    if (!newBranchId) return;
-    if (newBranchId === this.lastBranchId) return;
 
-    this.lastBranchId = newBranchId;
-    this.data = { ...this.data, subBranchName: null };
+    // ===== helper (local) to enforce: CODE-AAA-AAA (max 6 letters after prefix) =====
+    const normalizeSubBranch = (raw: any, code: string) => {
+      const prefix = (code || '').toString().trim().toUpperCase();
+      if (!prefix) return null;
 
-    this.loadSubBranchDropdown(newBranchId, true);
+      let v = (raw ?? '').toString().toUpperCase();
+
+      // remove spaces
+      v = v.replace(/\s+/g, '');
+
+      // if user removed prefix -> force it back
+      if (!v.startsWith(prefix + '-')) {
+        // keep only letters from user input
+        const letters = v.replace(/[^A-Z]/g, '').slice(0, 6);
+        v = `${prefix}-${letters}`;
+      }
+
+      // take part after prefix-
+      let after = v.slice(prefix.length + 1);
+
+      // letters only after prefix
+      after = after.replace(/[^A-Z]/g, '');
+
+      // max 6 letters
+      after = after.slice(0, 6);
+
+      // auto dash after 3 letters => AAA-AAA
+      const left = after.slice(0, 3);
+      const right = after.slice(3);
+      const formattedAfter = right ? `${left}-${right}` : left;
+
+      // final
+      return formattedAfter ? `${prefix}-${formattedAfter}` : `${prefix}-`;
+    };
+
+    // ✅ branch empty => clear readonlys + clear subBranchName too
+    if (!newBranchId) {
+      this.data = {
+        ...this.data,
+        branchName: '',
+        branchDesc: '',
+        subBranchName: null,
+      };
+      this.lastBranchId = 0;
+      this.applySubBranchValidator();
+      return;
+    }
+
+    const b = this.branchMap.get(newBranchId);
+    const code = this.getSelectedBranchCode(); // e.g. LHE / FSD
+
+    // ✅ branch changed
+    if (newBranchId !== this.lastBranchId) {
+      this.lastBranchId = newBranchId;
+
+      this.data = {
+        ...this.data,
+        branchName: b?.name ?? '',
+        branchDesc: b?.desc ?? '',
+        subBranchName: code ? `${code}-` : null,
+      };
+
+      this.applySubBranchValidator();
+      return;
+    }
+
+    // ✅ branch same: keep prefix locked + limit 6 letters after prefix
+    if (code) {
+      const current = this.data?.subBranchName;
+      const fixed = normalizeSubBranch(current, code);
+
+      // update only if changed (avoid loops)
+      if (fixed !== current) {
+        this.data = { ...this.data, subBranchName: fixed };
+      }
+    }
   }
 
   // ================= MODES =================
   openAddForm() {
     this.selectedId = null;
-    this.data = {};
     this.lastBranchId = 0;
+
+    this.data = {
+      branchId: null,
+      branchName: '',
+      branchDesc: '',
+      subBranchName: null,
+      subBranchDesc: null,
+    };
+
     this.formConfig = { ...SUB_BRANCH_DEFINITION_FORM, mode: 'create' };
     this.showModal = true;
 
     this.loadBranchDropdown();
-
-    this.loadSubBranchDropdown(0, true);
+    this.applySubBranchValidator();
   }
 
   edit(row: any) {
     this.selectedId = row.id;
-    this.data = { ...row };
-    this.lastBranchId = +row.branchId || 0; // ✅ set tracker from row
+    this.lastBranchId = +row.branchId || 0;
+
+    this.data = {
+      ...row,
+      branchId: this.lastBranchId || null,
+      branchName: row.branchName ?? '',
+      branchDesc: row.branchDesc ?? '',
+      subBranchName: (row.subBranchName ?? '').toString().toUpperCase(),
+    };
+
     this.formConfig = { ...SUB_BRANCH_DEFINITION_FORM, mode: 'update' };
     this.showModal = true;
 
+    // ✅ load dropdown and after map fills, ensure readonly fields + validator are correct
+    this.loadBranchDropdown();
+
     setTimeout(() => {
-      if (this.data?.branchId) {
-        // ✅ edit open: load options but keep selected value
-        this.loadSubBranchDropdown(+this.data.branchId, false);
+      // fallback fill from branchMap (in case row didn't include)
+      const b = this.branchMap.get(this.lastBranchId);
+      if (b && (!this.data.branchName || !this.data.branchDesc)) {
+        this.data = {
+          ...this.data,
+          branchName: this.data.branchName || b.name || '',
+          branchDesc: this.data.branchDesc || b.desc || '',
+        };
       }
+
+      this.applySubBranchValidator();
     }, 0);
   }
 
@@ -253,7 +318,11 @@ export class SubBranchDefinitionComponent implements OnInit {
 
     const body: any = {
       branchId: payload.branchId,
-      subBranchName: payload.subBranchName,
+      subBranchName: (payload.subBranchName ?? '')
+        .toString()
+        .trim()
+        .toUpperCase(),
+      subBranchDesc: (payload.subBranchDesc ?? '').toString().trim(),
     };
 
     if (this.selectedId) {

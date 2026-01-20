@@ -38,7 +38,7 @@ export const DELIVERY_ROUTE_DEFINITION_TABLE: TableConfig = {
     },
   ],
 
-  actions: [{ label: 'Delete', action: 'delete' }],
+  // actions: [{ label: 'Delete', action: 'delete' }],
 
   pagination: true,
 };

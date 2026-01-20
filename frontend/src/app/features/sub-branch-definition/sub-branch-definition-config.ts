@@ -6,6 +6,7 @@ export const SUB_BRANCH_DEFINITION_FORM: FormConfig = {
   title: 'Sub-Branch Definition',
 
   fields: [
+    // ================= BRANCH =================
     {
       key: 'branchId',
       label: 'Branch',
@@ -19,11 +20,13 @@ export const SUB_BRANCH_DEFINITION_FORM: FormConfig = {
       ],
     },
 
+    // ================= AUTO FILLED (READONLY) =================
     {
       key: 'branchName',
       label: 'Branch Name',
       type: 'readonly',
       disabled: true,
+      
     },
     {
       key: 'branchDesc',
@@ -32,18 +35,33 @@ export const SUB_BRANCH_DEFINITION_FORM: FormConfig = {
       disabled: true,
     },
 
+    // ================= SUB BRANCH NAME =================
     {
       key: 'subBranchName',
       label: 'Sub-Branch Name',
-      type: 'select',
+      type: 'text',
       required: true,
-      searchable: true,
-      optionColumns: [{ key: 'name', title: 'Sub-Branch Name' }],
+      mask: 'AAA_AAA_AAA',
+      maskPrefixKey: 'branchId',
+      validators: [AppValidators.maxLen(20)],
+
+      updateOn: 'change',
+    },
+
+    // ================= DESCRIPTION =================
+    {
+      key: 'subBranchDesc',
+      label: 'Description',
+      type: 'text',
+      required: true,
+      validators: [
+        AppValidators.alphaSpace(50),
+        AppValidators.notOnlyNumbers(),
+      ],
+      updateOn: 'change',
     },
   ],
 };
-
-// ================= TABLE =================
 
 export const SUB_BRANCH_DEFINITION_TABLE: TableConfig = {
   globalSearch: {
@@ -51,7 +69,7 @@ export const SUB_BRANCH_DEFINITION_TABLE: TableConfig = {
     keys: ['branchName', 'subBranchName'],
     rules: {
       mode: 'alphanumeric',
-      maxLength: 20,
+      maxLength: 25,
       trim: true,
     },
   },
@@ -60,11 +78,12 @@ export const SUB_BRANCH_DEFINITION_TABLE: TableConfig = {
     { key: 'subBranchId', title: 'Sub-Branch ID' },
     { key: 'branchName', title: 'Branch' },
     { key: 'subBranchName', title: 'Sub-Branch Name' },
+    { key: 'subBranchDesc', title: 'Description' },
   ],
 
   actions: [
     { label: 'Edit', action: 'edit' },
-    { label: 'Delete', action: 'delete' },
+    // { label: 'Delete', action: 'delete' },
   ],
 
   pagination: true,

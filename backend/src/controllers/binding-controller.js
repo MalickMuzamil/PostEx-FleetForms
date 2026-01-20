@@ -170,7 +170,6 @@ class BindingController {
         }
     };
 
-
     deleteBinding = async (req, res, next) => {
         try {
             const { id } = req.params;
@@ -185,6 +184,8 @@ class BindingController {
             next(e);
         }
     };
+
+    
 }
 
 export const bindingController = new BindingController();

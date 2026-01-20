@@ -49,7 +49,8 @@ export interface FormField {
   accept?: string; // ".csv,.xls,.xlsx"
   enabledWhen?: string[];
   disabledWhen?: string[];
-  mask?: 'SHORT_CODE_3_2' | 'ALPHA5_ROMAN' | 'AAA_AAA';
+  mask?: 'SHORT_CODE_3_2' | 'ALPHA5_ROMAN' | 'AAA_AAA' | 'AAA_AAA_AAA';
+  maskPrefixKey?: string; 
 }
 
 export interface FormConfig {
