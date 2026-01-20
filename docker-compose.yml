@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ./backend
+    container_name: fleetforms-backend
+    env_file: .env
+    restart: unless-stopped
+    expose:
+      - "5000"
+
+  frontend:
+    build: ./frontend
+    container_name: fleetforms-frontend
+    depends_on:
+      - backend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+
