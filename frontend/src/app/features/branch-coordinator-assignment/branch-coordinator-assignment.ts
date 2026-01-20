@@ -370,9 +370,15 @@ export class BranchCoordinatorAssignment implements OnInit {
 
   private applyMode(cfg: any, mode: 'create' | 'update') {
     const fields = cfg.fields.map((f: any) => {
-      if (f.key === 'employeeId' || f.key === 'branchId') {
+      if (f.key === 'branchId') {
         return { ...f, disabled: mode === 'update' };
       }
+
+      // ✅ Employee hamesha editable
+      if (f.key === 'employeeId') {
+        return { ...f, disabled: false };
+      }
+
       return { ...f };
     });
 
