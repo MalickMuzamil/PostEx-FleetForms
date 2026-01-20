@@ -91,7 +91,7 @@ export const DELIVERY_ROUTE_BINDING_TABLE: TableConfig = {
   ],
 
   actions: [
-    { label: 'Delete', action: 'delete' },
+    // { label: 'Delete', action: 'delete' },
     { label: 'Edit', action: 'edit' },
   ],
 

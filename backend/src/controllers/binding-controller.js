@@ -74,11 +74,35 @@ class BindingController {
                 });
             }
 
-            if (err?.code === "DUPLICATE_BINDING") {
+            // ✅ NEW: branch + employee duplicate (email/date ignore)
+            if (err?.code === "DUPLICATE_BRANCH_EMP") {
                 return res.status(409).json({
                     message:
-                        "Duplicate binding not allowed. This user/email (or branch/user) is already assigned.",
+                        "Duplicate not allowed: This employee is already assigned to this branch (email/date changes are not allowed).",
                     existingId: err.existingId,
+                });
+            }
+
+            // existing timeline duplicate
+            if (err?.code === "DUPLICATE_BINDING" || err?.code === "DUPLICATE_BINDING_FUTURE") {
+                return res.status(409).json({
+                    message: err.message || "Duplicate binding not allowed.",
+                    existingId: err.existingId,
+                });
+            }
+
+            if (err?.code === "EFFECTIVE_DATE_COLLISION") {
+                return res.status(409).json({
+                    message: err.message || "Duplicate: same effective date not allowed for this branch.",
+                    existingId: err.existingId,
+                });
+            }
+
+            // ✅ DB unique index/constraint violation fallback
+            if (err?.number === 2601 || err?.number === 2627) {
+                return res.status(409).json({
+                    message:
+                        "Duplicate not allowed: Same branch + same employee already exists.",
                 });
             }
 
@@ -105,10 +129,25 @@ class BindingController {
                 data,
             });
         } catch (err) {
-            if (err?.code === "DUPLICATE_BINDING") {
+            // ✅ NEW: branch + employee duplicate (email/date ignore)
+            if (err?.code === "DUPLICATE_BRANCH_EMP") {
                 return res.status(409).json({
                     message:
-                        "Duplicate binding not allowed. This user/email (or branch/user) is already assigned.",
+                        "Duplicate not allowed: This employee is already assigned to this branch (email/date changes are not allowed).",
+                    existingId: err.existingId,
+                });
+            }
+
+            if (err?.code === "DUPLICATE_BINDING" || err?.code === "DUPLICATE_BINDING_FUTURE") {
+                return res.status(409).json({
+                    message: err.message || "Duplicate binding not allowed.",
+                    existingId: err.existingId,
+                });
+            }
+
+            if (err?.code === "EFFECTIVE_DATE_COLLISION") {
+                return res.status(409).json({
+                    message: err.message || "Duplicate: same effective date not allowed for this branch.",
                     existingId: err.existingId,
                 });
             }
@@ -116,6 +155,14 @@ class BindingController {
             if (err?.code === "USER_NOT_ACTIVE") {
                 return res.status(400).json({
                     message: "Selected user is not active. Please select an active user.",
+                });
+            }
+
+            // ✅ DB unique index/constraint violation fallback
+            if (err?.number === 2601 || err?.number === 2627) {
+                return res.status(409).json({
+                    message:
+                        "Duplicate not allowed: Same branch + same employee already exists.",
                 });
             }
 

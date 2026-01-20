@@ -48,7 +48,7 @@ export class BranchCoordinatorAssignment implements OnInit {
   constructor(
     private service: BranchCoordinatorService,
     private notification: NzNotificationService,
-    private modal: NzModalService
+    private modal: NzModalService,
   ) {}
 
   // ✅ compact: converts "YYYY-MM-DD" into local Date (no timezone issues)
@@ -70,12 +70,12 @@ export class BranchCoordinatorAssignment implements OnInit {
   ngOnInit() {
     this.branches$ = this.service.getBranches().pipe(
       map((res: any) => res?.data ?? res ?? []),
-      shareReplay(1)
+      shareReplay(1),
     );
 
     this.employees$ = this.service.getEmployees().pipe(
       map((res: any) => res?.data ?? res ?? []),
-      shareReplay(1)
+      shareReplay(1),
     );
 
     // this.loadBranchesAndEmployeesForForm();
@@ -88,7 +88,7 @@ export class BranchCoordinatorAssignment implements OnInit {
     forkJoin({
       branches: this.branches$,
       employees: this.employees$,
-      bindingsRes: this.service.getAll(),
+      bindingsRes: this.service.getAll(), // should return PrevEmpName/NextEmpName/EndDate if backend changed
     })
       .pipe(
         map(({ branches, employees, bindingsRes }: any) => {
@@ -98,32 +98,48 @@ export class BranchCoordinatorAssignment implements OnInit {
             (branches || []).map((b: any) => [
               +(b.Branch_ID ?? b.BranchID ?? b.ID),
               (b.Branch_Name ?? b.BranchName ?? b.Name ?? '').trim(),
-            ])
+            ]),
           );
 
           const empMap = new Map<number, string>(
             (employees || []).map((e: any) => [
               +(e.EMP_ID ?? e.EmpId ?? e.ID),
               (e.APP_Name ?? e.Name ?? '').trim(),
-            ])
+            ]),
           );
+
+          const fmt = (dt: Date | null) => {
+            if (!dt) return '';
+            return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(
+              2,
+              '0',
+            )}-${String(dt.getDate()).padStart(2, '0')}`;
+          };
 
           return (bindings || []).map((r: any) => {
             const branchId = +(r.BranchID ?? r.branchId);
             const empId = +(r.BC_Emp_ID ?? r.employeeId);
 
-            const rawDate = r.EffectiveDate ?? r.effectiveDate;
+            const rawStart = r.EffectiveDate ?? r.effectiveDate;
+            const startDate = this.asLocalDate(rawStart);
 
-            // ✅ Date object (edit/date-picker)
-            const d = this.asLocalDate(rawDate);
+            // ✅ backend should provide EndDate OR NextEffectiveDate (depends on your query)
+            const rawEnd = r.EndDate ?? r.endDate;
+            const endDate = this.asLocalDate(rawEnd);
 
-            // ✅ Date-only for table
-            const effectiveDateDisplay = d
-              ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-                  2,
-                  '0'
-                )}-${String(d.getDate()).padStart(2, '0')}`
-              : '';
+            // ✅ prev/next owner names (prefer backend-provided names)
+            const prevOwner =
+              (r.PrevEmpName ?? '').trim() ||
+              (r.PrevEmpId != null ? empMap.get(+r.PrevEmpId) : '') ||
+              '-';
+
+            const nextOwner =
+              (r.NextEmpName ?? '').trim() ||
+              (r.NextEmpId != null ? empMap.get(+r.NextEmpId) : '') ||
+              '-';
+
+            const effectiveDateDisplay = fmt(startDate);
+            const endDateDisplay = endDate ? fmt(endDate) : 'Present'; // nice UX
 
             return {
               id: r.ID ?? r.id,
@@ -132,18 +148,26 @@ export class BranchCoordinatorAssignment implements OnInit {
               branchName: branchMap.get(branchId) ?? 'NA',
 
               employeeId: empId,
-              employeeName: empMap.get(empId) ?? 'NA',
+              employeeName: empMap.get(empId) ?? r.EmployeeName ?? 'NA',
 
               email: r.BC_Email ?? r.email,
 
-              // ✅ keep for edit mode
-              effectiveDate: d,
+              // edit
+              effectiveDate: startDate,
 
-              // ✅ show in table
+              // table
               effectiveDateDisplay,
+              endDateDisplay,
+
+              // 🔥 new timeline fields
+              prevOwner,
+              nextOwner,
+
+              // optional label if backend sends ChangeType
+              changeType: r.ChangeType ?? '',
             };
           });
-        })
+        }),
       )
       .subscribe((rows) => (this.tableData = rows));
   }
@@ -152,7 +176,7 @@ export class BranchCoordinatorAssignment implements OnInit {
   loadBranchesAndEmployeesForForm() {
     // ===== Branch dropdown =====
     const branchField = this.formConfig.fields.find(
-      (f) => f.key === 'branchId'
+      (f) => f.key === 'branchId',
     );
     if (branchField) {
       branchField.loading = true;
@@ -214,9 +238,9 @@ export class BranchCoordinatorAssignment implements OnInit {
                 meta: { id, name, desc, phone, address },
               };
             })
-            .filter(Boolean)
+            .filter(Boolean),
         ),
-        finalize(() => (branchField.loading = false))
+        finalize(() => (branchField.loading = false)),
       );
 
       branchField.options$ = branchesOptions$ as any;
@@ -259,9 +283,9 @@ export class BranchCoordinatorAssignment implements OnInit {
                 },
               };
             })
-            .filter(Boolean)
+            .filter(Boolean),
         ),
-        finalize(() => (empField.loading = false))
+        finalize(() => (empField.loading = false)),
       );
 
       empField.options$ = employeesOptions$ as any;
@@ -316,13 +340,11 @@ export class BranchCoordinatorAssignment implements OnInit {
     this.showModal = true;
 
     setTimeout(() => {
-      // ✅ reset config first
-      this.formConfig = {
-        ...BRANCH_COORDINATOR_ASSIGNMENT_FORM,
-        mode: 'create',
-      };
+      this.formConfig = this.applyMode(
+        { ...BRANCH_COORDINATOR_ASSIGNMENT_FORM },
+        'create',
+      );
 
-      // ✅ then re-bind dropdowns (this adds options$ back)
       this.warmupDropdownCaches();
     }, 0);
   }
@@ -333,10 +355,10 @@ export class BranchCoordinatorAssignment implements OnInit {
     this.showModal = true;
 
     setTimeout(() => {
-      this.formConfig = {
-        ...BRANCH_COORDINATOR_ASSIGNMENT_FORM,
-        mode: 'update',
-      };
+      this.formConfig = this.applyMode(
+        { ...BRANCH_COORDINATOR_ASSIGNMENT_FORM },
+        'update',
+      );
 
       this.warmupDropdownCaches();
     }, 0);
@@ -344,6 +366,17 @@ export class BranchCoordinatorAssignment implements OnInit {
 
   closeModal() {
     this.showModal = false;
+  }
+
+  private applyMode(cfg: any, mode: 'create' | 'update') {
+    const fields = cfg.fields.map((f: any) => {
+      if (f.key === 'employeeId' || f.key === 'branchId') {
+        return { ...f, disabled: mode === 'update' };
+      }
+      return { ...f };
+    });
+
+    return { ...cfg, mode, fields };
   }
 
   // ================= SUBMIT =================
@@ -375,14 +408,14 @@ export class BranchCoordinatorAssignment implements OnInit {
 
           this.notification.error(
             'Duplicate',
-            `${msg}${existingId ? ` (Existing ID: ${existingId})` : ''}`
+            `${msg}${existingId ? ` (Existing ID: ${existingId})` : ''}`,
           );
           return;
         }
 
         this.notification.error(
           'Error',
-          err?.error?.message ?? 'Something went wrong.'
+          err?.error?.message ?? 'Something went wrong.',
         );
       },
     });
@@ -402,13 +435,13 @@ export class BranchCoordinatorAssignment implements OnInit {
             this.loadTable();
             this.notification.success(
               'Deleted',
-              'Record deleted successfully.'
+              'Record deleted successfully.',
             );
           },
           error: (err) => {
             this.notification.error(
               'Error',
-              err?.error?.message ?? 'Delete failed.'
+              err?.error?.message ?? 'Delete failed.',
             );
           },
         });
@@ -454,8 +487,8 @@ export class BranchCoordinatorAssignment implements OnInit {
                   address,
                 },
               };
-            })
-          )
+            }),
+          ),
         ),
       };
     }
@@ -500,8 +533,8 @@ export class BranchCoordinatorAssignment implements OnInit {
                   designation,
                 },
               };
-            })
-          )
+            }),
+          ),
         ),
       };
     }
