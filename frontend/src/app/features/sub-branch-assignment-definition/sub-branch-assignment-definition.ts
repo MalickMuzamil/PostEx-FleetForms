@@ -42,7 +42,7 @@ export class SubBranchAssignmentDefinition implements OnInit {
     private service: SubBranchAssignmentDefinitionService,
     private router: Router,
     private notification: NzNotificationService,
-    private modal: NzModalService
+    private modal: NzModalService,
   ) {}
 
   ngOnInit(): void {
@@ -60,7 +60,7 @@ export class SubBranchAssignmentDefinition implements OnInit {
         this.tableData = rows.map((r: any) => {
           const statusFlag =
             Number(
-              r.StatusFlag ?? r.statusFlag ?? r.APP_ACTIVE ?? r.ActiveFlag
+              r.StatusFlag ?? r.statusFlag ?? r.APP_ACTIVE ?? r.ActiveFlag,
             ) === 0
               ? 0
               : 1;
@@ -163,7 +163,7 @@ export class SubBranchAssignmentDefinition implements OnInit {
             if (!id) return null;
 
             const name = String(
-              e.EmployeeName ?? e.APP_Name ?? e.AppName ?? ''
+              e.EmployeeName ?? e.APP_Name ?? e.AppName ?? '',
             ).trim();
             const departmentName = String(e.DepartmentName ?? '').trim();
             const designationName = String(e.DesignationName ?? '').trim();
@@ -188,7 +188,7 @@ export class SubBranchAssignmentDefinition implements OnInit {
 
         if (keepSelected && this.data?.employeeId) {
           const ok = this.employees.some(
-            (x: any) => Number(x.value) === Number(this.data.employeeId)
+            (x: any) => Number(x.value) === Number(this.data.employeeId),
           );
           if (!ok) this.data = { ...this.data, employeeId: null };
         }
@@ -220,8 +220,8 @@ export class SubBranchAssignmentDefinition implements OnInit {
                     branchId: o.branchId,
                     branchName: o.branchName,
                   },
-                }))
-              )
+                })),
+              ),
             ),
           };
         }
@@ -386,28 +386,7 @@ export class SubBranchAssignmentDefinition implements OnInit {
         this.showModal = false;
         this.loadTable();
       },
-      error: async (e) => {
-        if (this.isConfirmOverwriteError(e)) {
-          const { message, conflict } = this.parseBackendError(e);
-          const existingDate = this.formatYMD(conflict?.ExistingEffectiveDate);
-
-          const ok = await this.confirmOverwrite(message, existingDate);
-          if (!ok) return;
-
-          this.service.create({ ...payload, force: true }).subscribe({
-            next: () => {
-              this.notification.success('Success', 'Saved successfully');
-              this.showModal = false;
-              this.loadTable();
-            },
-            error: (e2) => {
-              const { message: m2 } = this.parseBackendError(e2);
-              this.notification.error('Error', m2 || 'Save failed');
-            },
-          });
-          return;
-        }
-
+      error: (e) => {
         const { message } = this.parseBackendError(e);
         this.notification.error('Error', message || 'Save failed');
       },
@@ -440,42 +419,6 @@ export class SubBranchAssignmentDefinition implements OnInit {
     });
   }
 
-  // ================= CONFIRM MODAL =================
-  private confirmOverwrite(
-    message: string,
-    existingDate?: string | null
-  ): Promise<boolean> {
-    return new Promise((resolve) => {
-      this.modal.confirm({
-        nzTitle: 'Confirmation Required',
-        nzContent: `
-          <div>
-            <p>${message || 'Confirm overwrite?'}</p>
-            ${
-              existingDate
-                ? `<p style="margin-top:8px">
-                     <strong>Existing Effective Date:</strong>
-                     <span style="color:#d46b08">${existingDate}</span>
-                   </p>`
-                : ''
-            }
-          </div>
-        `,
-        nzOkText: 'OK',
-        nzCancelText: 'Cancel',
-        nzOnOk: () => resolve(true),
-        nzOnCancel: () => resolve(false),
-      });
-    });
-  }
-
-  private formatYMD(iso: string | null | undefined): string | null {
-    if (!iso) return null;
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return null;
-    return d.toISOString().split('T')[0];
-  }
-
   private parseBackendError(err: any): {
     message: string;
     status?: number;
@@ -494,13 +437,5 @@ export class SubBranchAssignmentDefinition implements OnInit {
     const conflict = body?.conflict || body?.error?.conflict;
 
     return { message, status, code, conflict };
-  }
-
-  private isConfirmOverwriteError(err: any): boolean {
-    const { status, code, message } = this.parseBackendError(err);
-    if (status === 409) return true;
-    if (code === 'CONFIRM_OVERWRITE' || code === 'CONFIRM_OVERWRITE_BULK')
-      return true;
-    return /confirm overwrite/i.test(message || '');
   }
 }
