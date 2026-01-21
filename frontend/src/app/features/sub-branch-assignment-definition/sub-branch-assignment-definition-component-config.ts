@@ -58,7 +58,7 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_FORM: FormConfig = {
       type: 'text',
       required: true,
       validators: [AppValidators.email(50)],
-      updateOn: 'blur',
+      updateOn: 'change',
     },
 
     {
