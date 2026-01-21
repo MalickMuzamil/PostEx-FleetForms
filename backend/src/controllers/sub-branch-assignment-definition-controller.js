@@ -2,8 +2,8 @@
 import { subBranchAssignmentDefinitionService } from "../services/sub-branch-assignment-definition-service.js";
 
 class SubBranchAssignmentDefinitionController {
-    // ---------- SUB-BRANCHES (Dropdown) ----------
-    // GET /sub-branch-assignment-definition/sub-branches
+
+    // ---------- SUB-BRANCHES ----------
     getSubBranches = async (req, res, next) => {
         try {
             const data = await subBranchAssignmentDefinitionService.listSubBranches();
@@ -13,17 +13,18 @@ class SubBranchAssignmentDefinitionController {
         }
     };
 
-    // ---------- SUB-BRANCH BY ID (details) ----------
-    // GET /sub-branch-assignment-definition/sub-branches/:subBranchId
+    // ---------- SUB-BRANCH BY ID ----------
     getSubBranchById = async (req, res, next) => {
         try {
-            const { subBranchId } = req.params;
-            const idNum = Number(subBranchId);
-
-            if (!idNum) return res.status(400).json({ message: "Invalid subBranchId." });
+            const idNum = Number(req.params.subBranchId);
+            if (!idNum) {
+                return res.status(400).json({ message: "Invalid subBranchId." });
+            }
 
             const data = await subBranchAssignmentDefinitionService.getSubBranchById(idNum);
-            if (!data) return res.status(404).json({ message: "Sub-Branch not found." });
+            if (!data) {
+                return res.status(404).json({ message: "Sub-Branch not found." });
+            }
 
             res.json({ data });
         } catch (err) {
@@ -31,11 +32,10 @@ class SubBranchAssignmentDefinitionController {
         }
     };
 
-    // ---------- ACTIVE EMPLOYEES (by Branch) ----------
-    // GET /sub-branch-assignment-definition/employees/active?branchId=1
+    // ---------- ACTIVE EMPLOYEES ----------
     getActiveEmployeesByBranch = async (req, res, next) => {
         try {
-            const branchId = req.query.branchId ? Number(req.query.branchId) : null;
+            const branchId = Number(req.query.branchId);
             if (!branchId) {
                 return res.status(400).json({ message: "branchId is required." });
             }
@@ -49,8 +49,7 @@ class SubBranchAssignmentDefinitionController {
         }
     };
 
-    // ---------- LIST ALL ASSIGNMENTS ----------
-    // GET /sub-branch-assignment-definition
+    // ---------- LIST ----------
     getAll = async (req, res, next) => {
         try {
             const data = await subBranchAssignmentDefinitionService.listAssignments();
@@ -60,17 +59,18 @@ class SubBranchAssignmentDefinitionController {
         }
     };
 
-    // ---------- GET ASSIGNMENT BY ID ----------
-    // GET /sub-branch-assignment-definition/:id
+    // ---------- GET BY ID ----------
     getById = async (req, res, next) => {
         try {
-            const { id } = req.params;
-            const idNum = Number(id);
-
-            if (!idNum) return res.status(400).json({ message: "Invalid id." });
+            const idNum = Number(req.params.id);
+            if (!idNum) {
+                return res.status(400).json({ message: "Invalid id." });
+            }
 
             const data = await subBranchAssignmentDefinitionService.getAssignmentById(idNum);
-            if (!data) return res.status(404).json({ message: "Assignment not found." });
+            if (!data) {
+                return res.status(404).json({ message: "Assignment not found." });
+            }
 
             res.json({ data });
         } catch (err) {
@@ -79,18 +79,9 @@ class SubBranchAssignmentDefinitionController {
     };
 
     // ---------- CREATE ----------
-    // POST /sub-branch-assignment-definition
     create = async (req, res, next) => {
         try {
-            const {
-                subBranchId,
-                employeeId,
-                email,
-                effectiveDate,
-                statusFlag,
-                force,
-                enteredBy,
-            } = req.body;
+            const { subBranchId, employeeId, email, effectiveDate } = req.body;
 
             if (!subBranchId || !employeeId || !email || !effectiveDate) {
                 return res.status(400).json({
@@ -98,17 +89,11 @@ class SubBranchAssignmentDefinitionController {
                 });
             }
 
-            const finalEnteredBy =
-                enteredBy || req.user?.username || req.user?.id || "Admin";
-
             const data = await subBranchAssignmentDefinitionService.createAssignment({
                 subBranchId,
                 employeeId,
                 email,
                 effectiveDate,
-                statusFlag,
-                force: !!force,
-                enteredBy: finalEnteredBy,
             });
 
             res.status(201).json({
@@ -116,18 +101,22 @@ class SubBranchAssignmentDefinitionController {
                 data,
             });
         } catch (err) {
-            // ✅ overwrite confirm / duplicate effective date
-            if (err?.status === 409 || err?.code === "CONFIRM_OVERWRITE" || err?.code === "DUPLICATE_EFFECTIVE_DATE") {
+
+            // ✅ SAME AS BINDING — timeline validations
+            if (
+                err?.code === "EFFECTIVE_DATE_COLLISION" ||
+                err?.code === "PAST_LOCKED" ||
+                err?.code === "CONSECUTIVE_DUPLICATE"
+            ) {
                 return res.status(409).json({
-                    message: err?.message || "Conflict",
-                    code: err?.code,
-                    conflict: err?.conflict,
+                    message: err.message,
+                    existingId: err.existingId,
+                    code: err.code,
                 });
             }
 
-            // ✅ validations
+            // ✅ validation / business errors
             if (
-                err?.code === "PAST_EFFECTIVE_DATE" ||
                 err?.code === "INVALID_EFFECTIVE_DATE" ||
                 err?.code === "INVALID_EMAIL" ||
                 err?.code === "EMP_INACTIVE" ||
@@ -135,9 +124,9 @@ class SubBranchAssignmentDefinitionController {
                 err?.code === "EMP_NOT_FOUND" ||
                 err?.code === "SUB_BRANCH_NOT_FOUND"
             ) {
-                return res.status(422).json({
-                    message: err?.message || "Validation failed.",
-                    code: err?.code,
+                return res.status(400).json({
+                    message: err.message,
+                    code: err.code,
                 });
             }
 
@@ -146,32 +135,51 @@ class SubBranchAssignmentDefinitionController {
     };
 
     // ---------- UPDATE ----------
-    // PUT /sub-branch-assignment-definition/:id
     update = async (req, res, next) => {
         try {
-            const { id } = req.params;
-            const idNum = Number(id);
-
-            if (!idNum) return res.status(400).json({ message: "Invalid id." });
-
-            const finalEditedBy =
-                req.body?.editedBy || req.user?.username || req.user?.id || "Admin";
+            const idNum = Number(req.params.id);
+            if (!idNum) {
+                return res.status(400).json({ message: "Invalid id." });
+            }
 
             const data = await subBranchAssignmentDefinitionService.updateAssignment(
                 idNum,
-                { ...req.body, editedBy: finalEditedBy }
+                req.body
             );
 
-            if (!data) return res.status(404).json({ message: "Assignment not found." });
+            if (!data) {
+                return res.status(404).json({ message: "Assignment not found." });
+            }
 
             res.json({
                 message: "Assignment updated successfully.",
                 data,
             });
         } catch (err) {
-            // validations
+
+            // ✅ SAME AS BINDING — timeline validations
             if (
-                err?.code === "PAST_EFFECTIVE_DATE" ||
+                err?.code === "EFFECTIVE_DATE_COLLISION" ||
+                err?.code === "PAST_LOCKED" ||
+                err?.code === "CONSECUTIVE_DUPLICATE"
+            ) {
+                return res.status(409).json({
+                    message: err.message,
+                    existingId: err.existingId,
+                    code: err.code,
+                });
+            }
+
+            // ✅ sub-branch change not allowed (binding jaisa)
+            if (err?.code === "SUB_BRANCH_CHANGE_NOT_ALLOWED") {
+                return res.status(400).json({
+                    message: err.message,
+                    code: err.code,
+                });
+            }
+
+            // ✅ validation / business errors
+            if (
                 err?.code === "INVALID_EFFECTIVE_DATE" ||
                 err?.code === "INVALID_EMAIL" ||
                 err?.code === "EMP_INACTIVE" ||
@@ -179,9 +187,9 @@ class SubBranchAssignmentDefinitionController {
                 err?.code === "EMP_NOT_FOUND" ||
                 err?.code === "SUB_BRANCH_NOT_FOUND"
             ) {
-                return res.status(422).json({
-                    message: err?.message || "Validation failed.",
-                    code: err?.code,
+                return res.status(400).json({
+                    message: err.message,
+                    code: err.code,
                 });
             }
 
@@ -190,16 +198,17 @@ class SubBranchAssignmentDefinitionController {
     };
 
     // ---------- DELETE ----------
-    // DELETE /sub-branch-assignment-definition/:id
     delete = async (req, res, next) => {
         try {
-            const { id } = req.params;
-            const idNum = Number(id);
-
-            if (!idNum) return res.status(400).json({ message: "Invalid id." });
+            const idNum = Number(req.params.id);
+            if (!idNum) {
+                return res.status(400).json({ message: "Invalid id." });
+            }
 
             const data = await subBranchAssignmentDefinitionService.deleteAssignment(idNum);
-            if (!data) return res.status(404).json({ message: "Assignment not found." });
+            if (!data) {
+                return res.status(404).json({ message: "Assignment not found." });
+            }
 
             res.json({
                 message: "Assignment deleted successfully.",

@@ -168,10 +168,17 @@ class BindingService {
   async updateBinding(id, body) {
     const numericId = Number(id);
 
-    const inputBranchId = Number(body.branchId); // UI se aa raha
-    const empId = Number(body.empId);
-    const email = (body.email || "").trim();
-    const effectiveDate = body.effectiveDate;
+    // ✅ accept both naming styles (safety)
+    const inputBranchId = Number(body.branchId ?? body.BranchID ?? body.branch_id ?? body.branchId);
+    const empId = Number(body.empId ?? body.employeeId ?? body.BC_Emp_ID);
+    const email = (body.email ?? body.BC_Email ?? "").trim();
+    const effectiveDate = body.effectiveDate ?? body.EffectiveDate;
+
+    if (!numericId || !empId || !email || !effectiveDate) {
+      const err = new Error("empId, email, effectiveDate are required.");
+      err.code = "VALIDATION_ERROR";
+      throw err;
+    }
 
     const pool = await getPool();
 
@@ -194,21 +201,22 @@ class BindingService {
 
     const existingBranchId = Number(existing.BranchID);
 
-    if (inputBranchId !== existingBranchId) {
+    // if UI sends branchId, enforce it matches; if not sent, still enforce original
+    if (Number.isFinite(inputBranchId) && inputBranchId !== existingBranchId) {
       const err = new Error("Branch cannot be changed in update.");
       err.code = "BRANCH_CHANGE_NOT_ALLOWED";
       throw err;
     }
 
-    // ✅ 2) Run validations (same rules, but update-safe)
+    // ✅ 2) Apply SAME validations as CREATE (but update-safe via id exclusion)
     await this.ensureNoDuplicate({
       id: numericId,
-      branchId: existingBranchId, // enforce original branch
-      empId,
-      effectiveDate,
+      branchId: existingBranchId, // always original branch
+      empId,                      // ✅ employee change allowed
+      effectiveDate,              // ✅ date change allowed
     });
 
-    // ✅ 3) Update (branch remains same)
+    // ✅ 3) Update
     const request = pool.request();
     request.input("id", sql.Int, numericId);
     request.input("empId", sql.Int, empId);
@@ -227,6 +235,7 @@ class BindingService {
 
     return result.recordset?.[0];
   }
+
 
   /* =========================
      DUPLICATE LOGIC (CORE)

@@ -270,8 +270,6 @@ class SubBranchDefinitionService {
     return result.recordset?.[0] || null;
   }
 
-
-
   // ---------- DELETE (SOFT) ----------
   async deleteSubBranch(id, deletedBy = "Admin") {
     const pool = await getPool();
