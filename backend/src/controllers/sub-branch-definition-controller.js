@@ -51,7 +51,12 @@ class SubBranchDefinitionController {
     // ---------- CREATE ----------
     create = async (req, res, next) => {
         try {
-            const { branchId, subBranchName, enteredBy } = req.body;
+            const {
+                branchId,
+                subBranchName,
+                subBranchDesc,      
+                enteredBy,
+            } = req.body;
 
             if (!branchId || !subBranchName) {
                 return res.status(400).json({
@@ -65,6 +70,7 @@ class SubBranchDefinitionController {
             const data = await subBranchDefinitionService.createSubBranch({
                 branchId,
                 subBranchName,
+                subBranchDesc,           // ✅ pass to service
                 enteredBy: finalEnteredBy,
             });
 
@@ -93,14 +99,14 @@ class SubBranchDefinitionController {
     update = async (req, res, next) => {
         try {
             const { id } = req.params;
-            const { branchId, subBranchName, editedBy } = req.body;
+            const { branchId, subBranchName, subBranchDesc, editedBy } = req.body;
 
             const idNum = Number(id);
             if (!idNum) return res.status(400).json({ message: "Invalid id." });
 
-            if (!branchId && !subBranchName) {
+            if (!branchId && !subBranchName && subBranchDesc == null) {
                 return res.status(400).json({
-                    message: "Nothing to update. Provide branchId or subBranchName.",
+                    message: "Nothing to update. Provide branchId, subBranchName, or subBranchDesc.",
                 });
             }
 
@@ -110,29 +116,14 @@ class SubBranchDefinitionController {
             const data = await subBranchDefinitionService.updateSubBranch(idNum, {
                 branchId,
                 subBranchName,
+                subBranchDesc,      // ✅ add this
                 editedBy: finalEditedBy,
             });
 
-            if (!data)
-                return res.status(404).json({ message: "Sub-Branch not found." });
+            if (!data) return res.status(404).json({ message: "Sub-Branch not found." });
 
-            res.json({
-                message: "Sub-Branch updated successfully.",
-                data,
-            });
+            res.json({ message: "Sub-Branch updated successfully.", data });
         } catch (err) {
-            if (err?.code === "DUPLICATE_SUB_BRANCH") {
-                return res.status(409).json({
-                    message: "Sub-Branch Name already exists for this branch.",
-                    existingId: err.existingId,
-                });
-            }
-            if (err?.code === "INVALID_FORMAT") {
-                return res.status(422).json({
-                    message:
-                        "Sub-Branch Name format is invalid. Please follow the required format.",
-                });
-            }
             next(err);
         }
     };

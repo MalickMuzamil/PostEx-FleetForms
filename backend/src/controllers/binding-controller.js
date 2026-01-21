@@ -120,16 +120,62 @@ class BindingController {
 
             const data = await bindingService.updateBinding(id, req.body);
 
-            if (!data) {
-                return res.status(404).json({ message: "Binding not found" });
-            }
-
             return res.json({
                 message: "Binding updated successfully",
                 data,
             });
         } catch (err) {
-            // ✅ NEW: branch + employee duplicate (email/date ignore)
+            // ✅ Not found
+            if (err?.code === "NOT_FOUND") {
+                return res.status(404).json({
+                    message: err.message || "Binding not found",
+                });
+            }
+
+            // ✅ Validation error (missing fields etc.)
+            if (err?.code === "VALIDATION_ERROR") {
+                return res.status(400).json({
+                    message: err.message || "Validation error.",
+                });
+            }
+
+            // ✅ Branch cannot be changed
+            if (err?.code === "BRANCH_CHANGE_NOT_ALLOWED") {
+                return res.status(400).json({
+                    message: err.message || "Branch cannot be changed in update.",
+                });
+            }
+
+            // ✅ Same-day collision (same effective date not allowed per branch)
+            if (err?.code === "EFFECTIVE_DATE_COLLISION") {
+                return res.status(409).json({
+                    message:
+                        err.message ||
+                        "Duplicate: same effective date not allowed for this branch.",
+                    existingId: err.existingId,
+                });
+            }
+
+            // ✅ Earliest-date lock
+            if (err?.code === "PAST_LOCKED") {
+                return res.status(409).json({
+                    message:
+                        err.message ||
+                        "Date is reserved. You cannot set this effective date.",
+                });
+            }
+
+            // ✅ No consecutive duplicate (A > A)
+            if (err?.code === "CONSECUTIVE_DUPLICATE") {
+                return res.status(409).json({
+                    message:
+                        err.message ||
+                        "Duplicate: Same employee cannot be consecutive (A > A not allowed).",
+                    existingId: err.existingId,
+                });
+            }
+
+            // (Optional) old codes — keep if other parts still throw these
             if (err?.code === "DUPLICATE_BRANCH_EMP") {
                 return res.status(409).json({
                     message:
@@ -138,16 +184,12 @@ class BindingController {
                 });
             }
 
-            if (err?.code === "DUPLICATE_BINDING" || err?.code === "DUPLICATE_BINDING_FUTURE") {
+            if (
+                err?.code === "DUPLICATE_BINDING" ||
+                err?.code === "DUPLICATE_BINDING_FUTURE"
+            ) {
                 return res.status(409).json({
                     message: err.message || "Duplicate binding not allowed.",
-                    existingId: err.existingId,
-                });
-            }
-
-            if (err?.code === "EFFECTIVE_DATE_COLLISION") {
-                return res.status(409).json({
-                    message: err.message || "Duplicate: same effective date not allowed for this branch.",
                     existingId: err.existingId,
                 });
             }
@@ -170,6 +212,7 @@ class BindingController {
         }
     };
 
+
     deleteBinding = async (req, res, next) => {
         try {
             const { id } = req.params;
@@ -185,7 +228,7 @@ class BindingController {
         }
     };
 
-    
+
 }
 
 export const bindingController = new BindingController();

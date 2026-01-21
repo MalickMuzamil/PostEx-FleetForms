@@ -47,6 +47,50 @@ class DeliveryRouteDefinitionController {
         }
     }
 
+    // ✅ PUT: /delivery-routes/:id
+    async update(req, res) {
+        try {
+            const { id } = req.params;
+            const { routeDescription, editedBy } = req.body;
+
+            if (!id || isNaN(Number(id))) {
+                return res.status(400).json({ message: "Invalid id" });
+            }
+
+            if (routeDescription == null) {
+                return res.status(400).json({ message: "routeDescription is required" });
+            }
+
+            const data = await deliveryRouteDefinitionService.updateRoute(Number(id), {
+                routeDescription,
+                editedBy,
+            });
+
+            if (!data) {
+                return res.status(404).json({ message: "Delivery route description not found" });
+            }
+
+            return res.status(200).json({
+                message: "Delivery route description updated successfully",
+                data,
+            });
+        } catch (err) {
+            console.error("update error:", err);
+
+            if (err?.code === "DUPLICATE_DELIVERY_ROUTE_DESC") {
+                return res.status(409).json({
+                    message: err.message || "Duplicate delivery route description",
+                    code: err.code,
+                    existingId: err.existingId,
+                });
+            }
+
+            return res.status(500).json({
+                message: err.message || "Failed to update delivery route description",
+            });
+        }
+    }
+
     // DELETE: /delivery-routes/:id
     async remove(req, res) {
         try {

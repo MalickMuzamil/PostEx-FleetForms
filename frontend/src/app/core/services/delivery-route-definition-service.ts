@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { GeneralService } from './general-service';
+import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class DeliveryRouteDefinitionService {
-  private baseUrl = '/delivery-routes'; 
+  private baseUrl = '/delivery-routes';
 
   constructor(private api: GeneralService) {}
 
@@ -15,7 +16,7 @@ export class DeliveryRouteDefinitionService {
     return this.api.post(this.baseUrl, body);
   }
 
-  delete(id: number) {
-    return this.api.delete(`${this.baseUrl}/${id}`);
+  update(id: number, payload: any): Observable<any> {
+    return this.api.put<any>(`${this.baseUrl}/${id}`, payload);
   }
 }
