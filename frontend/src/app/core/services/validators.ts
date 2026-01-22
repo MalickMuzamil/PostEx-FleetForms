@@ -154,7 +154,12 @@ export class AppValidators {
       const v = (control.value ?? '').toString().trim().toUpperCase();
       if (!v) return null;
 
-      const regex = /^[A-Z]{5}-(I|II|III|IV|V|VI|VII|VIII|IX|X)$/;
+      if (v.length < 4) {
+        return { minLength: true };
+      }
+
+      const regex = /^[A-Z]{4,15}(-(I|II|III|IV|V|VI|VII|VIII|IX|X))?$/;
+
       return regex.test(v) ? null : { invalidName: true };
     };
   }
