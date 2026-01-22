@@ -64,7 +64,7 @@
                         </button>
 
                         <button *ngIf="action.action === 'delete'" class="btn btn-sm btn-outline-danger mx-2"
-                            (click)="onDelete(row)">
+                            [disabled]="isDeleteDisabled(row)" (click)="onDelete(row)">
                             {{ action.label }}
                         </button>
                     </ng-container>
