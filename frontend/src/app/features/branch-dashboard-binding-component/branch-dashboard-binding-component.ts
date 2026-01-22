@@ -222,6 +222,7 @@ export class BranchDashboardBindingComponent {
   }
 
   delete(row: any) {
+    
     this.modal.confirm({
       nzTitle: 'Delete Confirmation',
       nzContent: 'Are you sure you want to delete this record?',
