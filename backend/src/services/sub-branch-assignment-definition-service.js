@@ -365,7 +365,37 @@ class SubBranchAssignmentDefinitionService {
 
     const newDate = toDateOnly(effectiveDate);
 
-    /* 1) SAME-DAY COLLISION */
+    /* =====================================
+       0) HARD RULE (CREATE ONLY):
+       Per Sub-Branch MAX 2 assignments.
+       - A > B allowed
+       - New add after 2 not allowed (edit existing instead)
+    ====================================== */
+    if (id == null) {
+      const cntRes = await new sql.Request(tx)
+        .input("subBranchId", sql.Int, subBranchId)
+        .query(`
+        SELECT COUNT(1) AS Cnt
+        FROM GoGreen.OPS.Sub_Branch_Assignment_Definition WITH (UPDLOCK, HOLDLOCK)
+        WHERE Sub_Branch_ID = @subBranchId
+      `);
+
+      const cnt = Number(cntRes.recordset?.[0]?.Cnt ?? 0);
+
+      if (cnt >= 2) {
+        const e = new Error(
+          "New assignment not allowed. This Sub-Branch already has 2 assignments. Please edit the existing record instead."
+        );
+        e.code = "MAX_ASSIGNMENTS_REACHED";
+        e.status = 409;
+        throw e;
+      }
+    }
+
+    /* =====================================
+       1) SAME-DAY COLLISION (NO ENTRY ON SAME DATE)
+       - Applies to CREATE + UPDATE
+    ====================================== */
     {
       const req = new sql.Request(tx);
       req.input("id", sql.Int, id);
@@ -373,15 +403,15 @@ class SubBranchAssignmentDefinitionService {
       req.input("effectiveDate", sql.DateTime, effectiveDate);
 
       const collision = await req.query(`
-        SELECT TOP 1
-          ID,
-          CONVERT(varchar(10), CAST(EffectiveDate AS date), 23) AS ExistingDate
-        FROM GoGreen.OPS.Sub_Branch_Assignment_Definition WITH (UPDLOCK, HOLDLOCK)
-        WHERE Sub_Branch_ID = @subBranchId
-          AND CAST(EffectiveDate AS date) = CAST(@effectiveDate AS date)
-          AND (@id IS NULL OR ID <> @id)
-        ORDER BY ID DESC;
-      `);
+      SELECT TOP 1
+        ID,
+        CONVERT(varchar(10), CAST(EffectiveDate AS date), 23) AS ExistingDate
+      FROM GoGreen.OPS.Sub_Branch_Assignment_Definition WITH (UPDLOCK, HOLDLOCK)
+      WHERE Sub_Branch_ID = @subBranchId
+        AND CAST(EffectiveDate AS date) = CAST(@effectiveDate AS date)
+        AND (@id IS NULL OR ID <> @id)
+      ORDER BY ID DESC;
+    `);
 
       if (collision.recordset?.[0]?.ID) {
         const e = new Error(
@@ -394,48 +424,10 @@ class SubBranchAssignmentDefinitionService {
       }
     }
 
-    /* 2) EARLIEST DATE LOCK (same as Binding) */
-    {
-      const req = new sql.Request(tx);
-      req.input("id", sql.Int, id);
-      req.input("subBranchId", sql.Int, subBranchId);
-
-      const minRes = await req.query(`
-        SELECT MIN(CAST(EffectiveDate AS date)) AS MinD
-        FROM GoGreen.OPS.Sub_Branch_Assignment_Definition WITH (UPDLOCK, HOLDLOCK)
-        WHERE Sub_Branch_ID = @subBranchId
-          AND (@id IS NULL OR ID <> @id);
-      `);
-
-      const minD = minRes.recordset?.[0]?.MinD ? toDateOnly(minRes.recordset[0].MinD) : null;
-
-      // first ever entry
-      if (!minD) {
-        // continue
-      } else if (id == null) {
-        // CREATE: block on/before minD
-        if (newDate <= minD) {
-          const e = new Error(
-            `Date is reserved. You can only add AFTER ${minD.toISOString().slice(0, 10)}.`
-          );
-          e.code = "PAST_LOCKED";
-          e.status = 409;
-          throw e;
-        }
-      } else {
-        // UPDATE: allow equal minD (edit earliest), block earlier
-        if (newDate < minD) {
-          const e = new Error(
-            `Date is reserved. You can only set ON/AFTER ${minD.toISOString().slice(0, 10)}.`
-          );
-          e.code = "PAST_LOCKED";
-          e.status = 409;
-          throw e;
-        }
-      }
-    }
-
-    /* 3) FIND PREV / NEXT (NEIGHBORS) + A > A BLOCK */
+    /* =====================================
+       2) NEIGHBORS + NO CONSECUTIVE DUPLICATE (A > A not allowed)
+       - Allows A > B > A
+    ====================================== */
     {
       const req = new sql.Request(tx);
       req.input("id", sql.Int, id);
@@ -443,28 +435,28 @@ class SubBranchAssignmentDefinitionService {
       req.input("effectiveDate", sql.DateTime, effectiveDate);
 
       const neighbors = await req.query(`
-        ;WITH PrevRow AS (
-          SELECT TOP 1 ID, Sub_Branch_Emp_ID
-          FROM GoGreen.OPS.Sub_Branch_Assignment_Definition WITH (UPDLOCK, HOLDLOCK)
-          WHERE Sub_Branch_ID = @subBranchId
-            AND CAST(EffectiveDate AS date) < CAST(@effectiveDate AS date)
-            AND (@id IS NULL OR ID <> @id)
-          ORDER BY CAST(EffectiveDate AS date) DESC, ID DESC
-        ),
-        NextRow AS (
-          SELECT TOP 1 ID, Sub_Branch_Emp_ID
-          FROM GoGreen.OPS.Sub_Branch_Assignment_Definition WITH (UPDLOCK, HOLDLOCK)
-          WHERE Sub_Branch_ID = @subBranchId
-            AND CAST(EffectiveDate AS date) > CAST(@effectiveDate AS date)
-            AND (@id IS NULL OR ID <> @id)
-          ORDER BY CAST(EffectiveDate AS date) ASC, ID ASC
-        )
-        SELECT
-          (SELECT ID FROM PrevRow) AS PrevID,
-          (SELECT Sub_Branch_Emp_ID FROM PrevRow) AS PrevEmp,
-          (SELECT ID FROM NextRow) AS NextID,
-          (SELECT Sub_Branch_Emp_ID FROM NextRow) AS NextEmp;
-      `);
+      ;WITH PrevRow AS (
+        SELECT TOP 1 ID, Sub_Branch_Emp_ID
+        FROM GoGreen.OPS.Sub_Branch_Assignment_Definition WITH (UPDLOCK, HOLDLOCK)
+        WHERE Sub_Branch_ID = @subBranchId
+          AND CAST(EffectiveDate AS date) < CAST(@effectiveDate AS date)
+          AND (@id IS NULL OR ID <> @id)
+        ORDER BY CAST(EffectiveDate AS date) DESC, ID DESC
+      ),
+      NextRow AS (
+        SELECT TOP 1 ID, Sub_Branch_Emp_ID
+        FROM GoGreen.OPS.Sub_Branch_Assignment_Definition WITH (UPDLOCK, HOLDLOCK)
+        WHERE Sub_Branch_ID = @subBranchId
+          AND CAST(EffectiveDate AS date) > CAST(@effectiveDate AS date)
+          AND (@id IS NULL OR ID <> @id)
+        ORDER BY CAST(EffectiveDate AS date) ASC, ID ASC
+      )
+      SELECT
+        (SELECT ID FROM PrevRow) AS PrevID,
+        (SELECT Sub_Branch_Emp_ID FROM PrevRow) AS PrevEmp,
+        (SELECT ID FROM NextRow) AS NextID,
+        (SELECT Sub_Branch_Emp_ID FROM NextRow) AS NextEmp;
+    `);
 
       const nb = neighbors.recordset?.[0] || {};
       const prevEmp = nb.PrevEmp != null ? Number(nb.PrevEmp) : null;
@@ -486,6 +478,8 @@ class SubBranchAssignmentDefinitionService {
         throw e;
       }
     }
+
+    // ✅ Passed
   }
 
   /* =========================
