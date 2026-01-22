@@ -52,6 +52,7 @@ export class Table implements OnChanges {
   }
 
   onDelete(row: any) {
+    if (this.isDeleteDisabled(row)) return;
     this.delete.emit(row);
   }
 
@@ -106,17 +107,15 @@ export class Table implements OnChanges {
     return v;
   }
 
-  // ✅ Global search change handler
   onGlobalTermChange(value: string) {
     // IMPORTANT: rules yahan se aayengi config se
     this.globalTerm = this.sanitizeInput(
       value,
-      this.config.globalSearch?.rules
+      this.config.globalSearch?.rules,
     );
     this.applyFilters();
   }
 
-  // ✅ Column text filter change handler
   onColTextFilterChange(colKey: string, value: string, rules?: InputRules) {
     this.colFilters[colKey] = this.sanitizeInput(value, rules);
     this.applyFilters();
@@ -149,7 +148,7 @@ export class Table implements OnChanges {
             const match = searchKeys.some((k) =>
               String(row?.[k] ?? '')
                 .toLowerCase()
-                .includes(term)
+                .includes(term),
             );
             if (!match) return false;
           }
@@ -206,7 +205,7 @@ export class Table implements OnChanges {
         // large dataset: avoid blocking immediate UI by scheduling filtering
         console.warn(
           'Table: large dataset detected, running filter in a scheduled task',
-          rows.length
+          rows.length,
         );
         setTimeout(runFilter, 0);
       } else {
@@ -226,7 +225,7 @@ export class Table implements OnChanges {
 
     const sanitized = this.sanitizeInput(
       input.value,
-      this.config.globalSearch?.rules
+      this.config.globalSearch?.rules,
     );
 
     // model update
@@ -236,5 +235,25 @@ export class Table implements OnChanges {
     if (input.value !== sanitized) input.value = sanitized;
 
     this.applyFilters();
+  }
+
+  isDeleteDisabled(row: any): boolean {
+    // case 1: numeric flag (0 = inactive) — dashboard binding
+    if (row?.conferenceCallFlag === 0) return true;
+
+    // ✅ NEW: Branch General Employee Binding
+    if (row?.statusFlag === 0) return true;
+
+    // case 2: text flag ("Inactive")
+    const t = (row?.conferenceCallText ?? row?.statusText ?? row?.status ?? '')
+      .toString()
+      .toLowerCase();
+
+    if (t === 'inactive') return true;
+
+    // case 3 (optional): generic boolean
+    if (row?.isActive === false) return true;
+
+    return false;
   }
 }

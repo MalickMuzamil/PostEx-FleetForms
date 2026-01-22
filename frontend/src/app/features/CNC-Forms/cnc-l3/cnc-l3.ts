@@ -22,6 +22,7 @@ export class CncL3 implements OnInit {
 
   rows: any[] = [];
   loading = false;
+  submitting = false;
 
   showForm = false;
   isEdit = false;
@@ -32,7 +33,7 @@ export class CncL3 implements OnInit {
   constructor(
     private service: OpsCnCL3DefinitionService,
     private notification: NzNotificationService,
-    private modal: NzModalService
+    private modal: NzModalService,
   ) {}
 
   ngOnInit(): void {
@@ -43,7 +44,7 @@ export class CncL3 implements OnInit {
     this.loading = true;
     this.service.getAll().subscribe({
       next: (res: any) => {
-        const data = Array.isArray(res) ? res : res?.data ?? [];
+        const data = Array.isArray(res) ? res : (res?.data ?? []);
 
         this.rows = data.map((r: any) => ({
           ...r,
@@ -57,7 +58,7 @@ export class CncL3 implements OnInit {
         this.loading = false;
         this.notification.error(
           'Error',
-          err?.error?.message || 'Failed to load data'
+          err?.error?.message || 'Failed to load data',
         );
       },
     });
@@ -101,14 +102,14 @@ export class CncL3 implements OnInit {
           next: (res: any) => {
             this.notification.success(
               'Success',
-              res?.message || 'Deleted successfully'
+              res?.message || 'Deleted successfully',
             );
             this.load();
           },
           error: (err) => {
             this.notification.error(
               'Error',
-              err?.error?.message || 'Delete failed'
+              err?.error?.message || 'Delete failed',
             );
           },
         });
@@ -117,6 +118,10 @@ export class CncL3 implements OnInit {
   }
 
   onSubmit(payload: any): void {
+    if (this.submitting) return; // ✅ block multiple clicks
+    this.submitting = true;
+    const done = () => (this.submitting = false);
+
     const currentUser = this.getCurrentUser();
     const nowIso = new Date().toISOString();
 
@@ -143,16 +148,18 @@ export class CncL3 implements OnInit {
             'Success',
             newId
               ? `${res?.message || 'Created successfully'} (ID: ${newId})`
-              : res?.message || 'Created successfully'
+              : res?.message || 'Created successfully',
           );
           this.showForm = false;
           this.load();
+          done();
         },
         error: (err) => {
           this.notification.error(
             'Error',
-            err?.error?.message || 'Create failed'
+            err?.error?.message || 'Create failed',
           );
+          done();
         },
       });
 
@@ -160,7 +167,10 @@ export class CncL3 implements OnInit {
     }
 
     // ✅ UPDATE
-    if (!this.selectedId) return;
+    if (!this.selectedId) {
+      done();
+      return;
+    }
 
     const body = {
       ...base,
@@ -174,16 +184,18 @@ export class CncL3 implements OnInit {
       next: (res: any) => {
         this.notification.success(
           'Success',
-          res?.message || 'Updated successfully'
+          res?.message || 'Updated successfully',
         );
         this.showForm = false;
         this.load();
+        done();
       },
       error: (err) => {
         this.notification.error(
           'Error',
-          err?.error?.message || 'Update failed'
+          err?.error?.message || 'Update failed',
         );
+        done();
       },
     });
   }
