@@ -640,7 +640,8 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
         row.branchId = expectedBranch;
 
         // ✅ now that branch changed, attach correct sub-branches from cache if available
-        this.applySubBranchesToRow(row);
+        // this.applySubBranchesToRow(row);
+        this.loadPairSubBranches(routeId, expectedBranch, row);
       }
 
       row.deliveryRouteId = routeId;

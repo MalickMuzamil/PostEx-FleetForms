@@ -167,46 +167,33 @@ export class SubBranchDefinitionComponent implements OnInit {
 
   // ================= FORM CHANGE =================
   onFormChange(ev: any) {
-    if (ev?.formValue) this.data = { ...this.data, ...ev.formValue };
+    if (ev?.formValue) {
+      this.data = { ...this.data, ...ev.formValue };
+    }
 
     const newBranchId = +(this.data?.branchId ?? 0);
 
-    // ===== helper (local) to enforce: CODE-AAA-AAA (max 6 letters after prefix) =====
     const normalizeSubBranch = (raw: any, code: string) => {
-      const prefix = (code || '').toString().trim().toUpperCase();
+      const prefix = (code || '').trim().toUpperCase();
       if (!prefix) return null;
 
-      let v = (raw ?? '').toString().toUpperCase();
+      let v = (raw ?? '').toString().toUpperCase().replace(/\s+/g, '');
 
-      // remove spaces
-      v = v.replace(/\s+/g, '');
+      // avoid LHE-LHE
+      v = v.replace(new RegExp(`^${prefix}-?`), '');
 
-      // if user removed prefix -> force it back
-      if (!v.startsWith(prefix + '-')) {
-        // keep only letters from user input
-        const letters = v.replace(/[^A-Z]/g, '').slice(0, 6);
-        v = `${prefix}-${letters}`;
-      }
+      // only A-Z 0-9
+      const cleaned = v.replace(/[^A-Z0-9]/g, '').slice(0, 6);
 
-      // take part after prefix-
-      let after = v.slice(prefix.length + 1);
+      const mid = cleaned.slice(0, 3);
+      const last = cleaned.slice(3, 6);
 
-      // letters only after prefix
-      after = after.replace(/[^A-Z]/g, '');
-
-      // max 6 letters
-      after = after.slice(0, 6);
-
-      // auto dash after 3 letters => AAA-AAA
-      const left = after.slice(0, 3);
-      const right = after.slice(3);
-      const formattedAfter = right ? `${left}-${right}` : left;
-
-      // final
-      return formattedAfter ? `${prefix}-${formattedAfter}` : `${prefix}-`;
+      if (!mid) return `${prefix}-`;
+      if (cleaned.length <= 3) return `${prefix}-${mid}`;
+      return `${prefix}-${mid}-${last}`;
     };
 
-    // ✅ branch empty => clear readonlys + clear subBranchName too
+    // ===== branch cleared =====
     if (!newBranchId) {
       this.data = {
         ...this.data,
@@ -220,9 +207,9 @@ export class SubBranchDefinitionComponent implements OnInit {
     }
 
     const b = this.branchMap.get(newBranchId);
-    const code = this.getSelectedBranchCode(); // e.g. LHE / FSD
+    const code = this.getSelectedBranchCode();
 
-    // ✅ branch changed
+    // ===== branch changed =====
     if (newBranchId !== this.lastBranchId) {
       this.lastBranchId = newBranchId;
 
@@ -237,12 +224,11 @@ export class SubBranchDefinitionComponent implements OnInit {
       return;
     }
 
-    // ✅ branch same: keep prefix locked + limit 6 letters after prefix
+    // ===== branch same → enforce format =====
     if (code) {
       const current = this.data?.subBranchName;
       const fixed = normalizeSubBranch(current, code);
 
-      // update only if changed (avoid loops)
       if (fixed !== current) {
         this.data = { ...this.data, subBranchName: fixed };
       }
@@ -308,8 +294,16 @@ export class SubBranchDefinitionComponent implements OnInit {
 
   // ================= SUBMIT =================
   onSubmit(payload: any) {
-    const now = new Date().toISOString();
+    const code = this.getSelectedBranchCode();
+    const value = (payload.subBranchName ?? '').toString().trim().toUpperCase();
 
+    const fullRegex = new RegExp(`^${code}-[A-Z0-9]{3}-[A-Z0-9]{3}$`);
+    if (!fullRegex.test(value)) {
+      this.notification.error('Invalid Format', `Must be ${code}-A0A-AAA`);
+      return;
+    }
+
+    const now = new Date().toISOString();
     const user =
       localStorage.getItem('userName') ||
       localStorage.getItem('username') ||
@@ -318,10 +312,7 @@ export class SubBranchDefinitionComponent implements OnInit {
 
     const body: any = {
       branchId: payload.branchId,
-      subBranchName: (payload.subBranchName ?? '')
-        .toString()
-        .trim()
-        .toUpperCase(),
+      subBranchName: value,
       subBranchDesc: (payload.subBranchDesc ?? '').toString().trim(),
     };
 

@@ -67,13 +67,29 @@ class BranchDashboardBindingService {
   }
 
   async updateBinding(id, { branchId, reqConCall, effectiveDate }) {
-    if (branchId) {
-      await this.ensureNoDuplicate({ id: Number(id), branchId: Number(branchId) });
+    const pool = await getPool();
+
+    // ✅ resolve branchId even if not sent
+    let targetBranchId = branchId;
+
+    if (!targetBranchId) {
+      const existing = await pool.request()
+        .input("id", sql.Int, id)
+        .query(`
+        SELECT BranchID
+        FROM GoGreen.OPS.Branch_RequiredinDashboard_Binding
+        WHERE ID = @id
+      `);
+
+      targetBranchId = existing.recordset?.[0]?.BranchID;
     }
 
-    const pool = await getPool();
-    const request = pool.request();
+    // ✅ only block duplicates when making Active
+    if (Number(reqConCall) === 1 && targetBranchId) {
+      await this.ensureNoDuplicate({ id: Number(id), branchId: Number(targetBranchId) });
+    }
 
+    const request = pool.request();
     request.input("id", sql.Int, id);
     request.input("reqConCall", sql.Int, reqConCall);
     request.input("effectiveDate", sql.DateTime, effectiveDate);
@@ -81,17 +97,18 @@ class BranchDashboardBindingService {
     if (branchId) request.input("branchId", sql.Int, branchId);
 
     const result = await request.query(`
-      UPDATE GoGreen.OPS.Branch_RequiredinDashboard_Binding
-      SET
-        ${branchId ? "BranchID = @branchId," : ""}
-        Req_Con_Call = @reqConCall,
-        EffectiveDate = @effectiveDate
-      OUTPUT INSERTED.*
-      WHERE ID = @id
-    `);
+    UPDATE GoGreen.OPS.Branch_RequiredinDashboard_Binding
+    SET
+      ${branchId ? "BranchID = @branchId," : ""}
+      Req_Con_Call = @reqConCall,
+      EffectiveDate = @effectiveDate
+    OUTPUT INSERTED.*
+    WHERE ID = @id
+  `);
 
     return result.recordset?.[0];
   }
+
 
   async deleteBinding(id) {
     const pool = await getPool();
