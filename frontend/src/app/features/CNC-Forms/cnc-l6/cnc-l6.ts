@@ -25,6 +25,7 @@ export class CncL6 {
   selectedId: number | null = null;
 
   formData: any = {};
+  submitting = false;
 
   constructor(
     private service: OpsCnCL6DefinitionService,
@@ -114,76 +115,79 @@ export class CncL6 {
   }
 
   onSubmit(payload: any): void {
-    const currentUser = this.getCurrentUser();
-    const nowIso = new Date().toISOString();
+  if (this.submitting) return;     // ✅ block multiple clicks
+  this.submitting = true;
+  const done = () => (this.submitting = false);
 
-    const base = {
-      name: (payload?.name ?? '').toString().trim(),
-      description: payload?.description,
-      role: payload?.role ?? this.formData?.role ?? null,
-    };
+  const currentUser = this.getCurrentUser();
+  const nowIso = new Date().toISOString();
 
-    // ✅ CREATE
-    if (!this.isEdit) {
-      const body = {
-        ...base,
-        enteredOn: nowIso,
-        enteredBy: currentUser,
-        editedOn: null,
-        editedBy: null,
-      };
+  const base = {
+    name: (payload?.name ?? '').toString().trim(),
+    description: payload?.description,
+    role: payload?.role ?? this.formData?.role ?? null,
+  };
 
-      this.service.create(body).subscribe({
-        next: (res: any) => {
-          const newId = res?.data?.Ops_CnC_L6_Id ?? res?.data?.id;
-          this.notification.success(
-            'Success',
-            newId
-              ? `${res?.message || 'Created successfully'} (ID: ${newId})`
-              : res?.message || 'Created successfully'
-          );
-          this.showForm = false;
-          this.load();
-        },
-        error: (err) => {
-          this.notification.error(
-            'Error',
-            err?.error?.message || 'Create failed'
-          );
-        },
-      });
-
-      return;
-    }
-
-    // ✅ UPDATE
-    if (!this.selectedId) return;
-
+  // ✅ CREATE
+  if (!this.isEdit) {
     const body = {
       ...base,
-      enteredOn: this.formData?.enteredOn ?? null,
-      enteredBy: this.formData?.enteredBy ?? null,
-      editedOn: nowIso,
-      editedBy: currentUser,
+      enteredOn: nowIso,
+      enteredBy: currentUser,
+      editedOn: null,
+      editedBy: null,
     };
 
-    this.service.update(this.selectedId, body).subscribe({
+    this.service.create(body).subscribe({
       next: (res: any) => {
+        const newId = res?.data?.Ops_CnC_L6_Id ?? res?.data?.id;
         this.notification.success(
           'Success',
-          res?.message || 'Updated successfully'
+          newId
+            ? `${res?.message || 'Created successfully'} (ID: ${newId})`
+            : res?.message || 'Created successfully'
         );
         this.showForm = false;
         this.load();
+        done();
       },
       error: (err) => {
-        this.notification.error(
-          'Error',
-          err?.error?.message || 'Update failed'
-        );
+        this.notification.error('Error', err?.error?.message || 'Create failed');
+        done();
       },
     });
+
+    return;
   }
+
+  // ✅ UPDATE
+  if (!this.selectedId) {
+    done();
+    return;
+  }
+
+  const body = {
+    ...base,
+    enteredOn: this.formData?.enteredOn ?? null,
+    enteredBy: this.formData?.enteredBy ?? null,
+    editedOn: nowIso,
+    editedBy: currentUser,
+  };
+
+  this.service.update(this.selectedId, body).subscribe({
+    next: (res: any) => {
+      this.notification.success('Success', res?.message || 'Updated successfully');
+      this.showForm = false;
+      this.load();
+      done();
+    },
+    error: (err) => {
+      this.notification.error('Error', err?.error?.message || 'Update failed');
+      done();
+    },
+  });
+}
+
 
   closeForm(): void {
     this.showForm = false;
