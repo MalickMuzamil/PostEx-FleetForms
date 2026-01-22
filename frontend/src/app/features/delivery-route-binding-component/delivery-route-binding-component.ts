@@ -130,6 +130,7 @@ export class DeliveryRouteBindingComponent implements OnInit {
           subBranchName: r.SubBranchName,
 
           deliveryRouteId: r.DeliveryRouteID,
+          deliveryRouteNo: r.DeliveryRouteNo,
           deliveryRouteDescription: r.DeliveryRouteDescription,
 
           // ✅ keep real date for edit logic if needed

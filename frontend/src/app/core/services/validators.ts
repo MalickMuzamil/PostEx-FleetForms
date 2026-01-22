@@ -154,7 +154,12 @@ export class AppValidators {
       const v = (control.value ?? '').toString().trim().toUpperCase();
       if (!v) return null;
 
-      const regex = /^[A-Z]{5}-(I|II|III|IV|V|VI|VII|VIII|IX|X)$/;
+      if (v.length < 4) {
+        return { minLength: true };
+      }
+
+      const regex = /^[A-Z]{4,15}(-(I|II|III|IV|V|VI|VII|VIII|IX|X))?$/;
+
       return regex.test(v) ? null : { invalidName: true };
     };
   }
@@ -182,35 +187,35 @@ export class AppValidators {
         return { prefixMismatch: true };
       }
 
-      // only letters and dash allowed
-      if (!/^[A-Z-]+$/.test(v)) {
+      // allow only A-Z, 0-9 and dashes
+      if (!/^[A-Z0-9-]+$/.test(v)) {
         return { invalidName: true };
       }
 
       const afterPrefix = v.slice(code.length + 1); // part after "LHE-"
 
-      // ✅ NEW: prefix ke baad max allowed = "AAA-AAA" (7 chars)
+      // max allowed after prefix = "AAA-AAA" (7 chars)
       if (afterPrefix.length > 7) {
         return { invalidName: true };
       }
 
-      // allow typing: "", "A", "AB", "ABC", "ABC-", "ABC-X", "ABC-XY", "ABC-XYZ"
+      // allow partial while typing
       if (!afterPrefix) return null;
 
-      // block more than one dash after prefix
+      // only ONE dash after prefix (between middle and last group)
       if ((afterPrefix.match(/-/g) || []).length > 1) {
         return { invalidName: true };
       }
 
-      // STRICT FINAL FORMAT: CODE-AAA-AAA
-      const finalRegex = new RegExp(`^${code}-[A-Z]{3}-[A-Z]{3}$`);
+      // ✅ FINAL STRICT: CODE-AAA-A0A (middle 3 letters, last 3 alphanumeric)
+      const finalRegex = new RegExp(`^${code}-[A-Z0-9]{3}-[A-Z0-9]{3}$`);
 
       // if fully typed (7 chars after prefix) → must match exactly
       if (afterPrefix.length === 7) {
         return finalRegex.test(v) ? null : { invalidName: true };
       }
 
-      // otherwise allow partial typing (no error while typing)
+      // otherwise allow partial typing
       return null;
     };
   }

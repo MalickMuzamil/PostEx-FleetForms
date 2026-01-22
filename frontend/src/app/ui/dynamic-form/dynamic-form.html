@@ -33,7 +33,9 @@
               <ng-template #alpha5RomanInput>
                 <ng-container *ngIf="field.mask === 'ALPHA5_ROMAN'; else aaaAaaInput">
                   <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="10"
-                    autocomplete="off" spellcheck="false" [appShortCodeMask]="'ALPHA5_ROMAN'" />
+                    autocomplete="off" spellcheck="false" [appShortCodeMask]="'ALPHA5_ROMAN'" [attr.placeholder]="field.mask === 'ALPHA5_ROMAN'
+    ? 'Example: SOUTH or SOUTH-I'
+    : null" />
                 </ng-container>
               </ng-template>
 
@@ -66,7 +68,11 @@
 
             <!-- ALPHA5_ROMAN FORMAT -->
             <div class="text-danger mt-1" *ngIf="field.mask === 'ALPHA5_ROMAN' && hasError(field.key, 'invalidName')">
-              Name must be in format <b>AAAAA-II</b> (5 letters + - + Roman)
+              Name can be <b>SOUTH</b> or <b>SOUTH-I</b> (Roman optional: I–X)
+            </div>
+
+            <div class="text-danger mt-1" *ngIf="field.mask === 'ALPHA5_ROMAN' && hasError(field.key, 'minLength')">
+              Minimum <b>4 characters</b> required
             </div>
 
             <!-- AAA_AAA FORMAT -->

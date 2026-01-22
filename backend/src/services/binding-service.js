@@ -251,7 +251,52 @@ class BindingService {
       return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
     };
 
-    const newDate = toDateOnly(effectiveDate);
+    /* =====================================
+       0) SCENE-2 RULE (CREATE ONLY):
+       Max 2 ACTIVE / NOT-EXPIRED assignments per branch
+       - "Active" means: EndDate is NULL OR EndDate >= Today
+       - EndDate = (Next EffectiveDate - 1 day)
+    ====================================== */
+    if (id == null) {
+      const activeRes = await pool.request()
+        .input("branchId", sql.Int, branchId)
+        .query(`
+        ;WITH x AS (
+          SELECT
+            ID,
+            CAST(EffectiveDate AS date) AS StartD,
+            LEAD(CAST(EffectiveDate AS date)) OVER (
+              PARTITION BY BranchID
+              ORDER BY CAST(EffectiveDate AS date), ID
+            ) AS NextD
+          FROM GoGreen.OPS.Branch_BC_Binding
+          WHERE BranchID = @branchId
+        ),
+        y AS (
+          SELECT
+            ID,
+            StartD,
+            CASE
+              WHEN NextD IS NULL THEN NULL
+              ELSE DATEADD(DAY, -1, NextD)
+            END AS EndD
+          FROM x
+        )
+        SELECT COUNT(1) AS Cnt
+        FROM y
+        WHERE (EndD IS NULL OR EndD >= CAST(GETDATE() AS date)); -- ✅ not expired
+      `);
+
+      const activeCnt = Number(activeRes.recordset?.[0]?.Cnt ?? 0);
+
+      if (activeCnt >= 2) {
+        const err = new Error(
+          "New insertion not allowed. 2 assignments are still active/not-expired. Wait until one expires, then add."
+        );
+        err.code = "TWO_ACTIVE_ALREADY";
+        throw err;
+      }
+    }
 
     /* =====================================
        1) SAME-DAY COLLISION (NO ENTRY ON SAME DATE)
@@ -275,113 +320,79 @@ class BindingService {
 
     if (collision.recordset?.[0]?.ID) {
       const err = new Error(
-        `Duplicate: This branch already has an assignment on the same date (${collision.recordset[0].ExistingDate}).`
-      );
-      err.code = "EFFECTIVE_DATE_COLLISION";
-      err.existingId = collision.recordset[0].ID;
-      throw err;
-    }
+      `Duplicate: This branch already has an assignment on the same date (\${collision.recordset[0].ExistingDate}).`
+    );
+    err.code = "EFFECTIVE_DATE_COLLISION";
+    err.existingId = collision.recordset[0].ID;
+    throw err;
+  }
 
-    /* =====================================
-       2) EARLIEST DATE LOCK
-       Requirement:
-         - CREATE: cannot add on/before first ever EffectiveDate (keeps past unchanged)
-         - UPDATE: allow editing the earliest row on the same date, but not earlier than it
-       This DOES NOT break add/create logic.
-    ====================================== */
-    const minReq = pool.request();
-    minReq.input("id", sql.Int, id);
-    minReq.input("branchId", sql.Int, branchId);
+  /* =====================================
+     ✅ SCENE-1 NOTE:
+     "EARLIEST DATE LOCK" REMOVED
+     Now you can add earlier dates (26/27/28) even if 31 already exists.
+  ====================================== */
 
-    const minRes = await minReq.query(`
-    SELECT MIN(CAST(EffectiveDate AS date)) AS MinD
-    FROM GoGreen.OPS.Branch_BC_Binding
-    WHERE BranchID = @branchId
-      AND (@id IS NULL OR ID <> @id);
-  `);
+  /* =====================================
+     2) FIND IMMEDIATE PREV / NEXT (NEIGHBORS)
+     - Used for consecutive duplicate rule (A > A not allowed)
+  ====================================== */
+  const neighborsReq = pool.request();
+  neighborsReq.input("id", sql.Int, id);
+  neighborsReq.input("branchId", sql.Int, branchId);
+  neighborsReq.input("effectiveDate", sql.DateTime, effectiveDate);
 
-    const minD = minRes.recordset?.[0]?.MinD ? toDateOnly(minRes.recordset[0].MinD) : null;
-
-    // ✅ First ever entry allowed (no data yet for this branch)
-    if (!minD) return;
-
-    if (id == null) {
-      // ✅ CREATE: block on/before minD
-      if (newDate <= minD) {
-        const err = new Error(
-          `Date is reserved. You can only add AFTER ${minD.toISOString().slice(0, 10)}.`
-        );
-        err.code = "PAST_LOCKED";
-        throw err;
-      }
-    } else {
-      // ✅ UPDATE: allow equal to minD (editing earliest row), but not earlier
-      if (newDate < minD) {
-        const err = new Error(
-          `Date is reserved. You can only set ON/AFTER ${minD.toISOString().slice(0, 10)}.`
-        );
-        err.code = "PAST_LOCKED";
-        throw err;
-      }
-    }
-
-    /* =====================================
-       3) FIND IMMEDIATE PREV / NEXT (NEIGHBORS)
-    ====================================== */
-    const neighborsReq = pool.request();
-    neighborsReq.input("id", sql.Int, id);
-    neighborsReq.input("branchId", sql.Int, branchId);
-    neighborsReq.input("effectiveDate", sql.DateTime, effectiveDate);
-
-    const neighbors = await neighborsReq.query(`
-    ;WITH PrevRow AS (
-      SELECT TOP 1 ID, BC_Emp_ID, CAST(EffectiveDate AS date) AS D
+  const neighbors = await neighborsReq.query(`
+        ;WITH PrevRow AS(
+          SELECT TOP 1 ID, BC_Emp_ID, CAST(EffectiveDate AS date) AS D
       FROM GoGreen.OPS.Branch_BC_Binding
       WHERE BranchID = @branchId
         AND CAST(EffectiveDate AS date) < CAST(@effectiveDate AS date)
-        AND (@id IS NULL OR ID <> @id)
+        AND(@id IS NULL OR ID <> @id)
       ORDER BY CAST(EffectiveDate AS date) DESC, ID DESC
-    ),
-    NextRow AS (
-      SELECT TOP 1 ID, BC_Emp_ID, CAST(EffectiveDate AS date) AS D
+        ),
+          NextRow AS(
+            SELECT TOP 1 ID, BC_Emp_ID, CAST(EffectiveDate AS date) AS D
       FROM GoGreen.OPS.Branch_BC_Binding
       WHERE BranchID = @branchId
         AND CAST(EffectiveDate AS date) > CAST(@effectiveDate AS date)
-        AND (@id IS NULL OR ID <> @id)
+        AND(@id IS NULL OR ID <> @id)
       ORDER BY CAST(EffectiveDate AS date) ASC, ID ASC
-    )
-    SELECT
-      (SELECT ID FROM PrevRow) AS PrevID,
-      (SELECT BC_Emp_ID FROM PrevRow) AS PrevEmp,
-      (SELECT ID FROM NextRow) AS NextID,
-      (SELECT BC_Emp_ID FROM NextRow) AS NextEmp;
-  `);
+          )
+      SELECT
+        (SELECT ID FROM PrevRow) AS PrevID,
+          (SELECT BC_Emp_ID FROM PrevRow) AS PrevEmp,
+            (SELECT ID FROM NextRow) AS NextID,
+              (SELECT BC_Emp_ID FROM NextRow) AS NextEmp;
+      `);
 
-    const nb = neighbors.recordset?.[0] || {};
-    const prevEmp = nb.PrevEmp != null ? Number(nb.PrevEmp) : null;
-    const nextEmp = nb.NextEmp != null ? Number(nb.NextEmp) : null;
+  const nb = neighbors.recordset?.[0] || {};
+  const prevEmp = nb.PrevEmp != null ? Number(nb.PrevEmp) : null;
+  const nextEmp = nb.NextEmp != null ? Number(nb.NextEmp) : null;
 
-    /* =====================================
-       4) CORE RULE: NO CONSECUTIVE DUPLICATE (A > A not allowed)
-       - Block if newEmp equals immediate previous OR immediate next.
-       - Allows A > B > A.
-    ====================================== */
-    if (prevEmp !== null && newEmp === prevEmp) {
-      const err = new Error("Duplicate: Same employee cannot be consecutive (A > A not allowed).");
-      err.code = "CONSECUTIVE_DUPLICATE";
-      err.existingId = nb.PrevID;
-      throw err;
-    }
-
-    if (nextEmp !== null && newEmp === nextEmp) {
-      const err = new Error("Duplicate: Same employee cannot be consecutive (A > A not allowed).");
-      err.code = "CONSECUTIVE_DUPLICATE";
-      err.existingId = nb.NextID;
-      throw err;
-    }
-
-    // ✅ Passed
+  /* =====================================
+     3) CORE RULE: NO CONSECUTIVE DUPLICATE (A > A not allowed)
+     - Block if newEmp equals immediate previous OR immediate next.
+     - Allows A > B > A
+  ====================================== */
+  if (prevEmp !== null && newEmp === prevEmp) {
+    const err = new Error("Duplicate: Same employee cannot be consecutive (A > A not allowed).");
+    err.code = "CONSECUTIVE_DUPLICATE";
+    err.existingId = nb.PrevID;
+    throw err;
   }
+
+  if (nextEmp !== null && newEmp === nextEmp) {
+    const err = new Error("Duplicate: Same employee cannot be consecutive (A > A not allowed).");
+    err.code = "CONSECUTIVE_DUPLICATE";
+    err.existingId = nb.NextID;
+    throw err;
+  }
+
+  // ✅ Passed
+}
+
+
 
 
 }
