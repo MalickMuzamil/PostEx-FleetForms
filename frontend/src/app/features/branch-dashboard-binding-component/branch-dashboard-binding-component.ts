@@ -32,7 +32,7 @@ export class BranchDashboardBindingComponent {
   constructor(
     private service: BranchDashboardBindingService,
     private notification: NzNotificationService,
-    private modal: NzModalService
+    private modal: NzModalService,
   ) {}
 
   ngOnInit() {
@@ -43,7 +43,7 @@ export class BranchDashboardBindingComponent {
   // ---------- LOADERS ----------
   loadDropdowns() {
     const branchField = this.formConfig.fields.find(
-      (f) => f.key === 'branchId'
+      (f) => f.key === 'branchId',
     );
     if (!branchField) return;
 
@@ -65,10 +65,10 @@ export class BranchDashboardBindingComponent {
           },
           searchText:
             `${x.BranchID} ${x.BranchName} ${x.BranchDesc} ${x.BPHONE} ${x.BADDRESS}`.trim(),
-        }))
+        })),
       ),
       finalize(() => (branchField.loading = false)),
-      shareReplay(1)
+      shareReplay(1),
     );
 
     branchField.options$ = branches$ as any;
@@ -86,7 +86,7 @@ export class BranchDashboardBindingComponent {
         const effectiveDateDisplay = d
           ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
               2,
-              '0'
+              '0',
             )}-${String(d.getDate()).padStart(2, '0')}`
           : '';
 
@@ -117,7 +117,7 @@ export class BranchDashboardBindingComponent {
       fields: this.formConfig.fields.map((f) =>
         mode === 'update' && f.key === 'branchId'
           ? { ...f, disabled: true }
-          : { ...f, disabled: false }
+          : { ...f, disabled: false },
       ),
     };
   }
@@ -164,27 +164,33 @@ export class BranchDashboardBindingComponent {
 
   // ---------- SUBMIT ----------
   onSubmit(payload: any) {
-    const cleanPayload = this.selectedId
+    const isUpdate = !!this.selectedId;
+
+    // ✅ branchId fallback (disabled control ki wajah se payload me missing ho sakta hai)
+    const branchId = Number(payload.branchId ?? this.data.branchId);
+
+    const cleanPayload = isUpdate
       ? {
+          branchId, // ✅ send branchId in update
           reqConCall: Number(payload.conferenceCallFlag),
           effectiveDate: payload.effectiveDate,
         }
       : {
-          branchId: payload.branchId,
+          branchId, // ✅ use same resolved branchId
           effectiveDate: payload.effectiveDate,
         };
 
-    const api$ = this.selectedId
-      ? this.service.update(this.selectedId, cleanPayload)
+    const api$ = isUpdate
+      ? this.service.update(this.selectedId!, cleanPayload)
       : this.service.create(cleanPayload);
 
     api$.subscribe({
       next: () => {
         this.notification.success(
           'Success',
-          this.selectedId
+          isUpdate
             ? 'Branch Dashboard Binding updated successfully.'
-            : 'Branch Dashboard Binding created successfully.'
+            : 'Branch Dashboard Binding created successfully.',
         );
         this.showModal = false;
         this.loadTable();
@@ -194,14 +200,14 @@ export class BranchDashboardBindingComponent {
           this.notification.error(
             'Duplicate Entry',
             err?.error?.message ||
-              'This branch has already been bound. No new entry allowed.'
+              'This branch has already been bound. No new entry allowed.',
           );
           return;
         }
 
         this.notification.error(
           'Error',
-          err?.error?.message || 'Something went wrong.'
+          err?.error?.message || 'Something went wrong.',
         );
       },
     });
@@ -220,14 +226,14 @@ export class BranchDashboardBindingComponent {
           next: () => {
             this.notification.success(
               'Deleted',
-              'Branch Dashboard Binding deleted successfully.'
+              'Branch Dashboard Binding deleted successfully.',
             );
             this.loadTable();
           },
           error: (err) => {
             this.notification.error(
               'Error',
-              err?.error?.message || 'Delete failed.'
+              err?.error?.message || 'Delete failed.',
             );
           },
         });
