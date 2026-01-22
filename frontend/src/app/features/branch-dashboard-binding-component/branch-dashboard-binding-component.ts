@@ -28,6 +28,7 @@ export class BranchDashboardBindingComponent {
   data: any = {};
   tableData: any[] = [];
   private branchesCache: any[] = [];
+  submitting = false;
 
   constructor(
     private service: BranchDashboardBindingService,
@@ -164,19 +165,23 @@ export class BranchDashboardBindingComponent {
 
   // ---------- SUBMIT ----------
   onSubmit(payload: any) {
+    if (this.submitting) return; // ✅ block multiple clicks
+    this.submitting = true;
+    const done = () => (this.submitting = false);
+
     const isUpdate = !!this.selectedId;
 
-    // ✅ branchId fallback (disabled control ki wajah se payload me missing ho sakta hai)
+    // ✅ branchId fallback
     const branchId = Number(payload.branchId ?? this.data.branchId);
 
     const cleanPayload = isUpdate
       ? {
-          branchId, // ✅ send branchId in update
+          branchId,
           reqConCall: Number(payload.conferenceCallFlag),
           effectiveDate: payload.effectiveDate,
         }
       : {
-          branchId, // ✅ use same resolved branchId
+          branchId,
           effectiveDate: payload.effectiveDate,
         };
 
@@ -194,6 +199,7 @@ export class BranchDashboardBindingComponent {
         );
         this.showModal = false;
         this.loadTable();
+        done();
       },
       error: (err) => {
         if (err?.status === 409 || err?.error?.code === 'DUPLICATE_BRANCH') {
@@ -202,6 +208,7 @@ export class BranchDashboardBindingComponent {
             err?.error?.message ||
               'This branch has already been bound. No new entry allowed.',
           );
+          done();
           return;
         }
 
@@ -209,6 +216,7 @@ export class BranchDashboardBindingComponent {
           'Error',
           err?.error?.message || 'Something went wrong.',
         );
+        done();
       },
     });
   }
