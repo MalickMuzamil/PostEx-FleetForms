@@ -44,7 +44,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
   constructor(
     private service: BranchGeneralEmployeeService,
     private msg: NzMessageService,
-    private modal: NzModalService
+    private modal: NzModalService,
   ) {}
 
   // ✅ compact: converts "YYYY-MM-DD" into local Date (no timezone issues)
@@ -66,12 +66,12 @@ export class BranchGeneralEmployeeBinding implements OnInit {
   ngOnInit() {
     this.branches$ = this.service.getBranches().pipe(
       map((res: any) => res?.data ?? res ?? []),
-      shareReplay(1)
+      shareReplay(1),
     );
 
     this.employees$ = this.service.getEmployees().pipe(
       map((res: any) => res?.data ?? res ?? []),
-      shareReplay(1)
+      shareReplay(1),
     );
     // this.loadDropdowns();
     // this.warmupDropdownCaches();
@@ -93,14 +93,14 @@ export class BranchGeneralEmployeeBinding implements OnInit {
             (branches || []).map((b: any) => [
               +(b.BranchID ?? b.Branch_ID ?? b.ID),
               (b.BranchName ?? b.Branch_Name ?? b.Name ?? '').trim(),
-            ])
+            ]),
           );
 
           const empMap = new Map<number, string>(
             (employees || []).map((e: any) => [
               +(e.EMP_ID ?? e.EmpId ?? e.ID),
               (e.APP_Name ?? e.Name ?? '').trim(),
-            ])
+            ]),
           );
 
           return (bindings || []).map((r: any) => {
@@ -124,7 +124,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
             const effectiveDateDisplay = d
               ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
                   2,
-                  '0'
+                  '0',
                 )}-${String(d.getDate()).padStart(2, '0')}`
               : '';
 
@@ -133,8 +133,8 @@ export class BranchGeneralEmployeeBinding implements OnInit {
               rawStatus === true
                 ? 1
                 : rawStatus === false
-                ? 0
-                : +(rawStatus ?? 1);
+                  ? 0
+                  : +(rawStatus ?? 1);
 
             return {
               id: r.ID ?? r.id,
@@ -143,7 +143,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
               branchName: branchMap.get(branchId) ?? 'NA',
 
               branchCoordinatorId: bcId,
-              branchCoordinatorName: bcId ? empMap.get(bcId) ?? 'NA' : 'NA',
+              branchCoordinatorName: bcId ? (empMap.get(bcId) ?? 'NA') : 'NA',
               branchCoordinatorEmail:
                 r.BranchCoordinatorEmail ?? r.BC_Email ?? 'NA',
 
@@ -162,7 +162,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
               statusText: statusFlag === 1 ? 'Active' : 'Inactive',
             };
           });
-        })
+        }),
       )
       .subscribe((rows) => (this.tableData = rows));
   }
@@ -171,7 +171,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
   loadDropdowns() {
     // ===== Branch =====
     const branchField = this.formConfig.fields.find(
-      (f) => f.key === 'branchId'
+      (f) => f.key === 'branchId',
     );
     if (branchField) {
       branchField.loading = true;
@@ -245,9 +245,9 @@ export class BranchGeneralEmployeeBinding implements OnInit {
                   meta: { id, name, desc, phone, address },
                 };
               })
-              .filter(Boolean) as any[]
+              .filter(Boolean) as any[],
         ),
-        finalize(() => (branchField.loading = false))
+        finalize(() => (branchField.loading = false)),
       );
 
       branchField.options$ = branchesOptions$ as any;
@@ -297,9 +297,9 @@ export class BranchGeneralEmployeeBinding implements OnInit {
                   meta: { id, name, department, designation },
                 };
               })
-              .filter(Boolean) as any[]
+              .filter(Boolean) as any[],
         ),
-        finalize(() => (empField.loading = false))
+        finalize(() => (empField.loading = false)),
       );
 
       empField.options$ = employeesOptions$ as any;
@@ -328,7 +328,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
       // 1) reset + mode in one go
       this.formConfig = this.applyMode(
         { ...BRANCH_GENERAL_EMP_BINDING_FORM },
-        'create'
+        'create',
       );
 
       // 2) then bind dropdowns
@@ -338,6 +338,21 @@ export class BranchGeneralEmployeeBinding implements OnInit {
 
   edit(row: any) {
     this.selectedId = row.id;
+
+    const branchName = (row?.branchName ?? '').toString().trim().toUpperCase();
+    const employeeName = (row?.employeeName ?? '')
+      .toString()
+      .trim()
+      .toUpperCase();
+
+    const branchIdNum = Number(row?.branchId);
+    const empIdNum = Number(row?.employeeId);
+
+    const badBranch =
+      branchName === 'NA' || !Number.isFinite(branchIdNum) || branchIdNum <= 0;
+    const badEmp =
+      employeeName === 'NA' || !Number.isFinite(empIdNum) || empIdNum <= 0;
+
     this.data = {
       ...row,
       effectiveDate: this.asLocalDate(row.effectiveDate),
@@ -345,8 +360,12 @@ export class BranchGeneralEmployeeBinding implements OnInit {
         row.statusFlag === true
           ? 1
           : row.statusFlag === false
-          ? 0
-          : +(row.statusFlag ?? 1),
+            ? 0
+            : +(row.statusFlag ?? 1),
+
+      // ✅ force null => submit will block
+      branchId: badBranch ? null : branchIdNum,
+      employeeId: badEmp ? null : empIdNum,
     };
 
     this.showModal = true;
@@ -354,9 +373,8 @@ export class BranchGeneralEmployeeBinding implements OnInit {
     setTimeout(() => {
       this.formConfig = this.applyMode(
         { ...BRANCH_GENERAL_EMP_BINDING_FORM },
-        'update'
+        'update',
       );
-
       this.warmupDropdownCaches();
     }, 0);
   }
@@ -442,16 +460,49 @@ export class BranchGeneralEmployeeBinding implements OnInit {
 
   // ================= SUBMIT =================
   onSubmit(payload: any) {
+    // ✅ trust this.data (disabled fields issue)
+    const branchId = Number(this.data?.branchId ?? payload?.branchId);
+    const empId = Number(this.data?.employeeId ?? payload?.employeeId);
+
+    const branchName = (this.data?.branchName ?? '')
+      .toString()
+      .trim()
+      .toUpperCase();
+    const employeeName = (this.data?.employeeName ?? '')
+      .toString()
+      .trim()
+      .toUpperCase();
+
+    const isBadName = (s: string) => !s || s === 'NA';
+
+    if (!Number.isFinite(branchId) || branchId <= 0 || isBadName(branchName)) {
+      this.msg.error(
+        'Invalid record: Branch is NA/empty. Please fix data first.',
+      );
+      return;
+    }
+
+    if (!Number.isFinite(empId) || empId <= 0 || isBadName(employeeName)) {
+      this.msg.error(
+        'Invalid record: Employee is NA/empty. Please select a valid employee.',
+      );
+      return;
+    }
+
+    const effectiveDateValue =
+      payload?.effectiveDate ?? this.data?.effectiveDate;
+
     const cleanPayload = {
-      empId: payload.employeeId,
-      branchId: payload.branchId,
-      branchCoordinatorId: payload.branchCoordinatorId ?? null,
-      email: (payload.email || '').trim(),
+      empId,
+      branchId,
+      branchCoordinatorId:
+        payload?.branchCoordinatorId ?? this.data?.branchCoordinatorId ?? null,
+      email: (payload?.email ?? this.data?.email ?? '').trim(),
       effectiveDate:
-        payload.effectiveDate instanceof Date
-          ? payload.effectiveDate.toISOString()
-          : payload.effectiveDate,
-      status: payload.statusFlag ?? 1,
+        effectiveDateValue instanceof Date
+          ? effectiveDateValue.toISOString()
+          : effectiveDateValue,
+      status: payload?.statusFlag ?? this.data?.statusFlag ?? 1,
     };
 
     const api$ = this.selectedId
@@ -461,7 +512,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
     api$.subscribe({
       next: () => {
         this.msg.success(
-          this.selectedId ? 'Updated successfully' : 'Created successfully'
+          this.selectedId ? 'Updated successfully' : 'Created successfully',
         );
         this.showModal = false;
         this.loadTable();
@@ -469,7 +520,6 @@ export class BranchGeneralEmployeeBinding implements OnInit {
       error: (err) => {
         const status = err?.status;
         const message = err?.error?.message || 'Something went wrong';
-
         if (status === 409) {
           this.msg.error(message);
           return;
@@ -608,8 +658,8 @@ export class BranchGeneralEmployeeBinding implements OnInit {
                   meta: { id, name, desc, shortCode, phone, address, bcId },
                 };
               })
-              .filter(Boolean)
-          )
+              .filter(Boolean),
+          ),
         ),
       };
     }
@@ -661,8 +711,8 @@ export class BranchGeneralEmployeeBinding implements OnInit {
                   meta: { id, name, department, designation },
                 };
               })
-              .filter(Boolean)
-          )
+              .filter(Boolean),
+          ),
         ),
       };
     }
