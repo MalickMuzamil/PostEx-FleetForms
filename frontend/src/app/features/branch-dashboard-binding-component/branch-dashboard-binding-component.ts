@@ -133,7 +133,18 @@ export class BranchDashboardBindingComponent {
   edit(row: any) {
     this.selectedId = row.id;
     this.setMode('update');
-    this.data = { ...row };
+
+    const branchName = (row?.branchName ?? '').toString().trim().toUpperCase();
+    const branchIdNum = Number(row?.branchId);
+
+    const badBranch =
+      branchName === 'NA' || !Number.isFinite(branchIdNum) || branchIdNum <= 0;
+
+    this.data = {
+      ...row,
+      branchId: badBranch ? null : branchIdNum,
+    };
+
     this.showModal = true;
   }
 
@@ -165,24 +176,45 @@ export class BranchDashboardBindingComponent {
 
   // ---------- SUBMIT ----------
   onSubmit(payload: any) {
-    if (this.submitting) return; // ✅ block multiple clicks
+    if (this.submitting) return;
     this.submitting = true;
     const done = () => (this.submitting = false);
 
     const isUpdate = !!this.selectedId;
 
-    // ✅ branchId fallback
-    const branchId = Number(payload.branchId ?? this.data.branchId);
+    // ✅ trust this.data (because branchId can be disabled in update)
+    const branchId = Number(this.data?.branchId ?? payload?.branchId);
+    const branchName = (this.data?.branchName ?? '')
+      .toString()
+      .trim()
+      .toUpperCase();
+
+    const isBadName = (s: string) => !s || s === 'NA';
+
+    // ✅ HARD BLOCK
+    if (!Number.isFinite(branchId) || branchId <= 0 || isBadName(branchName)) {
+      this.notification.error(
+        'Validation',
+        'Invalid record: Branch is NA/empty. Please fix data first.',
+      );
+      done();
+      return;
+    }
+
+    const confFlag = Number(
+      payload?.conferenceCallFlag ?? this.data?.conferenceCallFlag ?? 0,
+    );
+    const effectiveDate = payload?.effectiveDate ?? this.data?.effectiveDate;
 
     const cleanPayload = isUpdate
       ? {
           branchId,
-          reqConCall: Number(payload.conferenceCallFlag),
-          effectiveDate: payload.effectiveDate,
+          reqConCall: Number.isFinite(confFlag) ? confFlag : 0,
+          effectiveDate,
         }
       : {
           branchId,
-          effectiveDate: payload.effectiveDate,
+          effectiveDate,
         };
 
     const api$ = isUpdate
@@ -222,7 +254,6 @@ export class BranchDashboardBindingComponent {
   }
 
   delete(row: any) {
-    
     this.modal.confirm({
       nzTitle: 'Delete Confirmation',
       nzContent: 'Are you sure you want to delete this record?',
