@@ -50,7 +50,7 @@ export class AppValidators {
         };
       }
 
-      return EMAIL_REGEX.test(value) ? null : { invalidEmail: true };
+      return EMAIL_REGEX.test(value.toLowerCase()) ? null : { invalidEmail: true };
     };
   }
 
