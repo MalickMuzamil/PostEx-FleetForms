@@ -121,31 +121,32 @@ class DeliveryRouteBindingService {
       .join(",");
 
     const result = await req.query(`
-      SELECT
-        b.ID,
+    SELECT
+      b.ID,
 
-        b.BranchID,
-        br.BranchName,
-        br.BranchDesc,
+      b.BranchID,
+      br.BranchName,
+      br.BranchDesc,
 
-        b.Sub_Branch_ID AS SubBranchID,
-        sb.Sub_Branch_Name        AS SubBranchName,
-        sb.Sub_Branch_Description AS SubBranchDesc,
+      b.Sub_Branch_ID AS SubBranchID,
+      sb.Sub_Branch_Name        AS SubBranchName,
+      sb.Sub_Branch_Description AS SubBranchDesc,
 
-        b.DeliveryRouteID,
-        b.DeliveryRouteNo AS DeliveryRouteNo,
-        b.Correct_Description_for_Reports AS DeliveryRouteDescription,
+      b.DeliveryRouteID,
+      b.DeliveryRouteNo AS DeliveryRouteNo,
+      b.Correct_Description_for_Reports AS DeliveryRouteDescription,
 
-        b.Sub_Branch_Effective_Date AS EffectiveDate,
-        b.Required_for_Reports AS RequiredReportsFlag
-      FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
-      LEFT JOIN HRM.HR.Branches br
-        ON br.BranchID = b.BranchID
-      LEFT JOIN GoGreen.OPS.Sub_Branch_Definition sb
-        ON sb.Sub_Branch_ID = b.Sub_Branch_ID
-      WHERE b.ID IN (${params})
-      ORDER BY b.ID DESC
-    `);
+      b.Sub_Branch_Effective_Date AS EffectiveDate,
+      b.Required_for_Reports AS RequiredReportsFlag
+    FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
+    LEFT JOIN HRM.HR.Branches br
+      ON br.BranchID = b.BranchID
+    LEFT JOIN GoGreen.OPS.Sub_Branch_Definition sb
+      ON sb.Sub_Branch_ID = b.Sub_Branch_ID
+     AND sb.BranchID = b.BranchID   -- ✅ FIX: stop duplicate join
+    WHERE b.ID IN (${params})
+    ORDER BY b.ID DESC
+  `);
 
     return result.recordset;
   }
@@ -263,6 +264,7 @@ class DeliveryRouteBindingService {
   async listBindings() {
     const pool = await getPool();
     const result = await pool.request().query(`
+    ;WITH Ranked AS (
       SELECT
         b.ID,
 
@@ -279,14 +281,32 @@ class DeliveryRouteBindingService {
         b.Correct_Description_for_Reports AS DeliveryRouteDescription,
 
         b.Sub_Branch_Effective_Date AS EffectiveDate,
-        b.Required_for_Reports AS RequiredReportsFlag
+
+        -- ✅ runtime active calculation
+        CASE
+          WHEN b.Sub_Branch_Effective_Date = MIN(
+            CASE
+              WHEN b.Sub_Branch_Effective_Date >= CAST(GETUTCDATE() AS DATE)
+              THEN b.Sub_Branch_Effective_Date
+            END
+          ) OVER (
+            PARTITION BY b.BranchID, b.Sub_Branch_ID, b.DeliveryRouteID
+          )
+          THEN 1
+          ELSE 0
+        END AS RequiredReportsFlag
+
       FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
       LEFT JOIN HRM.HR.Branches br
         ON br.BranchID = b.BranchID
       LEFT JOIN GoGreen.OPS.Sub_Branch_Definition sb
         ON sb.Sub_Branch_ID = b.Sub_Branch_ID
-      ORDER BY b.ID DESC
-    `);
+       AND sb.BranchID = b.BranchID
+    )
+    SELECT *
+    FROM Ranked
+    ORDER BY ID DESC;
+  `);
 
     return result.recordset;
   }
@@ -354,25 +374,24 @@ class DeliveryRouteBindingService {
 
       await this._acquireAppLock(tx, this._key(bId, sbId, rId));
 
-      // ✅ NEW CONFIRM RULE:
-      // If ANY ACTIVE exists for same key and its effective date != new effective date => confirm
+      // ✅ confirm overwrite rule (different effective date + active exists)
       const activeConflictRes = await new sql.Request(tx)
         .input("BranchID", sql.Int, bId)
         .input("SubBranchID", sql.Int, sbId)
         .input("DeliveryRouteID", sql.Int, rId)
         .input("NewEffectiveDate", sql.Date, effectiveDate)
         .query(`
-          SELECT TOP 1
-            ID,
-            Sub_Branch_Effective_Date AS ExistingEffectiveDate
-          FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding
-          WHERE BranchID = @BranchID
-            AND Sub_Branch_ID = @SubBranchID
-            AND DeliveryRouteID = @DeliveryRouteID
-            AND Required_for_Reports = 1
-            AND Sub_Branch_Effective_Date <> @NewEffectiveDate
-          ORDER BY Sub_Branch_Effective_Date DESC, ID DESC
-        `);
+        SELECT TOP 1
+          ID,
+          Sub_Branch_Effective_Date AS ExistingEffectiveDate
+        FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding
+        WHERE BranchID = @BranchID
+          AND Sub_Branch_ID = @SubBranchID
+          AND DeliveryRouteID = @DeliveryRouteID
+          AND Required_for_Reports = 1
+          AND Sub_Branch_Effective_Date <> @NewEffectiveDate
+        ORDER BY Sub_Branch_Effective_Date DESC, ID DESC
+      `);
 
       const activeConflict = activeConflictRes.recordset?.[0];
       if (activeConflict && !force) {
@@ -389,68 +408,94 @@ class DeliveryRouteBindingService {
           .input("SubBranchID", sql.Int, sbId)
           .input("DeliveryRouteID", sql.Int, rId)
           .query(`
-            UPDATE GoGreen.OPS.DeliveryRoute_SubBranch_Binding
-            SET Required_for_Reports = 0
-            WHERE BranchID = @BranchID
-              AND Sub_Branch_ID = @SubBranchID
-              AND DeliveryRouteID = @DeliveryRouteID
-          `);
+          UPDATE GoGreen.OPS.DeliveryRoute_SubBranch_Binding
+          SET Required_for_Reports = 0
+          WHERE BranchID = @BranchID
+            AND Sub_Branch_ID = @SubBranchID
+            AND DeliveryRouteID = @DeliveryRouteID
+        `);
       }
 
       const correctDesc = String(correctDescriptionForReports || "").trim();
+      const effDateNorm = String(effectiveDate).slice(0, 10); // ✅ normalize
+
+      // ✅ NEW: block exact duplicate (same key + same date + same description)
+      const dupRes = await new sql.Request(tx)
+        .input("BranchID", sql.Int, bId)
+        .input("SubBranchID", sql.Int, sbId)
+        .input("DeliveryRouteID", sql.Int, rId)
+        .input("EffectiveDate", sql.Date, effDateNorm)
+        .input("Desc", sql.NVarChar(200), correctDesc)
+        .query(`
+        SELECT TOP 1 ID
+        FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding
+        WHERE BranchID = @BranchID
+          AND Sub_Branch_ID = @SubBranchID
+          AND DeliveryRouteID = @DeliveryRouteID
+          AND Sub_Branch_Effective_Date = @EffectiveDate
+          AND LTRIM(RTRIM(ISNULL(Correct_Description_for_Reports,''))) = LTRIM(RTRIM(@Desc))
+      `);
+
+      if (dupRes.recordset?.length) {
+        throw this._httpError("Already exists (same date and same description).", {
+          code: "ALREADY_EXISTS",
+          httpStatus: 409,
+          conflict: dupRes.recordset[0],
+        });
+      }
 
       // ✅ UPSERT by (key + effectiveDate)
       const upsertRes = await new sql.Request(tx)
         .input("BranchID", sql.Int, bId)
         .input("SubBranchID", sql.Int, sbId)
         .input("DeliveryRouteID", sql.Int, rId)
-        .input("EffectiveDate", sql.Date, effectiveDate)
+        .input("EffectiveDate", sql.Date, effDateNorm)
         .input("RequiredReportsFlag", sql.Int, flag)
         .input("Correct_Description_for_Reports", sql.NVarChar(200), correctDesc)
         .query(`
-          DECLARE @id INT;
+        DECLARE @id INT;
 
-          SELECT TOP 1 @id = ID
-          FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding
-          WHERE BranchID = @BranchID
-            AND Sub_Branch_ID = @SubBranchID
-            AND DeliveryRouteID = @DeliveryRouteID
-            AND Sub_Branch_Effective_Date = @EffectiveDate
-          ORDER BY ID DESC;
+        SELECT TOP 1 @id = ID
+        FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding
+        WHERE BranchID = @BranchID
+          AND Sub_Branch_ID = @SubBranchID
+          AND DeliveryRouteID = @DeliveryRouteID
+          AND Sub_Branch_Effective_Date = @EffectiveDate
+        ORDER BY ID DESC;
 
-          IF @id IS NOT NULL
-          BEGIN
-            UPDATE b
-            SET
-              b.DeliveryRouteNo = r.RouteNo,
-              b.Correct_Description_for_Reports = @Correct_Description_for_Reports,
-              b.Required_for_Reports = @RequiredReportsFlag
-            FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
-            INNER JOIN GoGreen.dbo.DeliveryRoutes r
-              ON r.RouteID = @DeliveryRouteID
-            WHERE b.ID = @id;
+        IF @id IS NOT NULL
+        BEGIN
+          UPDATE b
+          SET
+            b.DeliveryRouteNo = r.RouteNo,
+            b.Correct_Description_for_Reports = @Correct_Description_for_Reports,
+            b.Required_for_Reports = @RequiredReportsFlag
+          FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
+          INNER JOIN GoGreen.dbo.DeliveryRoutes r
+            ON r.RouteID = @DeliveryRouteID
+          WHERE b.ID = @id;
 
-            SELECT @id AS ID;
-          END
-          ELSE
-          BEGIN
-            INSERT INTO GoGreen.OPS.DeliveryRoute_SubBranch_Binding
-              (BranchID, Sub_Branch_ID, DeliveryRouteID,
-               DeliveryRouteNo, Correct_Description_for_Reports,
-               Sub_Branch_Effective_Date, Required_for_Reports)
-            OUTPUT INSERTED.ID
-            SELECT
-              @BranchID,
-              @SubBranchID,
-              @DeliveryRouteID,
-              r.RouteNo,
-              @Correct_Description_for_Reports,
-              @EffectiveDate,
-              @RequiredReportsFlag
-            FROM GoGreen.dbo.DeliveryRoutes r
-            WHERE r.RouteID = @DeliveryRouteID;
-          END
-        `);
+          SELECT @id AS ID;
+        END
+        ELSE
+        BEGIN
+          INSERT INTO GoGreen.OPS.DeliveryRoute_SubBranch_Binding
+            (BranchID, Sub_Branch_ID, DeliveryRouteID,
+             DeliveryRouteNo, Correct_Description_for_Reports,
+             Sub_Branch_Effective_Date, Required_for_Reports)
+          OUTPUT INSERTED.ID
+          SELECT
+            @BranchID,
+            @SubBranchID,
+            @DeliveryRouteID,
+            r.RouteNo,
+            @Correct_Description_for_Reports,
+            @EffectiveDate,
+            @RequiredReportsFlag
+          FROM GoGreen.dbo.DeliveryRoutes r
+          WHERE r.RouteID = @DeliveryRouteID;
+        END
+      `);
 
       const newId = upsertRes.recordset?.[0]?.ID;
       const enriched = await this._fetchEnrichedByIds(tx, newId ? [newId] : []);
@@ -596,7 +641,18 @@ class DeliveryRouteBindingService {
     const payloads = isObj ? payloadsOrObj.payloads ?? [] : payloadsOrObj;
     const force = isObj ? Boolean(payloadsOrObj.force) : false;
 
+    console.log("createBulkBindings called:", new Date().toISOString());
+    console.log(
+      "incoming payloads length:",
+      Array.isArray(payloads) ? payloads.length : "not array"
+    );
+    console.log("after dedupe length:", this._dedupePayloads(payloads).length);
+
     if (!Array.isArray(payloads) || payloads.length === 0) return [];
+
+    if (isObj && payloadsOrObj.requestId) {
+      console.log("requestId:", payloadsOrObj.requestId);
+    }
 
     const { validRows, invalidRows } = await this.validateBulkBindings(payloads);
 
@@ -608,7 +664,8 @@ class DeliveryRouteBindingService {
       });
     }
 
-    const clean = validRows;
+    // ✅ EXTRA SAFETY: dedupe again before saving
+    const clean = this._dedupePayloads(validRows);
     if (!clean.length) return [];
 
     const pool = await getPool();
@@ -644,7 +701,7 @@ class DeliveryRouteBindingService {
           Number(p.branchId),
           Number(p.subBranchId),
           Number(p.deliveryRouteId),
-          p.effectiveDate,
+          String(p.effectiveDate).slice(0, 10), // normalize
           Number(p.requiredReportsFlag),
           desc
         );
@@ -652,25 +709,80 @@ class DeliveryRouteBindingService {
 
       await new sql.Request(tx).bulk(t);
 
-      // ✅ NEW CONFIRM RULE (BULK):
-      // If ANY ACTIVE exists for same key and its date != payload date => confirm
+      // optional debug proof
+      const cnt = await new sql.Request(tx).query(
+        `SELECT COUNT(*) AS c FROM #Payload;`
+      );
+      console.log("#Payload rows in SQL:", cnt.recordset?.[0]?.c);
+
+      // ✅ build DISTINCT payload table ONCE (used by all checks + upsert)
+      await new sql.Request(tx).query(`
+      IF OBJECT_ID('tempdb..#PayloadDistinct') IS NOT NULL DROP TABLE #PayloadDistinct;
+
+      SELECT DISTINCT
+        BranchID,
+        SubBranchID,
+        DeliveryRouteID,
+        EffectiveDate,
+        RequiredReportsFlag,
+        LTRIM(RTRIM(ISNULL(CorrectDescriptionForReports,''))) AS CorrectDescriptionForReports
+      INTO #PayloadDistinct
+      FROM #Payload;
+    `);
+
+      // ✅ 1) EXACT DUPLICATE BLOCK (same key + same date + same description)
+      const dupBulkRes = await new sql.Request(tx).query(`
+      SELECT TOP 1000
+        p.BranchID,
+        p.SubBranchID,
+        p.DeliveryRouteID,
+        p.EffectiveDate,
+        p.CorrectDescriptionForReports,
+        b.ID AS ExistingID
+      FROM #PayloadDistinct p
+      INNER JOIN GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
+        ON b.BranchID = p.BranchID
+       AND b.Sub_Branch_ID = p.SubBranchID
+       AND b.DeliveryRouteID = p.DeliveryRouteID
+       AND b.Sub_Branch_Effective_Date = p.EffectiveDate
+       AND LTRIM(RTRIM(ISNULL(b.Correct_Description_for_Reports,''))) =
+           p.CorrectDescriptionForReports
+      ORDER BY b.ID DESC;
+    `);
+
+      const dupRows = dupBulkRes.recordset ?? [];
+      if (dupRows.length) {
+        throw this._httpError(
+          "Some rows already exist (same date and same description).",
+          {
+            code: "ALREADY_EXISTS_BULK",
+            httpStatus: 409,
+            conflicts: dupRows,
+          }
+        );
+      }
+
+      // ✅ 2) CONFIRM RULE (BULK): active exists with different effective date
       const conflictsRes = await new sql.Request(tx).query(`
-        SELECT TOP 1000
-          b.BranchID,
-          b.Sub_Branch_ID AS SubBranchID,
-          b.DeliveryRouteID,
-          b.Sub_Branch_Effective_Date AS ExistingEffectiveDate,
-          p.EffectiveDate AS NewEffectiveDate,
-          b.ID AS ExistingID
-        FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
-        INNER JOIN #Payload p
-          ON p.BranchID = b.BranchID
-         AND p.SubBranchID = b.Sub_Branch_ID
-         AND p.DeliveryRouteID = b.DeliveryRouteID
-        WHERE b.Required_for_Reports = 1
-          AND b.Sub_Branch_Effective_Date <> p.EffectiveDate
-        ORDER BY b.Sub_Branch_Effective_Date DESC, b.ID DESC
-      `);
+      SELECT TOP 1000
+        b.BranchID,
+        b.Sub_Branch_ID AS SubBranchID,
+        b.DeliveryRouteID,
+        b.Sub_Branch_Effective_Date AS ExistingEffectiveDate,
+        p.EffectiveDate AS NewEffectiveDate,
+        b.ID AS ExistingID
+      FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
+      INNER JOIN (
+        SELECT DISTINCT BranchID, SubBranchID, DeliveryRouteID, EffectiveDate
+        FROM #PayloadDistinct
+      ) p
+        ON p.BranchID = b.BranchID
+       AND p.SubBranchID = b.Sub_Branch_ID
+       AND p.DeliveryRouteID = b.DeliveryRouteID
+      WHERE b.Required_for_Reports = 1
+        AND b.Sub_Branch_Effective_Date <> p.EffectiveDate
+      ORDER BY b.Sub_Branch_Effective_Date DESC, b.ID DESC;
+    `);
 
       const conflicts = conflictsRes.recordset ?? [];
       if (conflicts.length && !force) {
@@ -684,69 +796,69 @@ class DeliveryRouteBindingService {
         );
       }
 
-      // ✅ If payload row is Active(1) => make all old rows inactive for that key
+      // ✅ 3) If payload row Active(1) => make old inactive
       await new sql.Request(tx).query(`
-        UPDATE b
-        SET b.Required_for_Reports = 0
-        FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
-        INNER JOIN (
-          SELECT DISTINCT BranchID, SubBranchID, DeliveryRouteID
-          FROM #Payload
-          WHERE RequiredReportsFlag = 1
-        ) k
-          ON k.BranchID = b.BranchID
-         AND k.SubBranchID = b.Sub_Branch_ID
-         AND k.DeliveryRouteID = b.DeliveryRouteID;
-      `);
+      UPDATE b
+      SET b.Required_for_Reports = 0
+      FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
+      INNER JOIN (
+        SELECT DISTINCT BranchID, SubBranchID, DeliveryRouteID
+        FROM #PayloadDistinct
+        WHERE RequiredReportsFlag = 1
+      ) k
+        ON k.BranchID = b.BranchID
+       AND k.SubBranchID = b.Sub_Branch_ID
+       AND k.DeliveryRouteID = b.DeliveryRouteID;
+    `);
 
-      // ✅ UPSERT bulk by (key + effectiveDate)
+      // ✅ 4) UPSERT using DISTINCT payload source (no CTE+DECLARE issue)
       const upsertRes = await new sql.Request(tx).query(`
-        DECLARE @Affected TABLE (ID INT);
+      DECLARE @Affected TABLE (ID INT);
 
-        -- UPDATE existing (same key + same date)
-        UPDATE b
-        SET
-          b.DeliveryRouteNo = r.RouteNo,
-          b.Correct_Description_for_Reports = p.CorrectDescriptionForReports,
-          b.Required_for_Reports = p.RequiredReportsFlag
-        OUTPUT INSERTED.ID INTO @Affected(ID)
+      -- UPDATE existing (same key + same date)
+      UPDATE b
+      SET
+        b.DeliveryRouteNo = r.RouteNo,
+        b.Correct_Description_for_Reports = p.CorrectDescriptionForReports,
+        b.Required_for_Reports = p.RequiredReportsFlag
+      OUTPUT INSERTED.ID INTO @Affected(ID)
+      FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
+      INNER JOIN #PayloadDistinct p
+        ON p.BranchID = b.BranchID
+       AND p.SubBranchID = b.Sub_Branch_ID
+       AND p.DeliveryRouteID = b.DeliveryRouteID
+       AND p.EffectiveDate = b.Sub_Branch_Effective_Date
+      INNER JOIN GoGreen.dbo.DeliveryRoutes r
+        ON r.RouteID = p.DeliveryRouteID;
+
+      -- INSERT missing
+      INSERT INTO GoGreen.OPS.DeliveryRoute_SubBranch_Binding
+        (BranchID, Sub_Branch_ID, DeliveryRouteID,
+         DeliveryRouteNo, Correct_Description_for_Reports,
+         Sub_Branch_Effective_Date, Required_for_Reports)
+      OUTPUT INSERTED.ID INTO @Affected(ID)
+      SELECT
+        p.BranchID,
+        p.SubBranchID,
+        p.DeliveryRouteID,
+        r.RouteNo,
+        p.CorrectDescriptionForReports,
+        p.EffectiveDate,
+        p.RequiredReportsFlag
+      FROM #PayloadDistinct p
+      INNER JOIN GoGreen.dbo.DeliveryRoutes r
+        ON r.RouteID = p.DeliveryRouteID
+      WHERE NOT EXISTS (
+        SELECT 1
         FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
-        INNER JOIN #Payload p
-          ON p.BranchID = b.BranchID
-         AND p.SubBranchID = b.Sub_Branch_ID
-         AND p.DeliveryRouteID = b.DeliveryRouteID
-         AND p.EffectiveDate = b.Sub_Branch_Effective_Date
-        INNER JOIN GoGreen.dbo.DeliveryRoutes r
-          ON r.RouteID = p.DeliveryRouteID;
+        WHERE b.BranchID = p.BranchID
+          AND b.Sub_Branch_ID = p.SubBranchID
+          AND b.DeliveryRouteID = p.DeliveryRouteID
+          AND b.Sub_Branch_Effective_Date = p.EffectiveDate
+      );
 
-        -- INSERT missing (same key + same date not found)
-        INSERT INTO GoGreen.OPS.DeliveryRoute_SubBranch_Binding
-          (BranchID, Sub_Branch_ID, DeliveryRouteID,
-           DeliveryRouteNo, Correct_Description_for_Reports,
-           Sub_Branch_Effective_Date, Required_for_Reports)
-        OUTPUT INSERTED.ID INTO @Affected(ID)
-        SELECT
-          p.BranchID,
-          p.SubBranchID,
-          p.DeliveryRouteID,
-          r.RouteNo,
-          p.CorrectDescriptionForReports,
-          p.EffectiveDate,
-          p.RequiredReportsFlag
-        FROM #Payload p
-        INNER JOIN GoGreen.dbo.DeliveryRoutes r
-          ON r.RouteID = p.DeliveryRouteID
-        WHERE NOT EXISTS (
-          SELECT 1
-          FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
-          WHERE b.BranchID = p.BranchID
-            AND b.Sub_Branch_ID = p.SubBranchID
-            AND b.DeliveryRouteID = p.DeliveryRouteID
-            AND b.Sub_Branch_Effective_Date = p.EffectiveDate
-        );
-
-        SELECT ID FROM @Affected;
-      `);
+      SELECT ID FROM @Affected;
+    `);
 
       const ids = (upsertRes.recordset ?? []).map((r) => r.ID);
       const enriched = await this._fetchEnrichedByIds(tx, ids);
@@ -805,7 +917,7 @@ class DeliveryRouteBindingService {
           ? Number(requiredReportsFlag)
           : 1;
 
-      // ✅ fetch current row (include existing effective date + active flag)
+      // ✅ fetch current row
       const existingRes = await new sql.Request(tx)
         .input("ID", sql.Int, rowId)
         .query(`
@@ -850,14 +962,15 @@ class DeliveryRouteBindingService {
         });
       }
 
+      // ✅ lock old + new keys
       const oldKey = this._key(cur.BranchID, cur.SubBranchID, cur.DeliveryRouteID);
       const newKey = this._key(nextBranchId, nextSubBranchId, nextRouteId);
-
       const keysToLock = Array.from(new Set([oldKey, newKey])).sort();
       for (const k of keysToLock) await this._acquireAppLock(tx, k);
 
-      // ✅ normalize dates for compare (YYYY-MM-DD)
-      const newYMD = String(effectiveDate).slice(0, 10);
+      // ✅ normalize dates (YYYY-MM-DD)
+      const effDateNorm = String(effectiveDate).slice(0, 10);
+      const newYMD = effDateNorm;
       const curYMD = cur.ExistingEffectiveDate
         ? new Date(cur.ExistingEffectiveDate).toISOString().slice(0, 10)
         : null;
@@ -879,7 +992,7 @@ class DeliveryRouteBindingService {
         .input("BranchID", sql.Int, nextBranchId)
         .input("SubBranchID", sql.Int, nextSubBranchId)
         .input("DeliveryRouteID", sql.Int, nextRouteId)
-        .input("NewEffectiveDate", sql.Date, effectiveDate)
+        .input("NewEffectiveDate", sql.Date, effDateNorm)
         .input("ID", sql.Int, rowId)
         .query(`
         SELECT TOP 1
@@ -903,6 +1016,36 @@ class DeliveryRouteBindingService {
         );
       }
 
+      const correctDesc = String(correctDescriptionForReports || "").trim();
+
+      // ✅ NEW: block exact duplicate (same key + same date + same description) except current row
+      const dupRes = await new sql.Request(tx)
+        .input("BranchID", sql.Int, nextBranchId)
+        .input("SubBranchID", sql.Int, nextSubBranchId)
+        .input("DeliveryRouteID", sql.Int, nextRouteId)
+        .input("EffectiveDate", sql.Date, effDateNorm)
+        .input("Desc", sql.NVarChar(200), correctDesc)
+        .input("ID", sql.Int, rowId)
+        .query(`
+        SELECT TOP 1 ID
+        FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding
+        WHERE BranchID = @BranchID
+          AND Sub_Branch_ID = @SubBranchID
+          AND DeliveryRouteID = @DeliveryRouteID
+          AND Sub_Branch_Effective_Date = @EffectiveDate
+          AND LTRIM(RTRIM(ISNULL(Correct_Description_for_Reports,''))) = LTRIM(RTRIM(@Desc))
+          AND ID <> @ID
+        ORDER BY ID DESC
+      `);
+
+      if (dupRes.recordset?.length) {
+        throw this._httpError("Already exists (same date and same description).", {
+          code: "ALREADY_EXISTS",
+          httpStatus: 409,
+          conflict: dupRes.recordset[0],
+        });
+      }
+
       // ✅ If saving Active(1) => make all other rows inactive for same key
       if (flag === 1) {
         await new sql.Request(tx)
@@ -920,14 +1063,13 @@ class DeliveryRouteBindingService {
         `);
       }
 
-      const correctDesc = String(correctDescriptionForReports || "").trim();
-
+      // ✅ update current row
       await new sql.Request(tx)
         .input("ID", sql.Int, rowId)
         .input("BranchID", sql.Int, nextBranchId)
         .input("SubBranchID", sql.Int, nextSubBranchId)
         .input("DeliveryRouteID", sql.Int, nextRouteId)
-        .input("EffectiveDate", sql.Date, effectiveDate)
+        .input("EffectiveDate", sql.Date, effDateNorm) // ✅ normalized
         .input("RequiredReportsFlag", sql.Int, flag)
         .input("Correct_Description_for_Reports", sql.NVarChar(200), correctDesc)
         .query(`
@@ -954,7 +1096,6 @@ class DeliveryRouteBindingService {
       throw err;
     }
   }
-
 
   // ----------------- DELETE -----------------
   async deleteBinding(id) {
