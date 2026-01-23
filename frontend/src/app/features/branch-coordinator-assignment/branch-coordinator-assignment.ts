@@ -351,7 +351,19 @@ export class BranchCoordinatorAssignment implements OnInit {
 
   edit(row: any) {
     this.selectedId = row.id;
-    this.data = { ...row };
+
+    const employeeName = (row.employeeName ?? '').toString().trim();
+    const employeeId = Number(row.employeeId);
+
+    this.data = {
+      ...row,
+      // ✅ if NA / invalid -> force null so required validation can trigger
+      employeeId:
+        employeeName === 'NA' || !Number.isFinite(employeeId) || employeeId <= 0
+          ? null
+          : employeeId,
+    };
+
     this.showModal = true;
 
     setTimeout(() => {
@@ -387,14 +399,47 @@ export class BranchCoordinatorAssignment implements OnInit {
 
   // ================= SUBMIT =================
   onSubmit(payload: any) {
+    const branchId = Number(payload?.branchId);
+    const empId = Number(payload?.employeeId);
+
+    const empName = (payload?.employeeName ?? payload?.employee ?? '')
+      .toString()
+      .trim(); // fallback if your form emits name
+    const dbName = (this.data?.employeeName ?? '').toString().trim();
+
+    // ✅ Branch required
+    if (!Number.isFinite(branchId) || branchId <= 0) {
+      this.notification.error('Validation', 'Branch is required.');
+      return;
+    }
+
+    // ✅ Employee required (ID must exist)
+    if (!Number.isFinite(empId) || empId <= 0) {
+      this.notification.error('Validation', 'Employee is required.');
+      return;
+    }
+
+    // ✅ If DB already has "NA" and user cleared/invalid, block it
+    // (This covers cases where UI keeps old NA)
+    if (
+      (dbName === 'NA' || empName === 'NA') &&
+      (!Number.isFinite(empId) || empId <= 0)
+    ) {
+      this.notification.error(
+        'Validation',
+        'Please select a valid employee (NA not allowed).',
+      );
+      return;
+    }
+
     const body = {
-      empId: payload.employeeId,
-      branchId: payload.branchId,
-      email: (payload.email || '').trim(),
+      empId,
+      branchId,
+      email: (payload?.email || '').trim(),
       effectiveDate:
-        payload.effectiveDate instanceof Date
+        payload?.effectiveDate instanceof Date
           ? payload.effectiveDate.toISOString()
-          : payload.effectiveDate,
+          : payload?.effectiveDate,
     };
 
     const api$ = this.selectedId
@@ -408,17 +453,6 @@ export class BranchCoordinatorAssignment implements OnInit {
         this.notification.success('Success', 'Saved successfully.');
       },
       error: (err) => {
-        if (err?.status === 409) {
-          const msg = err?.error?.message ?? 'Duplicate binding not allowed.';
-          const existingId = err?.error?.existingId;
-
-          this.notification.error(
-            'Duplicate',
-            `${msg}${existingId ? ` (Existing ID: ${existingId})` : ''}`,
-          );
-          return;
-        }
-
         this.notification.error(
           'Error',
           err?.error?.message ?? 'Something went wrong.',

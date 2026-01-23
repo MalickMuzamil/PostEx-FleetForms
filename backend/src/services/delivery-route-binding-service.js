@@ -311,7 +311,7 @@ class DeliveryRouteBindingService {
     return result.recordset;
   }
 
-  // ----------------- SINGLE CREATE (UPDATED) -----------------
+  // ----------------- SINGLE CREATE (UPDATED DUPLICATE RULE) -----------------
   async createBinding({
     branchId,
     subBranchId,
@@ -319,7 +319,7 @@ class DeliveryRouteBindingService {
     effectiveDate,
     requiredReportsFlag,
     correctDescriptionForReports,
-    force = false,
+    force = false, // (overwrite rule still used for ACTIVE conflict; NOT for same-date dup)
   }) {
     const pool = await getPool();
     const tx = new sql.Transaction(pool);
@@ -374,12 +374,42 @@ class DeliveryRouteBindingService {
 
       await this._acquireAppLock(tx, this._key(bId, sbId, rId));
 
-      // ✅ confirm overwrite rule (different effective date + active exists)
+      const effDateNorm = String(effectiveDate).slice(0, 10); // YYYY-MM-DD
+      const correctDesc = String(correctDescriptionForReports || "").trim();
+
+      // ✅ HARD DUPLICATE BLOCK (same key + same effectiveDate) regardless of active/inactive/desc
+      const dupRes = await new sql.Request(tx)
+        .input("BranchID", sql.Int, bId)
+        .input("SubBranchID", sql.Int, sbId)
+        .input("DeliveryRouteID", sql.Int, rId)
+        .input("EffectiveDate", sql.Date, effDateNorm)
+        .query(`
+        SELECT TOP 1 ID
+        FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding
+        WHERE BranchID = @BranchID
+          AND Sub_Branch_ID = @SubBranchID
+          AND DeliveryRouteID = @DeliveryRouteID
+          AND Sub_Branch_Effective_Date = @EffectiveDate
+        ORDER BY ID DESC
+      `);
+
+      if (dupRes.recordset?.length) {
+        throw this._httpError(
+          "Duplicate not allowed (same Branch/SubBranch/Route and same EffectiveDate).",
+          {
+            code: "ALREADY_EXISTS",
+            httpStatus: 409,
+            conflict: dupRes.recordset[0],
+          }
+        );
+      }
+
+      // ✅ confirm overwrite rule (different effective date + active exists) - still applies
       const activeConflictRes = await new sql.Request(tx)
         .input("BranchID", sql.Int, bId)
         .input("SubBranchID", sql.Int, sbId)
         .input("DeliveryRouteID", sql.Int, rId)
-        .input("NewEffectiveDate", sql.Date, effectiveDate)
+        .input("NewEffectiveDate", sql.Date, effDateNorm)
         .query(`
         SELECT TOP 1
           ID,
@@ -416,36 +446,8 @@ class DeliveryRouteBindingService {
         `);
       }
 
-      const correctDesc = String(correctDescriptionForReports || "").trim();
-      const effDateNorm = String(effectiveDate).slice(0, 10); // ✅ normalize
-
-      // ✅ NEW: block exact duplicate (same key + same date + same description)
-      const dupRes = await new sql.Request(tx)
-        .input("BranchID", sql.Int, bId)
-        .input("SubBranchID", sql.Int, sbId)
-        .input("DeliveryRouteID", sql.Int, rId)
-        .input("EffectiveDate", sql.Date, effDateNorm)
-        .input("Desc", sql.NVarChar(200), correctDesc)
-        .query(`
-        SELECT TOP 1 ID
-        FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding
-        WHERE BranchID = @BranchID
-          AND Sub_Branch_ID = @SubBranchID
-          AND DeliveryRouteID = @DeliveryRouteID
-          AND Sub_Branch_Effective_Date = @EffectiveDate
-          AND LTRIM(RTRIM(ISNULL(Correct_Description_for_Reports,''))) = LTRIM(RTRIM(@Desc))
-      `);
-
-      if (dupRes.recordset?.length) {
-        throw this._httpError("Already exists (same date and same description).", {
-          code: "ALREADY_EXISTS",
-          httpStatus: 409,
-          conflict: dupRes.recordset[0],
-        });
-      }
-
-      // ✅ UPSERT by (key + effectiveDate)
-      const upsertRes = await new sql.Request(tx)
+      // ✅ INSERT ONLY (no upsert)
+      const insRes = await new sql.Request(tx)
         .input("BranchID", sql.Int, bId)
         .input("SubBranchID", sql.Int, sbId)
         .input("DeliveryRouteID", sql.Int, rId)
@@ -453,59 +455,30 @@ class DeliveryRouteBindingService {
         .input("RequiredReportsFlag", sql.Int, flag)
         .input("Correct_Description_for_Reports", sql.NVarChar(200), correctDesc)
         .query(`
-        DECLARE @id INT;
-
-        SELECT TOP 1 @id = ID
-        FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding
-        WHERE BranchID = @BranchID
-          AND Sub_Branch_ID = @SubBranchID
-          AND DeliveryRouteID = @DeliveryRouteID
-          AND Sub_Branch_Effective_Date = @EffectiveDate
-        ORDER BY ID DESC;
-
-        IF @id IS NOT NULL
-        BEGIN
-          UPDATE b
-          SET
-            b.DeliveryRouteNo = r.RouteNo,
-            b.Correct_Description_for_Reports = @Correct_Description_for_Reports,
-            b.Required_for_Reports = @RequiredReportsFlag
-          FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
-          INNER JOIN GoGreen.dbo.DeliveryRoutes r
-            ON r.RouteID = @DeliveryRouteID
-          WHERE b.ID = @id;
-
-          SELECT @id AS ID;
-        END
-        ELSE
-        BEGIN
-          INSERT INTO GoGreen.OPS.DeliveryRoute_SubBranch_Binding
-            (BranchID, Sub_Branch_ID, DeliveryRouteID,
-             DeliveryRouteNo, Correct_Description_for_Reports,
-             Sub_Branch_Effective_Date, Required_for_Reports)
-          OUTPUT INSERTED.ID
-          SELECT
-            @BranchID,
-            @SubBranchID,
-            @DeliveryRouteID,
-            r.RouteNo,
-            @Correct_Description_for_Reports,
-            @EffectiveDate,
-            @RequiredReportsFlag
-          FROM GoGreen.dbo.DeliveryRoutes r
-          WHERE r.RouteID = @DeliveryRouteID;
-        END
+        INSERT INTO GoGreen.OPS.DeliveryRoute_SubBranch_Binding
+          (BranchID, Sub_Branch_ID, DeliveryRouteID,
+           DeliveryRouteNo, Correct_Description_for_Reports,
+           Sub_Branch_Effective_Date, Required_for_Reports)
+        OUTPUT INSERTED.ID
+        SELECT
+          @BranchID,
+          @SubBranchID,
+          @DeliveryRouteID,
+          r.RouteNo,
+          @Correct_Description_for_Reports,
+          @EffectiveDate,
+          @RequiredReportsFlag
+        FROM GoGreen.dbo.DeliveryRoutes r
+        WHERE r.RouteID = @DeliveryRouteID;
       `);
 
-      const newId = upsertRes.recordset?.[0]?.ID;
+      const newId = insRes.recordset?.[0]?.ID;
       const enriched = await this._fetchEnrichedByIds(tx, newId ? [newId] : []);
 
       await tx.commit();
       return enriched?.[0] || null;
     } catch (err) {
-      try {
-        await tx.rollback();
-      } catch (_) { }
+      try { await tx.rollback(); } catch (_) { }
       throw err;
     }
   }
@@ -631,7 +604,7 @@ class DeliveryRouteBindingService {
     }
   }
 
-  // ----------------- BULK CREATE (UPDATED) -----------------
+  // ----------------- BULK CREATE (UPDATED DUPLICATE RULE) -----------------
   async createBulkBindings(payloadsOrObj = []) {
     const isObj =
       payloadsOrObj &&
@@ -641,17 +614,38 @@ class DeliveryRouteBindingService {
     const payloads = isObj ? payloadsOrObj.payloads ?? [] : payloadsOrObj;
     const force = isObj ? Boolean(payloadsOrObj.force) : false;
 
-    console.log("createBulkBindings called:", new Date().toISOString());
-    console.log(
-      "incoming payloads length:",
-      Array.isArray(payloads) ? payloads.length : "not array"
-    );
-    console.log("after dedupe length:", this._dedupePayloads(payloads).length);
-
     if (!Array.isArray(payloads) || payloads.length === 0) return [];
 
-    if (isObj && payloadsOrObj.requestId) {
-      console.log("requestId:", payloadsOrObj.requestId);
+    // ✅ 0) Detect duplicates INSIDE payload (same key+date) => throw 409
+    {
+      const seen = new Map();
+      const dups = [];
+      for (const p of payloads) {
+        const b = Number(p?.branchId);
+        const sb = Number(p?.subBranchId);
+        const r = Number(p?.deliveryRouteId);
+        const ed = String(p?.effectiveDate || "").slice(0, 10);
+        if (!b || !sb || !r || !ed) continue;
+
+        const k = `${b}|${sb}|${r}|${ed}`;
+        if (seen.has(k)) {
+          dups.push({
+            branchId: b,
+            subBranchId: sb,
+            deliveryRouteId: r,
+            effectiveDate: ed,
+            firstIndex: seen.get(k),
+          });
+        } else {
+          seen.set(k, dups.length + 1);
+        }
+      }
+      if (dups.length) {
+        throw this._httpError(
+          "Bulk contains duplicate rows (same Branch/SubBranch/Route and same EffectiveDate).",
+          { code: "DUPLICATE_IN_PAYLOAD", httpStatus: 409, conflicts: dups }
+        );
+      }
     }
 
     const { validRows, invalidRows } = await this.validateBulkBindings(payloads);
@@ -664,7 +658,7 @@ class DeliveryRouteBindingService {
       });
     }
 
-    // ✅ EXTRA SAFETY: dedupe again before saving
+    // ✅ We can still dedupe exact repeats after validation (safety)
     const clean = this._dedupePayloads(validRows);
     if (!clean.length) return [];
 
@@ -675,7 +669,6 @@ class DeliveryRouteBindingService {
     try {
       await new sql.Request(tx).query(`SET XACT_ABORT ON;`);
 
-      // lock per key (no date)
       for (const p of clean) {
         await this._acquireAppLock(
           tx,
@@ -685,7 +678,6 @@ class DeliveryRouteBindingService {
 
       const t = new sql.Table("#Payload");
       t.create = true;
-
       t.columns.add("BranchID", sql.Int, { nullable: false });
       t.columns.add("SubBranchID", sql.Int, { nullable: false });
       t.columns.add("DeliveryRouteID", sql.Int, { nullable: false });
@@ -701,7 +693,7 @@ class DeliveryRouteBindingService {
           Number(p.branchId),
           Number(p.subBranchId),
           Number(p.deliveryRouteId),
-          String(p.effectiveDate).slice(0, 10), // normalize
+          String(p.effectiveDate).slice(0, 10),
           Number(p.requiredReportsFlag),
           desc
         );
@@ -709,13 +701,7 @@ class DeliveryRouteBindingService {
 
       await new sql.Request(tx).bulk(t);
 
-      // optional debug proof
-      const cnt = await new sql.Request(tx).query(
-        `SELECT COUNT(*) AS c FROM #Payload;`
-      );
-      console.log("#Payload rows in SQL:", cnt.recordset?.[0]?.c);
-
-      // ✅ build DISTINCT payload table ONCE (used by all checks + upsert)
+      // DISTINCT payload table
       await new sql.Request(tx).query(`
       IF OBJECT_ID('tempdb..#PayloadDistinct') IS NOT NULL DROP TABLE #PayloadDistinct;
 
@@ -730,14 +716,13 @@ class DeliveryRouteBindingService {
       FROM #Payload;
     `);
 
-      // ✅ 1) EXACT DUPLICATE BLOCK (same key + same date + same description)
+      // ✅ 1) HARD DUPLICATE BLOCK AGAINST DB (same key+date) - ignore description, ignore active/inactive
       const dupBulkRes = await new sql.Request(tx).query(`
       SELECT TOP 1000
         p.BranchID,
         p.SubBranchID,
         p.DeliveryRouteID,
         p.EffectiveDate,
-        p.CorrectDescriptionForReports,
         b.ID AS ExistingID
       FROM #PayloadDistinct p
       INNER JOIN GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
@@ -745,24 +730,18 @@ class DeliveryRouteBindingService {
        AND b.Sub_Branch_ID = p.SubBranchID
        AND b.DeliveryRouteID = p.DeliveryRouteID
        AND b.Sub_Branch_Effective_Date = p.EffectiveDate
-       AND LTRIM(RTRIM(ISNULL(b.Correct_Description_for_Reports,''))) =
-           p.CorrectDescriptionForReports
       ORDER BY b.ID DESC;
     `);
 
       const dupRows = dupBulkRes.recordset ?? [];
       if (dupRows.length) {
         throw this._httpError(
-          "Some rows already exist (same date and same description).",
-          {
-            code: "ALREADY_EXISTS_BULK",
-            httpStatus: 409,
-            conflicts: dupRows,
-          }
+          "Some rows already exist (same Branch/SubBranch/Route and same EffectiveDate).",
+          { code: "ALREADY_EXISTS_BULK", httpStatus: 409, conflicts: dupRows }
         );
       }
 
-      // ✅ 2) CONFIRM RULE (BULK): active exists with different effective date
+      // ✅ 2) CONFIRM RULE (active exists with different effective date) stays as-is
       const conflictsRes = await new sql.Request(tx).query(`
       SELECT TOP 1000
         b.BranchID,
@@ -788,11 +767,7 @@ class DeliveryRouteBindingService {
       if (conflicts.length && !force) {
         throw this._httpError(
           "Bulk contains rows that conflict with an active binding (different effective date). Confirm overwrite.",
-          {
-            code: "CONFIRM_OVERWRITE_BULK",
-            httpStatus: 409,
-            conflicts,
-          }
+          { code: "CONFIRM_OVERWRITE_BULK", httpStatus: 409, conflicts }
         );
       }
 
@@ -811,27 +786,10 @@ class DeliveryRouteBindingService {
        AND k.DeliveryRouteID = b.DeliveryRouteID;
     `);
 
-      // ✅ 4) UPSERT using DISTINCT payload source (no CTE+DECLARE issue)
-      const upsertRes = await new sql.Request(tx).query(`
+      // ✅ 4) INSERT ONLY (no update existing by same date)
+      const insRes = await new sql.Request(tx).query(`
       DECLARE @Affected TABLE (ID INT);
 
-      -- UPDATE existing (same key + same date)
-      UPDATE b
-      SET
-        b.DeliveryRouteNo = r.RouteNo,
-        b.Correct_Description_for_Reports = p.CorrectDescriptionForReports,
-        b.Required_for_Reports = p.RequiredReportsFlag
-      OUTPUT INSERTED.ID INTO @Affected(ID)
-      FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
-      INNER JOIN #PayloadDistinct p
-        ON p.BranchID = b.BranchID
-       AND p.SubBranchID = b.Sub_Branch_ID
-       AND p.DeliveryRouteID = b.DeliveryRouteID
-       AND p.EffectiveDate = b.Sub_Branch_Effective_Date
-      INNER JOIN GoGreen.dbo.DeliveryRoutes r
-        ON r.RouteID = p.DeliveryRouteID;
-
-      -- INSERT missing
       INSERT INTO GoGreen.OPS.DeliveryRoute_SubBranch_Binding
         (BranchID, Sub_Branch_ID, DeliveryRouteID,
          DeliveryRouteNo, Correct_Description_for_Reports,
@@ -847,33 +805,24 @@ class DeliveryRouteBindingService {
         p.RequiredReportsFlag
       FROM #PayloadDistinct p
       INNER JOIN GoGreen.dbo.DeliveryRoutes r
-        ON r.RouteID = p.DeliveryRouteID
-      WHERE NOT EXISTS (
-        SELECT 1
-        FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
-        WHERE b.BranchID = p.BranchID
-          AND b.Sub_Branch_ID = p.SubBranchID
-          AND b.DeliveryRouteID = p.DeliveryRouteID
-          AND b.Sub_Branch_Effective_Date = p.EffectiveDate
-      );
+        ON r.RouteID = p.DeliveryRouteID;
 
       SELECT ID FROM @Affected;
     `);
 
-      const ids = (upsertRes.recordset ?? []).map((r) => r.ID);
+      const ids = (insRes.recordset ?? []).map((r) => r.ID);
       const enriched = await this._fetchEnrichedByIds(tx, ids);
 
       await tx.commit();
       return enriched;
     } catch (err) {
-      try {
-        await tx.rollback();
-      } catch (_) { }
+      try { await tx.rollback(); } catch (_) { }
       throw err;
     }
   }
 
-  // ----------------- UPDATE SINGLE (FIXED CONFIRM RULE) -----------------
+
+  // ----------------- UPDATE SINGLE (UPDATED DUPLICATE RULE) -----------------
   async updateBinding(
     id,
     {
@@ -917,7 +866,7 @@ class DeliveryRouteBindingService {
           ? Number(requiredReportsFlag)
           : 1;
 
-      // ✅ fetch current row
+      // fetch current row
       const existingRes = await new sql.Request(tx)
         .input("ID", sql.Int, rowId)
         .query(`
@@ -962,21 +911,49 @@ class DeliveryRouteBindingService {
         });
       }
 
-      // ✅ lock old + new keys
+      // lock old + new keys
       const oldKey = this._key(cur.BranchID, cur.SubBranchID, cur.DeliveryRouteID);
       const newKey = this._key(nextBranchId, nextSubBranchId, nextRouteId);
       const keysToLock = Array.from(new Set([oldKey, newKey])).sort();
       for (const k of keysToLock) await this._acquireAppLock(tx, k);
 
-      // ✅ normalize dates (YYYY-MM-DD)
       const effDateNorm = String(effectiveDate).slice(0, 10);
-      const newYMD = effDateNorm;
+
+      // ✅ HARD DUPLICATE BLOCK (same key + same effectiveDate) in ANY OTHER ROW
+      const dupRes = await new sql.Request(tx)
+        .input("BranchID", sql.Int, nextBranchId)
+        .input("SubBranchID", sql.Int, nextSubBranchId)
+        .input("DeliveryRouteID", sql.Int, nextRouteId)
+        .input("EffectiveDate", sql.Date, effDateNorm)
+        .input("ID", sql.Int, rowId)
+        .query(`
+        SELECT TOP 1 ID
+        FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding
+        WHERE BranchID = @BranchID
+          AND Sub_Branch_ID = @SubBranchID
+          AND DeliveryRouteID = @DeliveryRouteID
+          AND Sub_Branch_Effective_Date = @EffectiveDate
+          AND ID <> @ID
+        ORDER BY ID DESC
+      `);
+
+      if (dupRes.recordset?.length) {
+        throw this._httpError(
+          "Duplicate not allowed (same Branch/SubBranch/Route and same EffectiveDate).",
+          {
+            code: "ALREADY_EXISTS",
+            httpStatus: 409,
+            conflict: dupRes.recordset[0],
+          }
+        );
+      }
+
+      // confirm overwrite rule (ACTIVE exists with different date) stays as-is
       const curYMD = cur.ExistingEffectiveDate
         ? new Date(cur.ExistingEffectiveDate).toISOString().slice(0, 10)
         : null;
 
-      // ✅ CASE 1: same row is ACTIVE and effective date is changing => confirm
-      if (!force && Number(cur.ExistingActive) === 1 && curYMD && curYMD !== newYMD) {
+      if (!force && Number(cur.ExistingActive) === 1 && curYMD && curYMD !== effDateNorm) {
         throw this._httpError(
           "An active binding already exists for this Branch/SubBranch/Route with a different effective date. Confirm overwrite.",
           {
@@ -987,7 +964,6 @@ class DeliveryRouteBindingService {
         );
       }
 
-      // ✅ CASE 2: any OTHER active exists for same key with different date => confirm
       const activeConflictRes = await new sql.Request(tx)
         .input("BranchID", sql.Int, nextBranchId)
         .input("SubBranchID", sql.Int, nextSubBranchId)
@@ -1018,35 +994,6 @@ class DeliveryRouteBindingService {
 
       const correctDesc = String(correctDescriptionForReports || "").trim();
 
-      // ✅ NEW: block exact duplicate (same key + same date + same description) except current row
-      const dupRes = await new sql.Request(tx)
-        .input("BranchID", sql.Int, nextBranchId)
-        .input("SubBranchID", sql.Int, nextSubBranchId)
-        .input("DeliveryRouteID", sql.Int, nextRouteId)
-        .input("EffectiveDate", sql.Date, effDateNorm)
-        .input("Desc", sql.NVarChar(200), correctDesc)
-        .input("ID", sql.Int, rowId)
-        .query(`
-        SELECT TOP 1 ID
-        FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding
-        WHERE BranchID = @BranchID
-          AND Sub_Branch_ID = @SubBranchID
-          AND DeliveryRouteID = @DeliveryRouteID
-          AND Sub_Branch_Effective_Date = @EffectiveDate
-          AND LTRIM(RTRIM(ISNULL(Correct_Description_for_Reports,''))) = LTRIM(RTRIM(@Desc))
-          AND ID <> @ID
-        ORDER BY ID DESC
-      `);
-
-      if (dupRes.recordset?.length) {
-        throw this._httpError("Already exists (same date and same description).", {
-          code: "ALREADY_EXISTS",
-          httpStatus: 409,
-          conflict: dupRes.recordset[0],
-        });
-      }
-
-      // ✅ If saving Active(1) => make all other rows inactive for same key
       if (flag === 1) {
         await new sql.Request(tx)
           .input("BranchID", sql.Int, nextBranchId)
@@ -1063,13 +1010,12 @@ class DeliveryRouteBindingService {
         `);
       }
 
-      // ✅ update current row
       await new sql.Request(tx)
         .input("ID", sql.Int, rowId)
         .input("BranchID", sql.Int, nextBranchId)
         .input("SubBranchID", sql.Int, nextSubBranchId)
         .input("DeliveryRouteID", sql.Int, nextRouteId)
-        .input("EffectiveDate", sql.Date, effDateNorm) // ✅ normalized
+        .input("EffectiveDate", sql.Date, effDateNorm)
         .input("RequiredReportsFlag", sql.Int, flag)
         .input("Correct_Description_for_Reports", sql.NVarChar(200), correctDesc)
         .query(`
@@ -1096,6 +1042,7 @@ class DeliveryRouteBindingService {
       throw err;
     }
   }
+
 
   // ----------------- DELETE -----------------
   async deleteBinding(id) {
