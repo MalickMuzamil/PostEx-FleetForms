@@ -8,14 +8,14 @@
 ===================================================== */
 :root {
   /* Brand */
-  --primary: #f44336;
-  --primary-shadow: rgba(244, 67, 54, 0.4);
+  --primary: #92cf50;
+  --primary-shadow: rgba(57, 111, 49, 0.4);
 
   /* Sidebar */
   --sidebar-bg: #ffffff;
-  --sidebar-text: #3c4858;
-  --sidebar-muted: #a9afbb;
-  --sidebar-hover: rgba(0, 0, 0, 0.04);
+  --sidebar-text: #92cf50;
+  --sidebar-muted: #92cf50;
+  --sidebar-hover: rgba(57, 111, 49, 0.4);
 
   /* App */
   --app-bg: #eeeeee;

@@ -3,7 +3,7 @@ import { TableConfig } from '../../shared/form-model/data-table-model';
 import { AppValidators } from '../../core/services/validators';
 
 export const BRANCH_DASHBOARD_BINDING_FORM: FormConfig = {
-  title: 'Branch and Dashboard Binding',
+  title: 'Branch & Dashboard Binding',
 
   fields: [
     {

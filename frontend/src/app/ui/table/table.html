@@ -54,7 +54,41 @@
         <tbody>
             @for (row of table.data; track row) {
             <tr>
-                <td *ngFor="let col of config.columns">{{ row[col.key] }}</td>
+                <td *ngFor="let col of config.columns">
+                    <ng-container *ngIf="
+      col.key === 'statusText' ||
+      col.key === 'statusFlag' ||
+      col.key === 'requiredReportsDisplay' ||
+      col.key.toLowerCase().includes('status') ||
+      col.key.toLowerCase().includes('requiredreports') ||
+      col.key.endsWith('Text') ||
+      col.key.endsWith('Flag');
+      else normalCell
+    ">
+                        <span class="badge" [ngClass]="
+        row[col.key] === 1 ||
+        row[col.key] === '1' ||
+        row[col.key] === true ||
+        row[col.key] === 'Active'
+          ? 'bg-success'
+          : 'bg-danger'
+      ">
+                            {{
+                            row[col.key] === 1 ||
+                            row[col.key] === '1' ||
+                            row[col.key] === true ||
+                            row[col.key] === 'Active'
+                            ? 'Active'
+                            : 'Inactive'
+                            }}
+                        </span>
+                    </ng-container>
+
+                    <ng-template #normalCell>
+                        {{ row[col.key] }}
+                    </ng-template>
+                </td>
+
 
                 <td *ngIf="config.actions?.length" class="text-center">
                     <ng-container *ngFor="let action of config.actions">

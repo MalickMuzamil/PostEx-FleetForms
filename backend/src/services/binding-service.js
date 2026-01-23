@@ -320,7 +320,7 @@ class BindingService {
 
     if (collision.recordset?.[0]?.ID) {
       const err = new Error(
-      `Duplicate: This branch already has an assignment on the same date (\${collision.recordset[0].ExistingDate}).`
+      `Duplicate: This branch already has an assignment on the same date (${collision.recordset[0].ExistingDate}).`
     );
     err.code = "EFFECTIVE_DATE_COLLISION";
     err.existingId = collision.recordset[0].ID;
