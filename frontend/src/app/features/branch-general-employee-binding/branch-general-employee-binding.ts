@@ -460,48 +460,101 @@ export class BranchGeneralEmployeeBinding implements OnInit {
 
   // ================= SUBMIT =================
   onSubmit(payload: any) {
-    // ✅ trust this.data (disabled fields issue)
-    const branchId = Number(this.data?.branchId ?? payload?.branchId);
-    const empId = Number(this.data?.employeeId ?? payload?.employeeId);
+    // ---------- helpers ----------
+    const isEdit = !!this.selectedId;
 
-    const branchName = (this.data?.branchName ?? '')
-      .toString()
-      .trim()
-      .toUpperCase();
-    const employeeName = (this.data?.employeeName ?? '')
-      .toString()
-      .trim()
-      .toUpperCase();
+    const getId = (v: any): number => {
+      if (v == null) return NaN;
+      if (typeof v === 'number' || typeof v === 'string') return +v;
 
-    const isBadName = (s: string) => !s || s === 'NA';
+      // dropdown might emit {value,label} or {id,name} etc
+      return +(v.value ?? v.id ?? v.key ?? v.ID ?? v.BranchID ?? v.EMP_ID);
+    };
 
-    if (!Number.isFinite(branchId) || branchId <= 0 || isBadName(branchName)) {
-      this.msg.error(
-        'Invalid record: Branch is NA/empty. Please fix data first.',
-      );
+    const isBadName = (s: string) => {
+      const t = (s ?? '').toString().trim().toUpperCase();
+      return !t || t === 'NA';
+    };
+
+    const toDateOnlyIso = (dt: any): string | null => {
+      const d = this.asLocalDate(dt);
+      if (!d) return null;
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      // backend expects datetime? then add T00:00:00.000Z
+      return `${y}-${m}-${day}T00:00:00.000Z`;
+    };
+
+    // ---------- read ids (this.data preferred, payload fallback) ----------
+    const branchId = getId(this.data?.branchId ?? payload?.branchId);
+    const empId = getId(this.data?.employeeId ?? payload?.employeeId);
+
+    // basic required validation (create + edit both)
+    if (!Number.isFinite(branchId) || branchId <= 0) {
+      this.msg.error('Please select a valid Branch.');
       return;
     }
 
-    if (!Number.isFinite(empId) || empId <= 0 || isBadName(employeeName)) {
-      this.msg.error(
-        'Invalid record: Employee is NA/empty. Please select a valid employee.',
-      );
+    if (!Number.isFinite(empId) || empId <= 0) {
+      this.msg.error('Please select a valid Employee.');
       return;
     }
 
+    // ---------- derive names (avoid empty/NA false errors) ----------
+    // Branch name: prefer map (most accurate), then data, then payload
+    const bd = this.branchDetailsMap.get(branchId);
+    const branchName = (
+      bd?.name ??
+      this.data?.branchName ??
+      payload?.branchName ??
+      ''
+    )
+      .toString()
+      .trim()
+      .toUpperCase();
+
+    // Employee name: from empMap cache, then data/payload
+    const empNameFromMap = this.empMap.get(empId) ?? '';
+    const employeeName = (
+      empNameFromMap ??
+      this.data?.employeeName ??
+      payload?.employeeName ??
+      ''
+    )
+      .toString()
+      .trim()
+      .toUpperCase();
+
+    // ---------- NA rule (ONLY for edit existing bad DB rows) ----------
+    if (isEdit) {
+      if (isBadName(branchName)) {
+        this.msg.error(
+          'Invalid record: Branch is NA/empty in DB. Please fix data first.',
+        );
+        return;
+      }
+      if (isBadName(employeeName)) {
+        this.msg.error(
+          'Invalid record: Employee is NA/empty in DB. Please fix data first.',
+        );
+        return;
+      }
+    }
+
+    // ---------- effective date ----------
     const effectiveDateValue =
-      payload?.effectiveDate ?? this.data?.effectiveDate;
+      payload?.effectiveDate ?? this.data?.effectiveDate ?? null;
 
+    // ---------- build payload ----------
     const cleanPayload = {
       empId,
       branchId,
       branchCoordinatorId:
-        payload?.branchCoordinatorId ?? this.data?.branchCoordinatorId ?? null,
-      email: (payload?.email ?? this.data?.email ?? '').trim(),
-      effectiveDate:
-        effectiveDateValue instanceof Date
-          ? effectiveDateValue.toISOString()
-          : effectiveDateValue,
+        getId(payload?.branchCoordinatorId ?? this.data?.branchCoordinatorId) ||
+        null,
+      email: (payload?.email ?? this.data?.email ?? '').toString().trim(),
+      effectiveDate: toDateOnlyIso(effectiveDateValue), // date-only ISO
       status: payload?.statusFlag ?? this.data?.statusFlag ?? 1,
     };
 
@@ -512,7 +565,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
     api$.subscribe({
       next: () => {
         this.msg.success(
-          this.selectedId ? 'Updated successfully' : 'Created successfully',
+          isEdit ? 'Updated successfully' : 'Created successfully',
         );
         this.showModal = false;
         this.loadTable();

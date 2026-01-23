@@ -182,40 +182,75 @@ export class BranchDashboardBindingComponent {
 
     const isUpdate = !!this.selectedId;
 
-    // ✅ trust this.data (because branchId can be disabled in update)
-    const branchId = Number(this.data?.branchId ?? payload?.branchId);
-    const branchName = (this.data?.branchName ?? '')
-      .toString()
-      .trim()
-      .toUpperCase();
+    // ---------- helpers ----------
+    const getId = (v: any): number => {
+      if (v == null) return NaN;
+      if (typeof v === 'number' || typeof v === 'string') return +v;
+      return +(v.value ?? v.id ?? v.key ?? v.ID ?? v.BranchID);
+    };
 
-    const isBadName = (s: string) => !s || s === 'NA';
+    const normalizeName = (s: any) => (s ?? '').toString().trim().toUpperCase();
 
-    // ✅ HARD BLOCK
-    if (!Number.isFinite(branchId) || branchId <= 0 || isBadName(branchName)) {
+    const isBadName = (s: any) => {
+      const t = normalizeName(s);
+      return !t || t === 'NA';
+    };
+
+    const toDateOnlyIso = (dt: any): string | null => {
+      if (!dt) return null;
+
+      const d = dt instanceof Date ? dt : new Date(dt);
+      if (isNaN(d.getTime())) return null;
+
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+
+      return `${y}-${m}-${day}T00:00:00.000Z`;
+    };
+
+    // ✅ trust this.data (branchId disabled in update)
+    const branchId = getId(this.data?.branchId ?? payload?.branchId);
+
+    // ---------- REQUIRED: branchId only ----------
+    if (!Number.isFinite(branchId) || branchId <= 0) {
+      this.notification.error('Validation', 'Please select a valid Branch.');
+      done();
+      return;
+    }
+
+    // ---------- derive branchName from cache (reliable) ----------
+    const b = this.branchesCache?.find((x) => +x.BranchID === branchId) ?? null;
+
+    const branchName = normalizeName(
+      b?.BranchName ?? this.data?.branchName ?? payload?.branchName,
+    );
+
+    // ✅ ONLY block NA-name for UPDATE (your rule: DB me NA saved ho to edit na ho)
+    if (isUpdate && isBadName(branchName)) {
       this.notification.error(
         'Validation',
-        'Invalid record: Branch is NA/empty. Please fix data first.',
+        'Invalid record: Branch is NA/empty in DB. Please fix data first.',
       );
       done();
       return;
     }
 
+    // ---------- other fields ----------
     const confFlag = Number(
       payload?.conferenceCallFlag ?? this.data?.conferenceCallFlag ?? 0,
     );
-    const effectiveDate = payload?.effectiveDate ?? this.data?.effectiveDate;
 
-    const cleanPayload = isUpdate
-      ? {
-          branchId,
-          reqConCall: Number.isFinite(confFlag) ? confFlag : 0,
-          effectiveDate,
-        }
-      : {
-          branchId,
-          effectiveDate,
-        };
+    const effectiveDateRaw = payload?.effectiveDate ?? this.data?.effectiveDate;
+    const effectiveDate = toDateOnlyIso(effectiveDateRaw);
+
+    // ---------- payload ----------
+    const cleanPayload = {
+      branchId,
+      // always send these (create/update both) - stable
+      reqConCall: Number.isFinite(confFlag) ? confFlag : 0,
+      effectiveDate,
+    };
 
     const api$ = isUpdate
       ? this.service.update(this.selectedId!, cleanPayload)
