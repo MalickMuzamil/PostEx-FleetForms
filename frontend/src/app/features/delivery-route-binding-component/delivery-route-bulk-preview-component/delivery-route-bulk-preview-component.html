@@ -59,34 +59,33 @@
                                     <!-- Delivery Route -->
                                     <td>
                                         <div class="cell-wrap">
-                                            <select class="form-select form-select-sm"
-                                                [formControl]="row.deliveryRouteControl"
-                                                (change)="onRowRouteChange(row)" [disabled]="isLoading">
-                                                <option value="">Any</option>
-                                                <option *ngFor="let dr of deliveryRoutes" [value]="dr.DeliveryRouteID">
-                                                    {{ dr.DeliveryRouteNo }} - {{ dr.DeliveryRouteDescription }}
-                                                </option>
-                                            </select>
-
+                                    
+                                            <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Any" [formControl]="row.deliveryRouteControl"
+                                                [nzDisabled]="isLoading" (ngModelChange)="onRowRouteChange(row)"  class="route-select">
+                                                <nz-option *ngFor="let dr of deliveryRoutes" [nzValue]="dr.DeliveryRouteID"
+                                                    [nzLabel]="dr.DeliveryRouteNo + ' - ' + dr.DeliveryRouteDescription">
+                                                </nz-option>
+                                            </nz-select>
+                                    
+                                            <!-- errors same rahenge -->
                                             <div class="cell-msg">
-                                                <div class="field-err"
-                                                    *ngIf="(row.errors ?? []).includes('Delivery Route is required')">
+                                                <div class="field-err" *ngIf="(row.errors ?? []).includes('Delivery Route is required')">
                                                     <span class="dot"></span>
                                                     <strong>Delivery Route is required</strong>
                                                     <span class="file" *ngIf="row.rawDeliveryRoute">
                                                         Route ID: <strong>{{ row.rawDeliveryRoute }}</strong>
                                                     </span>
                                                 </div>
-
-                                                <div class="field-err "
-                                                    *ngIf="(row.errors ?? []).includes('Delivery Route ID does not exist')">
+                                    
+                                                <div class="field-err" *ngIf="(row.errors ?? []).includes('Delivery Route ID does not exist')">
                                                     <span class="dot"></span>
-                                                    <span><strong>Route does not exist in DB</strong></span>
+                                                    <strong>Route does not exist in DB</strong>
                                                     <span class="file" *ngIf="row.rawDeliveryRoute">
                                                         Route ID: <strong>{{ row.rawDeliveryRoute }}</strong>
                                                     </span>
                                                 </div>
                                             </div>
+                                    
                                         </div>
                                     </td>
 
@@ -127,7 +126,6 @@
                                             </div>
                                         </div>
                                     </td>
-
 
                                     <!-- Sub Branch -->
                                     <td>
