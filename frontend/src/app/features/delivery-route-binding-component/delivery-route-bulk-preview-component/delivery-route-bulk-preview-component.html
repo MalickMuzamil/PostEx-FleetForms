@@ -63,7 +63,7 @@
                                             <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Any" [formControl]="row.deliveryRouteControl"
                                                 [nzDisabled]="isLoading" (ngModelChange)="onRowRouteChange(row)"  class="route-select">
                                                 <nz-option *ngFor="let dr of deliveryRoutes" [nzValue]="dr.DeliveryRouteID"
-                                                    [nzLabel]="dr.DeliveryRouteNo + ' - ' + dr.DeliveryRouteDescription">
+                                                    [nzLabel]="'{' + dr.DeliveryRouteID + '} ' + dr.DeliveryRouteNo + ' - ' + dr.DeliveryRouteDescription">
                                                 </nz-option>
                                             </nz-select>
                                     
@@ -98,7 +98,7 @@
 
                                                 <option [ngValue]="null">Select Branch</option>
                                                 <option *ngFor="let b of row.routeBranches" [ngValue]="b.value">
-                                                    {{ b.label }}
+                                                    {{ '{' + b.value + '} ' + b.label }}
                                                 </option>
                                             </select>
 
@@ -135,7 +135,7 @@
                                                 (ngModelChange)="onRowSubBranchChange(row)">
                                                 <option [ngValue]="null">Select Sub Branch</option>
                                                 <option *ngFor="let sb of row.subBranches" [ngValue]="sb.SubBranchID">
-                                                    {{ sb.SubBranchName }}
+                                                    {{ '{' + sb.SubBranchID + '} ' + sb.SubBranchName }}
                                                 </option>
                                             </select>
 
