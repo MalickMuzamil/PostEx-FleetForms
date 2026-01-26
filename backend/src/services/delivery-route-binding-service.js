@@ -510,10 +510,15 @@ class DeliveryRouteBindingService {
     const tx = new sql.Transaction(pool);
     await tx.begin(sql.ISOLATION_LEVEL.READ_COMMITTED);
 
+    // ✅ GLOBAL TEMP TABLE name (unique) to avoid "Invalid object name #PayloadValidate"
+    const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+    const PAYLOAD_VALIDATE = `##PayloadValidate_${suffix}`;
+
     try {
       await new sql.Request(tx).query(`SET XACT_ABORT ON;`);
 
-      const t = new sql.Table("#PayloadValidate");
+      // ✅ 1) Create GLOBAL temp table via bulk
+      const t = new sql.Table(PAYLOAD_VALIDATE);
       t.create = true;
 
       t.columns.add("BranchID", sql.Int, { nullable: false });
@@ -531,7 +536,7 @@ class DeliveryRouteBindingService {
           Number(p.branchId),
           Number(p.subBranchId),
           Number(p.deliveryRouteId),
-          p.effectiveDate,
+          String(p.effectiveDate).slice(0, 10),
           Number(p.requiredReportsFlag),
           desc
         );
@@ -539,27 +544,28 @@ class DeliveryRouteBindingService {
 
       await new sql.Request(tx).bulk(t);
 
+      // ✅ 2) Same validation query, just global table name
       const checkRes = await new sql.Request(tx).query(`
-        SELECT
-          p.BranchID,
-          p.SubBranchID,
-          p.DeliveryRouteID,
-          p.EffectiveDate,
-          p.RequiredReportsFlag,
-          p.CorrectDescriptionForReports,
+      SELECT
+        p.BranchID,
+        p.SubBranchID,
+        p.DeliveryRouteID,
+        p.EffectiveDate,
+        p.RequiredReportsFlag,
+        p.CorrectDescriptionForReports,
 
-          CASE WHEN br.BranchID IS NULL THEN 0 ELSE 1 END AS BranchOk,
-          CASE WHEN sb.Sub_Branch_ID IS NULL THEN 0 ELSE 1 END AS SubBranchOk,
-          CASE WHEN r.RouteID IS NULL THEN 0 ELSE 1 END AS RouteOk
-        FROM #PayloadValidate p
-        LEFT JOIN HRM.HR.Branches br
-          ON br.BranchID = p.BranchID
-        LEFT JOIN GoGreen.OPS.Sub_Branch_Definition sb
-          ON sb.Sub_Branch_ID = p.SubBranchID
-         AND sb.BranchID = p.BranchID
-        LEFT JOIN GoGreen.dbo.DeliveryRoutes r
-          ON r.RouteID = p.DeliveryRouteID;
-      `);
+        CASE WHEN br.BranchID IS NULL THEN 0 ELSE 1 END AS BranchOk,
+        CASE WHEN sb.Sub_Branch_ID IS NULL THEN 0 ELSE 1 END AS SubBranchOk,
+        CASE WHEN r.RouteID IS NULL THEN 0 ELSE 1 END AS RouteOk
+      FROM ${PAYLOAD_VALIDATE} p
+      LEFT JOIN HRM.HR.Branches br
+        ON br.BranchID = p.BranchID
+      LEFT JOIN GoGreen.OPS.Sub_Branch_Definition sb
+        ON sb.Sub_Branch_ID = p.SubBranchID
+       AND sb.BranchID = p.BranchID
+      LEFT JOIN GoGreen.dbo.DeliveryRoutes r
+        ON r.RouteID = p.DeliveryRouteID;
+    `);
 
       const rows = checkRes.recordset ?? [];
       const invalidRows = [...dateInvalid];
@@ -569,9 +575,7 @@ class DeliveryRouteBindingService {
         const reasons = [];
         if (!row.BranchOk) reasons.push("Invalid BranchID");
         if (!row.SubBranchOk)
-          reasons.push(
-            "Invalid SubBranchID (not found OR not mapped to BranchID)"
-          );
+          reasons.push("Invalid SubBranchID (not found OR not mapped to BranchID)");
         if (!row.RouteOk)
           reasons.push("Invalid DeliveryRouteID (not found in DeliveryRoutes)");
 
@@ -601,8 +605,19 @@ class DeliveryRouteBindingService {
         await tx.rollback();
       } catch (_) { }
       throw err;
+    } finally {
+      // ✅ cleanup global temp table
+      try {
+        const req = new sql.Request(pool);
+        await req.query(`
+        IF OBJECT_ID('tempdb..${PAYLOAD_VALIDATE}') IS NOT NULL DROP TABLE ${PAYLOAD_VALIDATE};
+      `);
+      } catch (_) {
+        // ignore cleanup errors
+      }
     }
   }
+
 
   // ----------------- BULK CREATE (UPDATED DUPLICATE RULE) -----------------
   async createBulkBindings(payloadsOrObj = []) {
@@ -637,6 +652,7 @@ class DeliveryRouteBindingService {
             firstIndex: seen.get(k),
           });
         } else {
+          // keep same behavior as your code (index value not critical)
           seen.set(k, dups.length + 1);
         }
       }
@@ -666,9 +682,15 @@ class DeliveryRouteBindingService {
     const tx = new sql.Transaction(pool);
     await tx.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);
 
+    // ✅ GLOBAL TEMP TABLE names (unique) to avoid session issues with bulk()
+    const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+    const PAYLOAD = `##Payload_${suffix}`;
+    const DISTINCT = `##PayloadDistinct_${suffix}`;
+
     try {
       await new sql.Request(tx).query(`SET XACT_ABORT ON;`);
 
+      // ✅ lock per key (same as your logic)
       for (const p of clean) {
         await this._acquireAppLock(
           tx,
@@ -676,8 +698,10 @@ class DeliveryRouteBindingService {
         );
       }
 
-      const t = new sql.Table("#Payload");
+      // ✅ 1) Create GLOBAL temp payload table & bulk insert
+      const t = new sql.Table(PAYLOAD);
       t.create = true;
+
       t.columns.add("BranchID", sql.Int, { nullable: false });
       t.columns.add("SubBranchID", sql.Int, { nullable: false });
       t.columns.add("DeliveryRouteID", sql.Int, { nullable: false });
@@ -701,9 +725,11 @@ class DeliveryRouteBindingService {
 
       await new sql.Request(tx).bulk(t);
 
-      // DISTINCT payload table
+      // ✅ 2) Build DISTINCT GLOBAL temp table (same query, just global name)
       await new sql.Request(tx).query(`
-      IF OBJECT_ID('tempdb..#PayloadDistinct') IS NOT NULL DROP TABLE #PayloadDistinct;
+      SET NOCOUNT ON;
+
+      IF OBJECT_ID('tempdb..${DISTINCT}') IS NOT NULL DROP TABLE ${DISTINCT};
 
       SELECT DISTINCT
         BranchID,
@@ -712,11 +738,11 @@ class DeliveryRouteBindingService {
         EffectiveDate,
         RequiredReportsFlag,
         LTRIM(RTRIM(ISNULL(CorrectDescriptionForReports,''))) AS CorrectDescriptionForReports
-      INTO #PayloadDistinct
-      FROM #Payload;
+      INTO ${DISTINCT}
+      FROM ${PAYLOAD};
     `);
 
-      // ✅ 1) HARD DUPLICATE BLOCK AGAINST DB (same key+date) - ignore description, ignore active/inactive
+      // ✅ 3) HARD DUPLICATE BLOCK AGAINST DB (same key+date) - ignore description, ignore active/inactive
       const dupBulkRes = await new sql.Request(tx).query(`
       SELECT TOP 1000
         p.BranchID,
@@ -724,7 +750,7 @@ class DeliveryRouteBindingService {
         p.DeliveryRouteID,
         p.EffectiveDate,
         b.ID AS ExistingID
-      FROM #PayloadDistinct p
+      FROM ${DISTINCT} p
       INNER JOIN GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
         ON b.BranchID = p.BranchID
        AND b.Sub_Branch_ID = p.SubBranchID
@@ -741,7 +767,7 @@ class DeliveryRouteBindingService {
         );
       }
 
-      // ✅ 2) CONFIRM RULE (active exists with different effective date) stays as-is
+      // ✅ 4) CONFIRM RULE (active exists with different effective date) stays as-is
       const conflictsRes = await new sql.Request(tx).query(`
       SELECT TOP 1000
         b.BranchID,
@@ -753,7 +779,7 @@ class DeliveryRouteBindingService {
       FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
       INNER JOIN (
         SELECT DISTINCT BranchID, SubBranchID, DeliveryRouteID, EffectiveDate
-        FROM #PayloadDistinct
+        FROM ${DISTINCT}
       ) p
         ON p.BranchID = b.BranchID
        AND p.SubBranchID = b.Sub_Branch_ID
@@ -771,14 +797,14 @@ class DeliveryRouteBindingService {
         );
       }
 
-      // ✅ 3) If payload row Active(1) => make old inactive
+      // ✅ 5) If payload row Active(1) => make old inactive (same logic)
       await new sql.Request(tx).query(`
       UPDATE b
       SET b.Required_for_Reports = 0
       FROM GoGreen.OPS.DeliveryRoute_SubBranch_Binding b
       INNER JOIN (
         SELECT DISTINCT BranchID, SubBranchID, DeliveryRouteID
-        FROM #PayloadDistinct
+        FROM ${DISTINCT}
         WHERE RequiredReportsFlag = 1
       ) k
         ON k.BranchID = b.BranchID
@@ -786,7 +812,7 @@ class DeliveryRouteBindingService {
        AND k.DeliveryRouteID = b.DeliveryRouteID;
     `);
 
-      // ✅ 4) INSERT ONLY (no update existing by same date)
+      // ✅ 6) INSERT ONLY (no update existing by same date) (same logic)
       const insRes = await new sql.Request(tx).query(`
       DECLARE @Affected TABLE (ID INT);
 
@@ -803,7 +829,7 @@ class DeliveryRouteBindingService {
         p.CorrectDescriptionForReports,
         p.EffectiveDate,
         p.RequiredReportsFlag
-      FROM #PayloadDistinct p
+      FROM ${DISTINCT} p
       INNER JOIN GoGreen.dbo.DeliveryRoutes r
         ON r.RouteID = p.DeliveryRouteID;
 
@@ -818,6 +844,17 @@ class DeliveryRouteBindingService {
     } catch (err) {
       try { await tx.rollback(); } catch (_) { }
       throw err;
+    } finally {
+      // ✅ cleanup global temp tables (safe even if already dropped)
+      try {
+        const req = new sql.Request(pool);
+        await req.query(`
+        IF OBJECT_ID('tempdb..${DISTINCT}') IS NOT NULL DROP TABLE ${DISTINCT};
+        IF OBJECT_ID('tempdb..${PAYLOAD}') IS NOT NULL DROP TABLE ${PAYLOAD};
+      `);
+      } catch (_) {
+        // ignore cleanup errors
+      }
     }
   }
 
