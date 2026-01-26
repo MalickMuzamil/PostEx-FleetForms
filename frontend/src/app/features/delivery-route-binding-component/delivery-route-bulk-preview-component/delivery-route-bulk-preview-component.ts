@@ -40,6 +40,12 @@ interface BulkRow {
   errors?: string[];
 
   isValid?: boolean;
+
+  rawDeliveryRoute?: string;
+  rawBranch?: string;
+  rawSubBranch?: string;
+  rawCorrectDesc?: string;
+  rawEffectiveDate?: string;
 }
 
 @Component({
@@ -346,7 +352,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
 
       const json: any[] = XLSX.utils.sheet_to_json(sheet, {
         defval: '',
-        raw: false, 
+        raw: false,
       });
 
       this.fileHeaders = Object.keys(json[0] || {}).map((h) =>
@@ -386,7 +392,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     const headerMap = new Map<string, string>();
 
     for (const h of this.fileHeaders) {
-      headerMap.set(this.normHeader(h), h); 
+      headerMap.set(this.normHeader(h), h);
     }
 
     const pick = (candidates: string[]) => {
@@ -414,40 +420,54 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       'CorrectionDescriptionforReports',
       'CorrectionDescriptionForReports',
     ]);
-
   }
 
   mapRows(data: any[]) {
+    console.log('COLUMN MAP (INSIDE mapRows)=', this.columnMap);
     if (!this.uidCounter) this.uidCounter = Date.now();
 
     this.rows = data.map((r, i) => {
       const errors: string[] = [];
       const get = (k: string) => r?.[this.columnMap[k]];
 
-      const cdKey = this.columnMap['CorrectDescription'];
+      // ---------------- RAW (FILE) VALUES KEEP ----------------
+      const rawRouteVal = get('DeliveryRouteID');
+      const rawBranchVal = get('BranchId');
+      const rawSubBranchVal = get('SubBranchId');
+      const rawDescVal = get('CorrectDescription');
+      const rawDateVal = get('EffectiveDate');
 
-      const routeId = Number(get('DeliveryRouteID')) || null;
+      const rawDeliveryRoute = String(rawRouteVal ?? '').trim();
+      const rawBranch = String(rawBranchVal ?? '').trim();
+      const rawSubBranch = String(rawSubBranchVal ?? '').trim();
+      const rawCorrectDesc = String(rawDescVal ?? '').trim();
+      const rawEffectiveDate = String(rawDateVal ?? '').trim();
+
+      // ---------------- REQUIRED / PARSE ----------------
+      const routeId = Number(rawRouteVal) || null;
       if (!routeId) errors.push('Delivery Route is required');
 
-      const branchId = Number(get('BranchId')) || null;
+      const branchId = Number(rawBranchVal) || null;
       if (!branchId) errors.push('Branch is required');
 
-      const subBranchId = Number(get('SubBranchId')) || null;
+      const subBranchId = Number(rawSubBranchVal) || null;
       if (!subBranchId) errors.push('Sub Branch is required');
 
-      const rawDesc = get('CorrectDescription');
-      const descText = String(rawDesc ?? '').trim();
+      // ✅ Correct Description: FILE ME TEXT AATA HAI
+      const descText = rawCorrectDesc;
 
+      // ✅ abhi ID resolve karne ki koshish (agar map already ready ho)
       let correctDescId: number | null = null;
       if (descText) {
         correctDescId = this.descKeyToId.get(this.normDesc(descText)) ?? null;
+        // ❌ yahan error add nahi karna (options later load ho sakti hain)
       } else {
         errors.push(this.DESC_REQUIRED);
       }
 
       // ---------------- DATE PARSE ----------------
       let date: Date | null = null;
-      const rawDate = get('EffectiveDate');
+      const rawDate = rawDateVal;
 
       if (rawDate != null && rawDate !== '') {
         if (typeof rawDate === 'number') {
@@ -481,11 +501,18 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
         uid: ++this.uidCounter,
         rowNo: i + 1,
 
+        // ✅ RAW values (file wali) — UI me niche show karne ke liye
+        rawDeliveryRoute,
+        rawBranch,
+        rawSubBranch,
+        rawCorrectDesc,
+        rawEffectiveDate,
+
         branchId,
         subBranchId,
 
         correctDescId,
-        correctDescText: descText, 
+        correctDescText: descText,
 
         routeBranches: [],
         subBranches: [],
@@ -507,6 +534,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       return row;
     });
 
+    // ✅ IMPORTANT: ab descriptions resolve karo (options ready hon ya na hon)
     this.resolveCorrectDescriptionsForRows();
 
     this.validateDuplicateRouteIds();
@@ -520,6 +548,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       this.loadSubBranchesForAllRowsBulk(() => {
         this.isLoading = false;
 
+        // ✅ after all async loads, resolve again (safe)
         this.resolveCorrectDescriptionsForRows();
 
         this.applyLocalValidationsSafe();

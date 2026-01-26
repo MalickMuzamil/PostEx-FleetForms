@@ -1,4 +1,4 @@
-<!-- delivery-route-bulk-preview-component.html (UPDATED - Correct Description dropdown added) -->
+<!-- delivery-route-bulk-preview-component.html (UPDATED - show raw wrong value under the same column) -->
 
 <div class="container-fluid mt-4">
     <div class="card shadow-sm">
@@ -9,20 +9,18 @@
                     <button class="btn btn-outline-secondary" routerLink="/delivery-route-binding">
                         ← Back
                     </button>
-            
-                    <button class="btn btn-success px-4" *ngIf="selectedValidCount >= 2" [disabled]="isLoading || !canProceed"
-                        (click)="proceedBulkUpdate()">
+
+                    <button class="btn btn-success px-4" *ngIf="selectedValidCount >= 2"
+                        [disabled]="isLoading || !canProceed" (click)="proceedBulkUpdate()">
                         <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
                         {{ bulkSaving ? 'Processing...' : 'Proceed' }}
                     </button>
                 </div>
-            
+
                 <!-- RIGHT: Title -->
                 <h4 class="fw-bold mb-0 text-end">Delivery Route Bulk Preview</h4>
             </div>
 
-
-            <!-- ✅ Loader wrapper (only initial load/file read) -->
             <nz-spin [nzSpinning]="isLoading" [nzTip]="loadingText">
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover align-middle">
@@ -36,10 +34,7 @@
                                 <th>Delivery Route</th>
                                 <th>Branch</th>
                                 <th>Sub Branch</th>
-
-                                <!-- ✅ NEW COLUMN -->
                                 <th>Correct Description</th>
-
                                 <th>Effective Date</th>
                                 <th>Required Reports</th>
                                 <th style="width: 140px">Action</th>
@@ -48,9 +43,9 @@
 
                         <tbody>
                             <ng-container *ngFor="let row of rows; let i = index; trackBy: trackByRow">
-                                <!-- MAIN ROW -->
                                 <tr [@rowAnim] [class.table-warning]="row.checked"
                                     [class.table-danger]="(row.errors?.length ?? 0) > 0">
+
                                     <!-- Checkbox -->
                                     <td>
                                         <input type="checkbox" class="form-check-input" [(ngModel)]="row.checked"
@@ -61,63 +56,176 @@
                                     <!-- Row No -->
                                     <td>{{ row.rowNo }}</td>
 
-                                    <!-- Delivery Route Dropdown -->
+                                    <!-- Delivery Route -->
                                     <td>
-                                        <select class="form-select form-select-sm"
-                                            [formControl]="row.deliveryRouteControl" (change)="onRowRouteChange(row)"
-                                            [disabled]="isLoading">
-                                            <option value="">Any</option>
-                                            <option *ngFor="let dr of deliveryRoutes" [value]="dr.DeliveryRouteID">
-                                                {{ dr.DeliveryRouteNo }} - {{ dr.DeliveryRouteDescription }}
-                                            </option>
-                                        </select>
+                                        <div class="cell-wrap">
+                                            <select class="form-select form-select-sm"
+                                                [formControl]="row.deliveryRouteControl"
+                                                (change)="onRowRouteChange(row)" [disabled]="isLoading">
+                                                <option value="">Any</option>
+                                                <option *ngFor="let dr of deliveryRoutes" [value]="dr.DeliveryRouteID">
+                                                    {{ dr.DeliveryRouteNo }} - {{ dr.DeliveryRouteDescription }}
+                                                </option>
+                                            </select>
+
+                                            <div class="cell-msg">
+                                                <div class="field-err"
+                                                    *ngIf="(row.errors ?? []).includes('Delivery Route is required')">
+                                                    <span class="dot"></span>
+                                                    <strong>Delivery Route is required</strong>
+                                                    <span class="file" *ngIf="row.rawDeliveryRoute">
+                                                        Route ID: <strong>{{ row.rawDeliveryRoute }}</strong>
+                                                    </span>
+                                                </div>
+
+                                                <div class="field-err warn"
+                                                    *ngIf="(row.errors ?? []).includes('Delivery Route ID does not exist')">
+                                                    <span class="dot"></span>
+                                                    <span><strong>Route does not exist in DB</strong></span>
+                                                    <span class="file" *ngIf="row.rawDeliveryRoute">
+                                                        Route ID: <strong>{{ row.rawDeliveryRoute }}</strong>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
 
                                     <!-- Branch -->
                                     <td>
-                                        <select class="form-select form-select-sm" [(ngModel)]="row.branchId"
-                                            (ngModelChange)="onRowBranchChange(row)"
-                                            [disabled]="isLoading || !row.deliveryRouteControl.value">
-                                            <option [ngValue]="null">Select Branch</option>
-                                            <option *ngFor="let b of row.routeBranches" [ngValue]="b.value">
-                                                {{ b.label }}
-                                            </option>
-                                        </select>
+                                        <div class="cell-wrap">
+                                            <select class="form-select form-select-sm" [(ngModel)]="row.branchId"
+                                                (ngModelChange)="onRowBranchChange(row)"
+                                                [disabled]="isLoading || !row.deliveryRouteControl.value">
+                                                <option [ngValue]="null">Select Branch</option>
+                                                <option *ngFor="let b of row.routeBranches" [ngValue]="b.value">
+                                                    {{ b.label }}
+                                                </option>
+                                            </select>
+
+                                            <div class="cell-msg">
+                                                <div class="field-err"
+                                                    *ngIf="(row.errors ?? []).includes('Branch is required')">
+                                                    <span class="dot"></span>
+                                                    <span><strong>Branch is required</strong></span>
+                                                    <span class="file" *ngIf="row.rawBranch">
+                                                        Branch ID: <strong>{{ row.rawBranch }}</strong>
+                                                    </span>
+                                                </div>
+
+                                                <div class="field-err warn"
+                                                    *ngIf="(row.errors ?? []).includes('Branch does not belong to selected Route')">
+                                                    <span class="dot"></span>
+                                                    <strong>Branch does not match selected Route</strong>
+                                                    <span class="file" *ngIf="row.rawBranch">
+                                                        Branch ID: <strong>{{ row.rawBranch }}</strong>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
 
                                     <!-- Sub Branch -->
                                     <td>
-                                        <select class="form-select form-select-sm" [(ngModel)]="row.subBranchId"
-                                            [disabled]="isLoading || !row.branchId"
-                                            (ngModelChange)="onRowSubBranchChange(row)">
-                                            <option [ngValue]="null">Select Sub Branch</option>
-                                            <option *ngFor="let sb of row.subBranches" [ngValue]="sb.SubBranchID">
-                                                {{ sb.SubBranchName }}
-                                            </option>
-                                        </select>
+                                        <div class="cell-wrap">
+                                            <select class="form-select form-select-sm" [(ngModel)]="row.subBranchId"
+                                                [disabled]="isLoading || !row.branchId"
+                                                (ngModelChange)="onRowSubBranchChange(row)">
+                                                <option [ngValue]="null">Select Sub Branch</option>
+                                                <option *ngFor="let sb of row.subBranches" [ngValue]="sb.SubBranchID">
+                                                    {{ sb.SubBranchName }}
+                                                </option>
+                                            </select>
+
+                                            <div class="cell-msg">
+                                                <div class="field-err"
+                                                    *ngIf="(row.errors ?? []).includes('Sub Branch is required')">
+                                                    <span class="dot"></span>
+                                                    <span><strong>Sub Branch is required</strong></span>
+                                                    <span class="file" *ngIf="row.rawSubBranch">
+                                                        Sub Branch ID: <strong>{{ row.rawSubBranch }}</strong>
+                                                    </span>
+                                                </div>
+
+                                                <div class="field-err warn"
+                                                    *ngIf="(row.errors ?? []).includes('Invalid SubBranchID (not found OR not mapped to BranchID)')">
+                                                    <span class="dot"></span>
+                                                    <strong>Sub Branch does not exist in DB / not mapped to
+                                                        Branch</strong>
+                                                    <span class="file" *ngIf="row.rawSubBranch">
+                                                        Sub Branch ID: <strong>{{ row.rawSubBranch }}</strong>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
 
                                     <!-- Correct Description -->
                                     <td>
-                                        <select class="form-select form-select-sm" [(ngModel)]="row.correctDescId"
-                                            [disabled]="isLoading" (ngModelChange)="onRowDescChange(row)">
-                                            <option [ngValue]="null">Select Description</option>
-                                            <option *ngFor="let d of correctDescriptions" [ngValue]="d.id">
-                                                {{ d.text }}
-                                            </option>
-                                        </select>
+                                        <div class="cell-wrap">
+                                            <select class="form-select form-select-sm" [(ngModel)]="row.correctDescId"
+                                                [disabled]="isLoading" (ngModelChange)="onRowDescChange(row)">
+
+                                                <option [ngValue]="null">Select Description</option>
+                                                <option *ngFor="let d of correctDescriptions" [ngValue]="d.id">
+                                                    {{ d.text }}
+                                                </option>
+                                            </select>
+
+                                            <div class="cell-msg">
+                                                <!-- Required -->
+                                                <div class="field-err"
+                                                    *ngIf="(row.errors ?? []).includes('Description is required')">
+                                                    <span class="dot"></span>
+                                                    <span><strong>Description is required</strong></span>
+
+                                                    <span class="file" *ngIf="row.rawCorrectDesc">
+                                                        Description: <strong>{{ row.rawCorrectDesc }}</strong>
+                                                    </span>
+                                                </div>
+
+                                                <!-- Not found -->
+                                                <div class="field-err" *ngIf="(row.correctDescText?.trim() || '') && row.correctDescId == null
+                                                        && !(row.errors ?? []).includes('Description is required')">
+
+                                                    <span class="dot"></span>
+                                                    <strong>Description does not exist in DB</strong>
+
+                                                    <span class="file">
+                                                        Value: <strong>{{ row.correctDescText }}</strong>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
 
                                     <!-- Effective Date -->
                                     <td>
-                                        <nz-date-picker nzFormat="yyyy-MM-dd" nzSize="small"
-                                            [formControl]="row.effectiveDateControl" [nzDisabledDate]="disablePastDates"
-                                            [nzDisabled]="isLoading"
-                                            (ngModelChange)="onRowDateChange(row)"></nz-date-picker>
+                                        <div class="cell-wrap">
+                                            <nz-date-picker nzFormat="yyyy-MM-dd" nzSize="small"
+                                                [formControl]="row.effectiveDateControl"
+                                                [nzDisabledDate]="disablePastDates" [nzDisabled]="isLoading"
+                                                (ngModelChange)="onRowDateChange(row)">
+                                            </nz-date-picker>
 
-                                        <div class="text-danger small mt-1"
-                                            *ngIf="row.effectiveDateControl.invalid && row.effectiveDateControl.touched">
-                                            Future date required
+                                            <div class="cell-msg">
+                                                <div class="field-err"
+                                                    *ngIf="(row.errors ?? []).includes('Invalid Date')">
+                                                    <span class="dot"></span>
+                                                    <strong>Invalid Effective Date</strong>
+                                                    <span class="file" *ngIf="row.rawEffectiveDate">
+                                                        Date: <strong>{{ row.rawEffectiveDate }}</strong>
+                                                    </span>
+                                                </div>
+
+                                                <div class="field-err"
+                                                    *ngIf="(row.errors ?? []).includes('Date must be a future date')">
+                                                    <span class="dot"></span>
+                                                    <strong>Effective Date must be a future date</strong>
+                                                    <span class="file" *ngIf="row.rawEffectiveDate">
+                                                        Date: <strong>{{ row.rawEffectiveDate }}</strong>
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
 
@@ -144,22 +252,13 @@
                                             Remove
                                         </button>
                                     </td>
-                                </tr>
 
-                                <!-- ERROR ROW -->
-                                <tr *ngIf="row.errors?.length" [@rowAnim]>
-                                    <td colspan="9" class="py-2">
-                                        <div class="text-danger small">
-                                            <div *ngFor="let err of row.errors">• {{ err }}</div>
-                                        </div>
-                                    </td>
                                 </tr>
                             </ng-container>
                         </tbody>
 
 
                     </table>
-
                 </div>
             </nz-spin>
         </div>
