@@ -81,8 +81,9 @@
             </div>
 
             <!-- AAA_AAA_AAA FORMAT -->
-            <div class="text-danger mt-1" *ngIf="field.mask === 'AAA_AAA_AAA' && hasError(field.key, 'invalidName')">
-              Name must be in format <b>AAA-AAA-AAA</b> (letters only)
+            <div class="text-danger mt-1"
+              *ngIf="field.key === 'subBranchName' && (hasError(field.key,'invalidName') || hasError(field.key,'prefixMismatch') || hasError(field.key,'branchRequiredForSubBranch'))">
+              Name must be in format <b>CODE-AAA</b> or <b>CODE-AAA-AAA</b>
             </div>
 
             <!-- EMAIL FORMAT (Angular built-in key) -->

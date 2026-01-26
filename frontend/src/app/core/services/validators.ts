@@ -50,7 +50,9 @@ export class AppValidators {
         };
       }
 
-      return EMAIL_REGEX.test(value.toLowerCase()) ? null : { invalidEmail: true };
+      return EMAIL_REGEX.test(value.toLowerCase())
+        ? null
+        : { invalidEmail: true };
     };
   }
 
@@ -182,41 +184,28 @@ export class AppValidators {
       const code = (getBranchCode?.() ?? '').toString().trim().toUpperCase();
       if (!code) return { branchRequiredForSubBranch: true };
 
-      // must start with PREFIX-
-      if (!v.startsWith(code + '-')) {
-        return { prefixMismatch: true };
-      }
+      if (!v.startsWith(code + '-')) return { prefixMismatch: true };
+      if (!/^[A-Z0-9-]+$/.test(v)) return { invalidName: true };
 
-      // allow only A-Z, 0-9 and dashes
-      if (!/^[A-Z0-9-]+$/.test(v)) {
+      const afterPrefix = v.slice(code.length + 1);
+
+      if ((afterPrefix.match(/-/g) || []).length > 1)
         return { invalidName: true };
-      }
 
-      const afterPrefix = v.slice(code.length + 1); // part after "LHE-"
+      if (afterPrefix.length === 0) return null;
 
-      // max allowed after prefix = "AAA-AAA" (7 chars)
-      if (afterPrefix.length > 7) {
+      if (afterPrefix.length < 3) return { invalidName: true };
+
+      if (afterPrefix.length !== 3 && afterPrefix.length !== 7)
         return { invalidName: true };
-      }
 
-      // allow partial while typing
-      if (!afterPrefix) return null;
+      const shortRegex = new RegExp(`^${code}-[A-Z0-9]{3}$`);
+      const longRegex = new RegExp(`^${code}-[A-Z0-9]{3}-[A-Z0-9]{3}$`);
 
-      // only ONE dash after prefix (between middle and last group)
-      if ((afterPrefix.match(/-/g) || []).length > 1) {
-        return { invalidName: true };
-      }
-
-      // ✅ FINAL STRICT: CODE-AAA-A0A (middle 3 letters, last 3 alphanumeric)
-      const finalRegex = new RegExp(`^${code}-[A-Z0-9]{3}-[A-Z0-9]{3}$`);
-
-      // if fully typed (7 chars after prefix) → must match exactly
-      if (afterPrefix.length === 7) {
-        return finalRegex.test(v) ? null : { invalidName: true };
-      }
-
-      // otherwise allow partial typing
-      return null;
+      return shortRegex.test(v) || longRegex.test(v)
+        ? null
+        : { invalidName: true };
     };
   }
+  
 }
