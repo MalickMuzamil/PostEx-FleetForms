@@ -15,6 +15,7 @@ import { AppValidators } from '../../../core/services/validators';
 import { DeliveryRouteDefinitionService } from '../../../core/services/delivery-route-definition-service';
 import { RouterLink } from '@angular/router';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 
 interface BulkRow {
   rowNo: number;
@@ -58,6 +59,7 @@ interface BulkRow {
     NzDatePickerModule,
     NzModalModule,
     NzSpinModule,
+    NzSelectModule,
     RouterLink,
   ],
   templateUrl: './delivery-route-bulk-preview-component.html',
