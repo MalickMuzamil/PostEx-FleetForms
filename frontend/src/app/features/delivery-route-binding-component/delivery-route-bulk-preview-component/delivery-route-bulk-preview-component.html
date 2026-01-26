@@ -78,7 +78,7 @@
                                                     </span>
                                                 </div>
 
-                                                <div class="field-err warn"
+                                                <div class="field-err "
                                                     *ngIf="(row.errors ?? []).includes('Delivery Route ID does not exist')">
                                                     <span class="dot"></span>
                                                     <span><strong>Route does not exist in DB</strong></span>
@@ -94,8 +94,9 @@
                                     <td>
                                         <div class="cell-wrap">
                                             <select class="form-select form-select-sm" [(ngModel)]="row.branchId"
-                                                (ngModelChange)="onRowBranchChange(row)"
-                                                [disabled]="isLoading || !row.deliveryRouteControl.value">
+                                                [disabled]="isLoading || !row.deliveryRouteControl.value"
+                                                (ngModelChange)="onRowBranchChange(row)">
+
                                                 <option [ngValue]="null">Select Branch</option>
                                                 <option *ngFor="let b of row.routeBranches" [ngValue]="b.value">
                                                     {{ b.label }}
@@ -103,26 +104,30 @@
                                             </select>
 
                                             <div class="cell-msg">
+
+                                                <!-- Branch required -->
                                                 <div class="field-err"
-                                                    *ngIf="(row.errors ?? []).includes('Branch is required')">
+                                                    *ngIf="row.deliveryRouteControl.value && !row.branchId">
+
                                                     <span class="dot"></span>
-                                                    <span><strong>Branch is required</strong></span>
-                                                    <span class="file" *ngIf="row.rawBranch">
-                                                        Branch ID: <strong>{{ row.rawBranch }}</strong>
+                                                    <strong>Branch is required</strong>
+                                                </div>
+
+                                                <!-- Branch invalid -->
+                                                <div class="field-err" *ngIf="isInvalidBranch(row)">
+
+                                                    <span class="dot"></span>
+                                                    <strong>Branch ID is wrong</strong>
+
+                                                    <span class="file">
+                                                        Branch ID: <strong>{{ row.branchId }}</strong>
                                                     </span>
                                                 </div>
 
-                                                <div class="field-err warn"
-                                                    *ngIf="(row.errors ?? []).includes('Branch does not belong to selected Route')">
-                                                    <span class="dot"></span>
-                                                    <strong>Branch does not match selected Route</strong>
-                                                    <span class="file" *ngIf="row.rawBranch">
-                                                        Branch ID: <strong>{{ row.rawBranch }}</strong>
-                                                    </span>
-                                                </div>
                                             </div>
                                         </div>
                                     </td>
+
 
                                     <!-- Sub Branch -->
                                     <td>
@@ -140,7 +145,7 @@
                                                 <div class="field-err"
                                                     *ngIf="(row.errors ?? []).includes('Sub Branch is required')">
                                                     <span class="dot"></span>
-                                                    <span><strong>Sub Branch is required</strong></span>
+                                                    <strong>Sub Branch is required</strong>
                                                     <span class="file" *ngIf="row.rawSubBranch">
                                                         Sub Branch ID: <strong>{{ row.rawSubBranch }}</strong>
                                                     </span>
@@ -188,7 +193,7 @@
                                                         && !(row.errors ?? []).includes('Description is required')">
 
                                                     <span class="dot"></span>
-                                                    <strong>Description does not exist in DB</strong>
+                                                    <strong>Invalid Description</strong>
 
                                                     <span class="file">
                                                         Value: <strong>{{ row.correctDescText }}</strong>
@@ -218,9 +223,9 @@
                                                 </div>
 
                                                 <div class="field-err"
-                                                    *ngIf="(row.errors ?? []).includes('Date must be a future date')">
+                                                    *ngIf="(row.errors ?? []).includes('Effective Date must be a future date')">
                                                     <span class="dot"></span>
-                                                    <strong>Effective Date must be a future date</strong>
+                                                    <strong>Date must be a future.</strong>
                                                     <span class="file" *ngIf="row.rawEffectiveDate">
                                                         Date: <strong>{{ row.rawEffectiveDate }}</strong>
                                                     </span>
@@ -231,11 +236,14 @@
 
                                     <!-- Required Reports -->
                                     <td>
-                                        <select class="form-select form-select-sm" [(ngModel)]="row.requiredReportsFlag"
-                                            [disabled]="isLoading" (ngModelChange)="onRowFlagChange(row)">
-                                            <option [ngValue]="1">Active</option>
-                                            <option [ngValue]="0">Inactive</option>
-                                        </select>
+                                        <div class="cell-wrap">
+                                            <select class="form-select form-select-sm" [(ngModel)]="row.requiredReportsFlag" [disabled]="isLoading"
+                                                (ngModelChange)="onRowFlagChange(row)">
+                                    
+                                                <option [ngValue]="1">Active</option>
+                                                <option [ngValue]="0">Inactive</option>
+                                            </select>
+                                        </div>
                                     </td>
 
                                     <!-- Action -->

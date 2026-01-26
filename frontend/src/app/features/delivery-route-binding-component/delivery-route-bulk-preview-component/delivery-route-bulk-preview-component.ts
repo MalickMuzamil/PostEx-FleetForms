@@ -1377,4 +1377,16 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     this.validateDuplicateRouteIds();
     this.updateHasValidRow();
   }
+
+  isInvalidBranch(row: any): boolean {
+    if (
+      !row?.deliveryRouteControl?.value ||
+      !row?.branchId ||
+      !row?.routeBranches
+    ) {
+      return false;
+    }
+
+    return !row.routeBranches.some((b:any) => b.value === row.branchId);
+  }
 }

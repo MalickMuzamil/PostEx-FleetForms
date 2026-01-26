@@ -6,7 +6,7 @@
   margin-top: 6px;
   padding: 6px 8px;
   border-radius: 8px;
-  font-size: 10px;
+  font-size: 12px;
   display: flex;
   gap: 6px;
   align-items: center;
@@ -42,4 +42,8 @@
 .cell-msg{
   min-height: 22px;     
   margin-top: 4px;
+}
+
+td {
+  vertical-align: top;
 }
