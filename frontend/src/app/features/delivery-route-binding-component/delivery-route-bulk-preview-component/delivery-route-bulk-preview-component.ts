@@ -23,10 +23,10 @@ interface BulkRow {
   branchId: number | null;
   subBranchId: number | null;
   correctDescId: number | null;
+  correctDescText?: string;
 
   routeBranches: any[];
   subBranches: any[];
-  correctDescText?: string;
 
   deliveryRouteId: number | null;
   deliveryRouteControl: FormControl<number | null>;
@@ -62,7 +62,7 @@ interface BulkRow {
         style({ opacity: 1, height: '*', transform: 'translateX(0)' }),
         animate(
           '180ms ease-in',
-          style({ opacity: 0, height: 0, transform: 'translateX(12px)' })
+          style({ opacity: 0, height: 0, transform: 'translateX(12px)' }),
         ),
       ]),
     ]),
@@ -116,16 +116,17 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   ];
 
   // ✅ CACHES (no repeated calls)
-  private branchesCache = new Map<number, any[]>(); // routeId -> branches[]
-  private subBranchesCache = new Map<string, any[]>(); // "routeId|branchId" -> subBranches[]
+  private branchesCache = new Map<number, any[]>();
+  private subBranchesCache = new Map<string, any[]>();
   private branchesInFlight = new Set<number>();
   private subBranchesInFlight = new Set<string>();
+  private descKeyToId = new Map<string, number>();
 
   constructor(
     private bindingService: DeliveryRouteBindingService,
     private definitionService: DeliveryRouteDefinitionService,
     private notification: NzNotificationService,
-    private modal: NzModalService
+    private modal: NzModalService,
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -158,7 +159,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   // ---------------- CONFIRM MODAL ----------------
   private confirmOverwrite(
     message: string,
-    existingDate?: string | null
+    existingDate?: string | null,
   ): Promise<boolean> {
     return new Promise((resolve) => {
       this.modal.confirm({
@@ -237,6 +238,15 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     ].forEach((m) => this.removeErr(row, m));
   }
 
+  private normDesc(v: any): string {
+    return (v ?? '')
+      .toString()
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toLowerCase();
+  }
+
   // ---------------- MASTER LOADERS ----------------
   private loadDeliveryRoutesPromise(): Promise<void> {
     return new Promise((resolve) => {
@@ -266,14 +276,32 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       this.definitionService.getAll().subscribe({
         next: (res: any) => {
           const rows = res?.data ?? res ?? [];
-          this.correctDescriptions = rows.map((r: any) => ({
-            id: Number(r.Id),
-            text:
-              r.CorrectionDescriptionforReports ||
-              r.routeDescription ||
-              r.RouteDescription ||
-              '',
-          }));
+
+          this.correctDescriptions = (rows || [])
+            .map((r: any) => {
+              const text =
+                r.CorrectionDescriptionforReports ??
+                r.correctionDescriptionforReports ??
+                r.routeDescription ??
+                r.RouteDescription ??
+                r.text ??
+                '';
+
+              return {
+                id: Number(r.Id ?? r.id),
+                text: String(text ?? '').trim(),
+              };
+            })
+            .filter((x: any) => x.id && x.text);
+
+          this.descKeyToId.clear();
+          for (const d of this.correctDescriptions) {
+            const key = this.normDesc(d.text);
+            if (key) this.descKeyToId.set(key, Number(d.id));
+          }
+
+          this.resolveCorrectDescriptionsForRows();
+
           resolve();
         },
         error: () => {
@@ -296,8 +324,15 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      transformHeader: (h: string) =>
+        String(h ?? '')
+          .replace(/^\uFEFF/, '')
+          .trim(), // ✅ BOM remove + trim
       complete: (res: any) => {
-        this.fileHeaders = res.meta.fields || [];
+        this.fileHeaders = (res.meta.fields || []).map((h: any) =>
+          String(h ?? '').trim(),
+        );
+
         this.handleHeaderValidation(res.data);
       },
     });
@@ -308,8 +343,16 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     reader.onload = (e: any) => {
       const wb = XLSX.read(e.target.result, { type: 'binary' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
-      const json: any[] = XLSX.utils.sheet_to_json(sheet);
-      this.fileHeaders = Object.keys(json[0] || {});
+
+      const json: any[] = XLSX.utils.sheet_to_json(sheet, {
+        defval: '',
+        raw: false, 
+      });
+
+      this.fileHeaders = Object.keys(json[0] || {}).map((h) =>
+        String(h ?? '').trim(),
+      );
+
       this.handleHeaderValidation(json);
     };
     reader.readAsBinaryString(file);
@@ -317,7 +360,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
 
   handleHeaderValidation(data: any[]) {
     const matched = this.REQUIRED_COLUMNS.filter((c) =>
-      this.fileHeaders.some((h) => h.toLowerCase().includes(c.toLowerCase()))
+      this.fileHeaders.some((h) => h.toLowerCase().includes(c.toLowerCase())),
     );
 
     if (matched.length < 2) {
@@ -330,25 +373,59 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     this.mapRows(data);
   }
 
-  autoMapColumns() {
-    this.REQUIRED_COLUMNS.forEach((req) => {
-      const found = this.fileHeaders.find((h) =>
-        h.toLowerCase().includes(req.toLowerCase())
-      );
-      if (found) this.columnMap[req] = found;
-    });
+  private normHeader(h: any): string {
+    return String(h ?? '')
+      .replace(/^\uFEFF/, '') // BOM remove
+      .replace(/[\u200B-\u200D\uFEFF]/g, '') // zero-width
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_]+/g, ''); // spaces/underscores remove
   }
 
-  // ✅ MAIN IMPORT MAPPING
+  autoMapColumns() {
+    const headerMap = new Map<string, string>();
+
+    for (const h of this.fileHeaders) {
+      headerMap.set(this.normHeader(h), h); 
+    }
+
+    const pick = (candidates: string[]) => {
+      for (const c of candidates) {
+        const found = headerMap.get(this.normHeader(c));
+        if (found) return found;
+      }
+      return null;
+    };
+
+    this.columnMap['BranchId'] = pick(['BranchId', 'BranchID']);
+    this.columnMap['SubBranchId'] = pick(['SubBranchId', 'SubBranchID']);
+    this.columnMap['DeliveryRouteID'] = pick([
+      'DeliveryRouteID',
+      'DeliveryRouteId',
+    ]);
+    this.columnMap['EffectiveDate'] = pick(['EffectiveDate']);
+    this.columnMap['RequiredReportsFlag'] = pick(['RequiredReportsFlag']);
+
+    this.columnMap['CorrectDescription'] = pick([
+      'CorrectDescription',
+      'Correct Description',
+      'CorrectDescriptionForReports',
+      'CorrectDescriptionforReports',
+      'CorrectionDescriptionforReports',
+      'CorrectionDescriptionForReports',
+    ]);
+
+  }
+
   mapRows(data: any[]) {
-    // ✅ ensure unique stable ids
     if (!this.uidCounter) this.uidCounter = Date.now();
 
     this.rows = data.map((r, i) => {
       const errors: string[] = [];
       const get = (k: string) => r?.[this.columnMap[k]];
 
-      // ---------------- IDs ----------------
+      const cdKey = this.columnMap['CorrectDescription'];
+
       const routeId = Number(get('DeliveryRouteID')) || null;
       if (!routeId) errors.push('Delivery Route is required');
 
@@ -357,6 +434,16 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
 
       const subBranchId = Number(get('SubBranchId')) || null;
       if (!subBranchId) errors.push('Sub Branch is required');
+
+      const rawDesc = get('CorrectDescription');
+      const descText = String(rawDesc ?? '').trim();
+
+      let correctDescId: number | null = null;
+      if (descText) {
+        correctDescId = this.descKeyToId.get(this.normDesc(descText)) ?? null;
+      } else {
+        errors.push(this.DESC_REQUIRED);
+      }
 
       // ---------------- DATE PARSE ----------------
       let date: Date | null = null;
@@ -391,12 +478,14 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       if (!(flagNum === 0 || flagNum === 1)) errors.push(this.INVALID_FLAG);
 
       const row: BulkRow = {
-        uid: ++this.uidCounter, // ✅ stable key (never changes)
-        rowNo: i + 1, // (optional) display only
+        uid: ++this.uidCounter,
+        rowNo: i + 1,
 
         branchId,
         subBranchId,
-        correctDescId: null,
+
+        correctDescId,
+        correctDescText: descText, 
 
         routeBranches: [],
         subBranches: [],
@@ -418,18 +507,21 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       return row;
     });
 
-    // ✅ run existing flow
+    this.resolveCorrectDescriptionsForRows();
+
     this.validateDuplicateRouteIds();
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
 
-    // ✅ BULK LOAD DROPDOWN OPTIONS (1–2 calls)
     this.loadingText = 'Loading branches & sub-branches (bulk)...';
     this.isLoading = true;
 
     this.loadBranchesForAllRowsBulk(() => {
       this.loadSubBranchesForAllRowsBulk(() => {
         this.isLoading = false;
+
+        this.resolveCorrectDescriptionsForRows();
+
         this.applyLocalValidationsSafe();
         this.updateHasValidRow();
         this.scheduleServerValidation();
@@ -443,8 +535,8 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       new Set(
         this.rows
           .map((r) => Number(r.deliveryRouteControl.value))
-          .filter((x) => x > 0)
-      )
+          .filter((x) => x > 0),
+      ),
     );
 
     if (!routeIds.length) {
@@ -501,8 +593,8 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
               ? `${routeId}|${branchId}`
               : null;
           })
-          .filter(Boolean) as string[]
-      )
+          .filter(Boolean) as string[],
+      ),
     );
 
     if (!pairKeys.length) {
@@ -560,9 +652,40 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     // preserve selection if exists
     if (selected != null) {
       const exists = row.subBranches.some(
-        (x: any) => Number(x.value) === Number(selected)
+        (x: any) => Number(x.value) === Number(selected),
       );
       row.subBranchId = exists ? selected : null;
+    }
+  }
+
+  private resolveCorrectDescriptionsForRows() {
+    if (!this.rows?.length) return;
+
+    for (const row of this.rows) {
+      const text = String(row.correctDescText ?? '').trim();
+
+      // if empty -> required
+      if (!text) {
+        this.addErr(row, this.DESC_REQUIRED);
+        row.correctDescId = null;
+        continue;
+      }
+
+      // try resolve
+      const id = this.descKeyToId.get(this.normDesc(text)) ?? null;
+
+      if (id) {
+        row.correctDescId = id;
+        // ✅ remove both possible errors
+        this.removeErr(row, this.DESC_REQUIRED);
+        this.removeErr(row, `Correct Description not found: ${text}`);
+      } else {
+        // text exists but not found in master
+        this.addErr(row, `Correct Description not found: ${text}`);
+        // do not force DESC_REQUIRED here (different error)
+        this.removeErr(row, this.DESC_REQUIRED);
+        row.correctDescId = null;
+      }
     }
   }
 
@@ -588,6 +711,12 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       const branchId = Number(row.branchId) || 0;
       const subBranchId = Number(row.subBranchId) || 0;
 
+      // ---------- DEBUG: Description mapping ----------
+      const rawTxt = String(row.correctDescText ?? '');
+      const trimmedTxt = rawTxt.trim();
+      const normTxt = this.normDesc(trimmedTxt);
+      const mappedId = this.descKeyToId.get(normTxt) ?? null;
+
       // numeric checks
       if (
         (row.deliveryRouteControl.value != null && !routeId) ||
@@ -605,10 +734,32 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       }
 
       if (!row.correctDescId) {
-        this.addErr(row, this.DESC_REQUIRED);
+        const txt = trimmedTxt;
+
+        if (!txt) {
+          this.addErr(row, this.DESC_REQUIRED);
+        } else {
+          const resolved = this.descKeyToId.get(this.normDesc(txt)) ?? null;
+
+          if (resolved) {
+            row.correctDescId = resolved;
+            this.removeErr(row, this.DESC_REQUIRED);
+            this.removeErr(row, `Correct Description not found: ${txt}`);
+          } else {
+            this.addErr(row, `Correct Description not found: ${txt}`);
+            this.removeErr(row, this.DESC_REQUIRED);
+          }
+        }
+
         row.checked = false;
+      } else {
+        // if ID exists, make sure not-found/required errors are removed
+        const txt = trimmedTxt;
+        this.removeErr(row, this.DESC_REQUIRED);
+        if (txt) this.removeErr(row, `Correct Description not found: ${txt}`);
       }
 
+      // ---------- DATE ----------
       const dt = row.effectiveDateControl?.value;
       if (!dt) {
         this.addErr(row, this.DATE_REQUIRED);
@@ -640,7 +791,6 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
         row.branchId = expectedBranch;
 
         // ✅ now that branch changed, attach correct sub-branches from cache if available
-        // this.applySubBranchesToRow(row);
         this.loadPairSubBranches(routeId, expectedBranch, row);
       }
 
@@ -702,7 +852,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       })
       .filter(
         (p) =>
-          p.branchId && p.subBranchId && p.deliveryRouteId && p.effectiveDate
+          p.branchId && p.subBranchId && p.deliveryRouteId && p.effectiveDate,
       );
 
     if (!payloads.length) return;
@@ -726,7 +876,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
           const k = `${Number(inv.branchId) || 0}|${
             Number(inv.subBranchId) || 0
           }|${Number(inv.deliveryRouteId) || 0}|${String(
-            inv.effectiveDate || ''
+            inv.effectiveDate || '',
           )}`;
           const match = rowMap.get(k);
           if (!match) continue;
@@ -747,10 +897,15 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   // ---------------- DEPENDENT DROPDOWNS (OPTIMIZED) ----------------
   onRowRouteChange(row: BulkRow) {
     const routeId = Number(row.deliveryRouteControl.value) || null;
+
+    // Keep old for compare (optional)
+    const oldRouteId = Number(row.deliveryRouteId) || null;
     row.deliveryRouteId = routeId;
 
     row.subBranchId = null;
-    row.correctDescId = null;
+    // ❌ DO NOT CLEAR correctDescId (this was killing file-mapped description)
+    // row.correctDescId = null;
+
     row.subBranches = [];
     row.routeBranches = [];
     row.checked = false;
@@ -763,7 +918,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       return;
     }
 
-    // ✅ Fill branches from cache (if exists), else bulk-fetch just this routeId
+    // ✅ branches (same)
     if (this.branchesCache.has(routeId)) {
       this.applyBranchesToRow(row);
     } else if (!this.branchesInFlight.has(routeId)) {
@@ -779,7 +934,6 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
           }));
           this.branchesCache.set(routeId, normalized);
           this.branchesInFlight.delete(routeId);
-
           this.applyBranchesToRow(row);
         },
         error: () => {
@@ -789,16 +943,14 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       });
     }
 
-    // auto branch based on route master list
+    // ✅ auto branch (same)
     const route = this.deliveryRoutes.find(
-      (r: any) => Number(r.DeliveryRouteID) === Number(routeId)
+      (r: any) => Number(r.DeliveryRouteID) === Number(routeId),
     );
     const expectedBranchId = Number(route?.BranchID) || null;
 
     if (expectedBranchId) {
       row.branchId = expectedBranchId;
-
-      // ✅ load sub-branches from cache / bulk-fetch this pair
       this.loadPairSubBranches(routeId, expectedBranchId, row);
     } else {
       row.branchId = null;
@@ -867,7 +1019,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
           this.toast(
             'error',
             'Error',
-            'Failed to load sub branches (bulk single)'
+            'Failed to load sub branches (bulk single)',
           );
         },
       });
@@ -1001,7 +1153,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     row.saving = true;
 
     const selectedDesc = this.correctDescriptions.find(
-      (d: any) => Number(d.id) === Number(row.correctDescId)
+      (d: any) => Number(d.id) === Number(row.correctDescId),
     );
     const descText = String(selectedDesc?.text || '').trim();
 
@@ -1052,7 +1204,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
               this.toast(
                 'success',
                 'Saved',
-                `Row ${row.rowNo} saved successfully`
+                `Row ${row.rowNo} saved successfully`,
               );
               this.removeRowRef(row);
             },

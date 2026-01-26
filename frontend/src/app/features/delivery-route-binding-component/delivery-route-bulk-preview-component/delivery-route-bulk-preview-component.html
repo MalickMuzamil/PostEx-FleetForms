@@ -4,12 +4,23 @@
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <button class="btn btn-outline-secondary" routerLink="/delivery-route-binding">
-                    ← Back
-                </button>
-
-                <h4 class="fw-bold mb-0">Delivery Route Bulk Preview</h4>
+                <!-- LEFT: Back + Proceed -->
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-outline-secondary" routerLink="/delivery-route-binding">
+                        ← Back
+                    </button>
+            
+                    <button class="btn btn-success px-4" *ngIf="selectedValidCount >= 2" [disabled]="isLoading || !canProceed"
+                        (click)="proceedBulkUpdate()">
+                        <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
+                        {{ bulkSaving ? 'Processing...' : 'Proceed' }}
+                    </button>
+                </div>
+            
+                <!-- RIGHT: Title -->
+                <h4 class="fw-bold mb-0 text-end">Delivery Route Bulk Preview</h4>
             </div>
+
 
             <!-- ✅ Loader wrapper (only initial load/file read) -->
             <nz-spin [nzSpinning]="isLoading" [nzTip]="loadingText">
@@ -149,14 +160,6 @@
 
                     </table>
 
-                    <!-- Bulk Proceed -->
-                    <div class="d-flex justify-content-end mt-3" *ngIf="selectedValidCount >= 2">
-                        <button class="btn btn-success px-4" [disabled]="isLoading || !canProceed"
-                            (click)="proceedBulkUpdate()">
-                            <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
-                            {{ bulkSaving ? 'Processing...' : 'Proceed' }}
-                        </button>
-                    </div>
                 </div>
             </nz-spin>
         </div>
