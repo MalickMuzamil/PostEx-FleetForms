@@ -37,7 +37,7 @@ export const BRANCH_COORDINATOR_ASSIGNMENT_FORM: FormConfig = {
         { key: 'name', title: 'Branch Name' },
         { key: 'desc', title: 'Description' },
         { key: 'phone', title: 'Phone' },
-        { key: 'address', title: 'Address' },
+        // { key: 'address', title: 'Address' },
       ],
     },
 

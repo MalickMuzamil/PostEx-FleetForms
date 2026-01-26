@@ -516,7 +516,7 @@ export class BranchCoordinatorAssignment implements OnInit {
               return {
                 value: id,
                 label: name,
-                searchText: `${id} ${name}`,
+                searchText: `${id} ${name} ${desc} ${phone}`.trim(),
 
                 // ✅ META (exact keys as optionColumns)
                 meta: {
@@ -563,7 +563,7 @@ export class BranchCoordinatorAssignment implements OnInit {
               return {
                 value: id,
                 label: name,
-                searchText: `${id} ${name}`,
+                searchText: `${id} ${name}${department} ${designation}`.trim(),
 
                 // ✅ META (exact keys as optionColumns)
                 meta: {
