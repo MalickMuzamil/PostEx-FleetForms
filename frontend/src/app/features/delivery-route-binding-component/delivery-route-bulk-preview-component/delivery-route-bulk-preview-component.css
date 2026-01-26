@@ -1,0 +1,45 @@
+.table-danger {
+  background: rgba(221, 6, 28, 0.08) !important;
+}
+
+.field-err {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  color: #b42318;
+  background: rgba(220, 53, 69, 0.12);
+}
+
+.field-err.warn {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.field-err .dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.field-err .file {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+
+.cell-wrap{
+  display: flex;
+  flex-direction: column;
+}
+
+.cell-msg{
+  min-height: 22px;     
+  margin-top: 4px;
+}
