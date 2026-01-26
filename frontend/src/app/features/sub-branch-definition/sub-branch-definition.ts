@@ -297,9 +297,14 @@ export class SubBranchDefinitionComponent implements OnInit {
     const code = this.getSelectedBranchCode();
     const value = (payload.subBranchName ?? '').toString().trim().toUpperCase();
 
-    const fullRegex = new RegExp(`^${code}-[A-Z0-9]{3}-[A-Z0-9]{3}$`);
-    if (!fullRegex.test(value)) {
-      this.notification.error('Invalid Format', `Must be ${code}-A0A-AAA`);
+    const shortRegex = new RegExp(`^${code}-[A-Z0-9]{3}$`);
+    const longRegex = new RegExp(`^${code}-[A-Z0-9]{3}-[A-Z0-9]{3}$`);
+
+    if (!shortRegex.test(value) && !longRegex.test(value)) {
+      this.notification.error(
+        'Invalid Format',
+        `Must be ${code}-AAA or ${code}-AAA-AAA`,
+      );
       return;
     }
 
