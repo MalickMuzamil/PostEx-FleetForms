@@ -59,25 +59,49 @@
                                     <!-- Delivery Route -->
                                     <td>
                                         <div class="cell-wrap">
-                                    
-                                            <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Any" [formControl]="row.deliveryRouteControl"
-                                                [nzDisabled]="isLoading" (ngModelChange)="onRowRouteChange(row)"  class="route-select">
-                                                <nz-option *ngFor="let dr of deliveryRoutes" [nzValue]="dr.DeliveryRouteID"
-                                                    [nzLabel]="'{' + dr.DeliveryRouteID + '} ' + dr.DeliveryRouteNo + ' - ' + dr.DeliveryRouteDescription">
+
+                                            <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Any"
+                                                [formControl]="row.deliveryRouteControl" [nzDisabled]="isLoading"
+                                                nzDropdownClassName="opt-dropdown" class="route-select"
+                                                (ngModelChange)="onRowRouteChange(row)">
+
+                                                <!-- 🔹 HEADER ROW -->
+                                                <nz-option nzDisabled nzCustomContent>
+                                                    <div class="opt-row opt-header"
+                                                        style="grid-template-columns: 80px 1fr">
+                                                        <div class="opt-cell">ID</div>
+                                                        <div class="opt-cell">Delivery Route</div>
+                                                    </div>
                                                 </nz-option>
+
+                                                <!-- 🔹 DATA ROWS -->
+                                                <nz-option *ngFor="let dr of deliveryRoutes"
+                                                    [nzValue]="dr.DeliveryRouteID" [nzLabel]="dr.DeliveryRouteNo"
+                                                    nzCustomContent>
+                                                    <div class="opt-row" style="grid-template-columns: 80px 1fr">
+                                                        <div class="opt-cell">
+                                                            {{ dr.DeliveryRouteID }}
+                                                        </div>
+                                                        <div class="opt-cell">
+                                                            {{ dr.DeliveryRouteNo }}
+                                                        </div>
+                                                    </div>
+                                                </nz-option>
+
                                             </nz-select>
-                                    
-                                            <!-- errors same rahenge -->
+
                                             <div class="cell-msg">
-                                                <div class="field-err" *ngIf="(row.errors ?? []).includes('Delivery Route is required')">
+                                                <div class="field-err"
+                                                    *ngIf="(row.errors ?? []).includes('Delivery Route is required')">
                                                     <span class="dot"></span>
                                                     <strong>Delivery Route is required</strong>
                                                     <span class="file" *ngIf="row.rawDeliveryRoute">
                                                         Route ID: <strong>{{ row.rawDeliveryRoute }}</strong>
                                                     </span>
                                                 </div>
-                                    
-                                                <div class="field-err" *ngIf="(row.errors ?? []).includes('Delivery Route ID does not exist')">
+
+                                                <div class="field-err"
+                                                    *ngIf="(row.errors ?? []).includes('Delivery Route ID does not exist')">
                                                     <span class="dot"></span>
                                                     <strong>Route does not exist in DB</strong>
                                                     <span class="file" *ngIf="row.rawDeliveryRoute">
@@ -85,44 +109,58 @@
                                                     </span>
                                                 </div>
                                             </div>
-                                    
+
                                         </div>
                                     </td>
 
                                     <!-- Branch -->
                                     <td>
                                         <div class="cell-wrap">
-                                            <select class="form-select form-select-sm" [(ngModel)]="row.branchId"
-                                                [disabled]="isLoading || !row.deliveryRouteControl.value"
-                                                (ngModelChange)="onRowBranchChange(row)">
-
-                                                <option [ngValue]="null">Select Branch</option>
-                                                <option *ngFor="let b of row.routeBranches" [ngValue]="b.value">
-                                                    {{ '{' + b.value + '} ' + b.label }}
-                                                </option>
-                                            </select>
-
+                                    
+                                            <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Any" [(ngModel)]="row.branchId"
+                                                [nzDisabled]="isLoading || !row.deliveryRouteControl.value" nzDropdownClassName="opt-dropdown"
+                                                class="route-select" (ngModelChange)="onRowBranchChange(row)">
+                                    
+                                                <!-- 🔹 HEADER ROW -->
+                                                <nz-option nzDisabled nzCustomContent>
+                                                    <div class="opt-row opt-header" style="grid-template-columns: 80px 1fr">
+                                                        <div class="opt-cell">ID</div>
+                                                        <div class="opt-cell">Branch</div>
+                                                    </div>
+                                                </nz-option>
+                                    
+                                                <!-- 🔹 DATA ROWS -->
+                                                <nz-option *ngFor="let b of row.routeBranches" [nzValue]="b.value" [nzLabel]="b.label" nzCustomContent>
+                                                    <div class="opt-row" style="grid-template-columns: 80px 1fr">
+                                                        <div class="opt-cell">
+                                                            {{ b.value }}
+                                                        </div>
+                                                        <div class="opt-cell">
+                                                            {{ b.label }}
+                                                        </div>
+                                                    </div>
+                                                </nz-option>
+                                    
+                                            </nz-select>
+                                    
                                             <div class="cell-msg">
-
+                                    
                                                 <!-- Branch required -->
-                                                <div class="field-err"
-                                                    *ngIf="row.deliveryRouteControl.value && !row.branchId">
-
+                                                <div class="field-err" *ngIf="row.deliveryRouteControl.value && !row.branchId">
                                                     <span class="dot"></span>
                                                     <strong>Branch is required</strong>
                                                 </div>
-
+                                    
                                                 <!-- Branch invalid -->
                                                 <div class="field-err" *ngIf="isInvalidBranch(row)">
-
                                                     <span class="dot"></span>
                                                     <strong>Branch ID is wrong</strong>
-
+                                    
                                                     <span class="file">
                                                         Branch ID: <strong>{{ row.branchId }}</strong>
                                                     </span>
                                                 </div>
-
+                                    
                                             </div>
                                         </div>
                                     </td>
@@ -130,34 +168,53 @@
                                     <!-- Sub Branch -->
                                     <td>
                                         <div class="cell-wrap">
-                                            <select class="form-select form-select-sm" [(ngModel)]="row.subBranchId"
-                                                [disabled]="isLoading || !row.branchId"
+                                    
+                                            <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Any" [(ngModel)]="row.subBranchId"
+                                                [nzDisabled]="isLoading || !row.branchId" nzDropdownClassName="opt-dropdown" class="route-select"
                                                 (ngModelChange)="onRowSubBranchChange(row)">
-                                                <option [ngValue]="null">Select Sub Branch</option>
-                                                <option *ngFor="let sb of row.subBranches" [ngValue]="sb.SubBranchID">
-                                                    {{ '{' + sb.SubBranchID + '} ' + sb.SubBranchName }}
-                                                </option>
-                                            </select>
-
+                                    
+                                                <!-- 🔹 HEADER ROW -->
+                                                <nz-option nzDisabled nzCustomContent>
+                                                    <div class="opt-row opt-header" style="grid-template-columns: 80px 1fr">
+                                                        <div class="opt-cell">ID</div>
+                                                        <div class="opt-cell">Sub Branch</div>
+                                                    </div>
+                                                </nz-option>
+                                    
+                                                <!-- 🔹 DATA ROWS -->
+                                                <nz-option *ngFor="let sb of row.subBranches" [nzValue]="sb.SubBranchID" [nzLabel]="sb.SubBranchName"
+                                                    nzCustomContent>
+                                                    <div class="opt-row" style="grid-template-columns: 80px 1fr">
+                                                        <div class="opt-cell">
+                                                            {{ sb.SubBranchID }}
+                                                        </div>
+                                                        <div class="opt-cell">
+                                                            {{ sb.SubBranchName }}
+                                                        </div>
+                                                    </div>
+                                                </nz-option>
+                                    
+                                            </nz-select>
+                                    
                                             <div class="cell-msg">
-                                                <div class="field-err"
-                                                    *ngIf="(row.errors ?? []).includes('Sub Branch is required')">
+                                    
+                                                <div class="field-err" *ngIf="(row.errors ?? []).includes('Sub Branch is required')">
                                                     <span class="dot"></span>
                                                     <strong>Sub Branch is required</strong>
                                                     <span class="file" *ngIf="row.rawSubBranch">
                                                         Sub Branch ID: <strong>{{ row.rawSubBranch }}</strong>
                                                     </span>
                                                 </div>
-
+                                    
                                                 <div class="field-err warn"
                                                     *ngIf="(row.errors ?? []).includes('Invalid SubBranchID (not found OR not mapped to BranchID)')">
                                                     <span class="dot"></span>
-                                                    <strong>Sub Branch does not exist in DB / not mapped to
-                                                        Branch</strong>
+                                                    <strong>Sub Branch does not exist in DB / not mapped to Branch</strong>
                                                     <span class="file" *ngIf="row.rawSubBranch">
                                                         Sub Branch ID: <strong>{{ row.rawSubBranch }}</strong>
                                                     </span>
                                                 </div>
+                                    
                                             </div>
                                         </div>
                                     </td>
@@ -235,9 +292,10 @@
                                     <!-- Required Reports -->
                                     <td>
                                         <div class="cell-wrap">
-                                            <select class="form-select form-select-sm" [(ngModel)]="row.requiredReportsFlag" [disabled]="isLoading"
+                                            <select class="form-select form-select-sm"
+                                                [(ngModel)]="row.requiredReportsFlag" [disabled]="isLoading"
                                                 (ngModelChange)="onRowFlagChange(row)">
-                                    
+
                                                 <option [ngValue]="1">Active</option>
                                                 <option [ngValue]="0">Inactive</option>
                                             </select>
