@@ -63,7 +63,7 @@
                                             <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Any"
                                                 [formControl]="row.deliveryRouteControl" [nzDisabled]="isLoading"
                                                 nzDropdownClassName="opt-dropdown" class="route-select"
-                                                (ngModelChange)="onRowRouteChange(row)">
+                                                (ngModelChange)="onRowRouteChange(row)" [nzFilterOption]="filterByIdAndName">
 
                                                 <!-- 🔹 HEADER ROW -->
                                                 <nz-option nzDisabled nzCustomContent>
@@ -119,7 +119,7 @@
                                     
                                             <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Any" [(ngModel)]="row.branchId"
                                                 [nzDisabled]="isLoading || !row.deliveryRouteControl.value" nzDropdownClassName="opt-dropdown"
-                                                class="route-select" (ngModelChange)="onRowBranchChange(row)">
+                                                class="route-select" (ngModelChange)="onRowBranchChange(row)" [nzFilterOption]="filterByIdAndName">
                                     
                                                 <!-- 🔹 HEADER ROW -->
                                                 <nz-option nzDisabled nzCustomContent>
@@ -171,7 +171,7 @@
                                     
                                             <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Any" [(ngModel)]="row.subBranchId"
                                                 [nzDisabled]="isLoading || !row.branchId" nzDropdownClassName="opt-dropdown" class="route-select"
-                                                (ngModelChange)="onRowSubBranchChange(row)">
+                                                (ngModelChange)="onRowSubBranchChange(row)" [nzFilterOption]="filterByIdAndName">
                                     
                                                 <!-- 🔹 HEADER ROW -->
                                                 <nz-option nzDisabled nzCustomContent>

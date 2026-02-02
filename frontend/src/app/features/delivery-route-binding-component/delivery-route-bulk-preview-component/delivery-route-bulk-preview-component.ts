@@ -1391,4 +1391,9 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
 
     return !row.routeBranches.some((b:any) => b.value === row.branchId);
   }
+
+  filterByIdAndName = (input: string, option: any): boolean =>
+  option.nzValue?.toString().toLowerCase().includes(input.toLowerCase()) ||
+  option.nzLabel?.toLowerCase().includes(input.toLowerCase());
 }
+
