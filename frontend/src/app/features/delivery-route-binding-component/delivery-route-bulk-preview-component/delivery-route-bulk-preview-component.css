@@ -1,3 +1,7 @@
+/* =========================
+   TABLE ROW ERROR STYLES
+   ========================= */
+
 .table-danger {
   background: rgba(221, 6, 28, 0.08) !important;
 }
@@ -33,14 +37,17 @@
   opacity: 0.8;
 }
 
+/* =========================
+   TABLE CELL LAYOUT
+   ========================= */
 
-.cell-wrap{
+.cell-wrap {
   display: flex;
   flex-direction: column;
 }
 
-.cell-msg{
-  min-height: 22px;     
+.cell-msg {
+  min-height: 22px;
   margin-top: 4px;
 }
 
@@ -50,4 +57,50 @@ td {
 
 .route-select {
   width: 320px;
+}
+
+/* =========================
+   TABLE STYLE DROPDOWN
+   (GLOBAL / REUSABLE)
+   ========================= */
+
+/* remove extra dropdown padding */
+::ng-deep .ant-select-dropdown {
+  padding: 0;
+}
+
+/* option container full width */
+::ng-deep .ant-select-item-option-content {
+  width: 100%;
+}
+
+/* dropdown row (table row look) */
+::ng-deep .ant-select-item-option-content .opt-row {
+  display: grid;
+  grid-template-columns: 80px 1fr; /* ID | Route No */
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+}
+
+/* header row */
+::ng-deep .ant-select-item-option-content .opt-header {
+  font-weight: 600;
+  opacity: 0.85;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+/* cells */
+::ng-deep .ant-select-item-option-content .opt-cell {
+  min-width: 0;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* hover effect */
+::ng-deep .ant-select-item-option-active {
+  background: #eaf7ff !important;
 }
