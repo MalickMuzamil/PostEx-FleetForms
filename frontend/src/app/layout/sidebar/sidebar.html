@@ -85,4 +85,39 @@
     </li>
 
 
+    <li nz-submenu nzTitle="CNC Binding Forms" nzIcon="cluster">
+        <ul>
+            <li nz-menu-item routerLink="/branch-to-L1" routerLinkActive="nz-menu-item-selected">
+                <i class="fas fa-layer-group me-2"></i>
+                <span *ngIf="!collapsed">Branch-L1</span>
+            </li>
+
+            <li nz-menu-item routerLink="/L1-to-L2" routerLinkActive="nz-menu-item-selected">
+                <i class="fas fa-layer-group me-2"></i>
+                <span *ngIf="!collapsed">L1-L2</span>
+            </li>
+
+            <li nz-menu-item routerLink="/L2-to-L3" routerLinkActive="nz-menu-item-selected">
+                <i class="fas fa-layer-group me-2"></i>
+                <span *ngIf="!collapsed">L2-L3</span>
+            </li>
+
+            <li nz-menu-item routerLink="/L3-to-L4" routerLinkActive="nz-menu-item-selected">
+                <i class="fas fa-layer-group me-2"></i>
+                <span *ngIf="!collapsed">L3-L4</span>
+            </li>
+
+            <li nz-menu-item routerLink="/L4-to-L5" routerLinkActive="nz-menu-item-selected">
+                <i class="fas fa-layer-group me-2"></i>
+                <span *ngIf="!collapsed">L4-L5</span>
+            </li>
+
+            <li nz-menu-item routerLink="/L5-to-L6" routerLinkActive="nz-menu-item-selected">
+                <i class="fas fa-layer-group me-2"></i>
+                <span *ngIf="!collapsed">L5-L6</span>
+            </li>
+        </ul>
+    </li>
+
+
 </ul>

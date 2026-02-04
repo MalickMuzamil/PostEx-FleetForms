@@ -143,6 +143,54 @@ export const routes: Routes = [
             './features/CNC-Forms/cnc-l6/cnc-l6'
           ).then((m) => m.CncL6),
       },
+
+      {
+        path: 'branch-to-L1',
+        loadComponent: () =>
+          import(
+            './features/CNC-Binnding-Forms/b-l1/b-l1'
+          ).then((m) => m.BL1),
+      },
+
+      {
+        path: 'L1-to-L2',
+        loadComponent: () =>
+          import(
+            './features/CNC-Binnding-Forms/b-l2/b-l2'
+          ).then((m) => m.BL2),
+      },
+
+      {
+        path: 'L2-to-L3',
+        loadComponent: () =>
+          import(
+            './features/CNC-Binnding-Forms/b-l3/b-l3'
+          ).then((m) => m.BL3),
+      },
+
+      {
+        path: 'L3-to-L4',
+        loadComponent: () =>
+          import(
+            './features/CNC-Binnding-Forms/b-l4/b-l4'
+          ).then((m) => m.BL4),
+      },
+
+      {
+        path: 'L4-to-L5',
+        loadComponent: () =>
+          import(
+            './features/CNC-Binnding-Forms/b-l5/b-l5'
+          ).then((m) => m.BL5),
+      },
+
+      {
+        path: 'L5-to-L6',
+        loadComponent: () =>
+          import(
+            './features/CNC-Binnding-Forms/b-l6/b-l6'
+          ).then((m) => m.BL6),
+      },
       
     ],
   },
