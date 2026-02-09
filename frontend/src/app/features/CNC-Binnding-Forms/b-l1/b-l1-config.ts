@@ -76,9 +76,9 @@ export const OPS_CNC_L1_BRANCH_MAPPING_TABLE: TableConfig = {
 
   columns: [
     { key: 'id', title: 'ID' },
-    { key: 'branchId', title: 'Branch' },
+    { key: 'branchName', title: 'Branch' },
     { key: 'branchDescription', title: 'Branch Description' },
-    { key: 'cncL1Id', title: 'CnC L1' },
+    { key: 'cncL1Name', title: 'CnC L1' },
     { key: 'cncL1Description', title: 'CnC L1 Description' },
     { key: 'effectiveDate', title: 'Effective Date' },
   ],

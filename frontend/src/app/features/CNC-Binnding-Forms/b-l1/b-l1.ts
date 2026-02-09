@@ -46,6 +46,8 @@ export class BL1 implements OnInit {
   formData: any = {};
 
   addLoading = false;
+  branchMap: Record<number, string> = {};
+  cncMap: Record<number, string> = {};
 
   constructor(
     private service: OpsCncL1BranchMappingService,
@@ -63,18 +65,50 @@ export class BL1 implements OnInit {
   load(): void {
     this.loading = true;
 
-    this.service.getAll().subscribe({
+    forkJoin({
+      data: this.service.getAll(),
+      branches: this.service.getBranches(),
+      cnc: this.service.getCnCL1List(),
+    }).subscribe({
       next: (res: any) => {
-        this.rows = Array.isArray(res) ? res : (res?.data ?? []);
+
+        const rows = Array.isArray(res.data)
+          ? res.data
+          : (res.data?.data ?? []);
+
+        const branchArr = Array.isArray(res.branches)
+          ? res.branches
+          : (res.branches?.data ?? []);
+
+        const cncArr = Array.isArray(res.cnc)
+          ? res.cnc
+          : (res.cnc?.data ?? []);
+
+        // build maps
+        this.branchMap = {};
+        branchArr.forEach((b: any) => {
+          this.branchMap[b.id] = b.name;
+        });
+
+        this.cncMap = {};
+        cncArr.forEach((c: any) => {
+          this.cncMap[c.id] = c.name;
+        });
+
+        // replace ids with names
+        this.rows = rows.map((r: any) => ({
+          ...r,
+          branchName: this.branchMap[r.branchId] || r.branchId,
+          cncL1Name: this.cncMap[r.cncL1Id] || r.cncL1Id,
+          effectiveDate: r.effectiveDate?.split('T')[0]
+        }));
+
         this.loading = false;
       },
-      error: (err) => {
+      error: () => {
         this.loading = false;
-        this.notification.error(
-          'Error',
-          err?.error?.message || 'Failed to load data'
-        );
-      },
+        this.notification.error('Error', 'Failed to load data');
+      }
     });
   }
 
@@ -90,6 +124,14 @@ export class BL1 implements OnInit {
     this.isEdit = false;
     this.selectedId = null;
     this.formData = {};
+
+    const branchField = this.formConfig.fields.find(
+      f => f.key === 'branchId'
+    );
+
+    if (branchField) {
+      branchField.disabled = false;
+    }
 
     forkJoin({
       branches: this.service.getBranches(),
@@ -157,38 +199,57 @@ export class BL1 implements OnInit {
 
   openEdit(row: any): void {
 
+    const branchField = this.formConfig.fields.find(f => f.key === 'branchId');
+    if (branchField) branchField.disabled = true;
+
     this.isEdit = true;
     this.selectedId = row?.id ?? null;
 
-    // ===== LOAD BRANCHES =====
     this.service.getBranches().subscribe({
       next: (branches: any) => {
 
-        const branchOptions =
-          (Array.isArray(branches) ? branches : branches?.data ?? [])
-            .map((b: any) => ({
-              label: b.name,
-              value: b.id
-            }));
+        const branchArray = (Array.isArray(branches) ? branches : branches?.data ?? []);
 
-        this.formConfig.fields.find(f => f.key === 'branchId')!.options =
-          branchOptions;
+        const branchOptions = branchArray.map((b: any) => {
+          const id = +(b.id ?? b.ID ?? b.BranchID ?? b.BranchId ?? null);
+          const name = (b.name ?? b.Name ?? b.BranchName ?? '').toString().trim();
+          const desc = (b.desc ?? b.description ?? b.BranchDesc ?? '').toString().trim();
 
-        // ===== LOAD CNC L1 =====
+          return {
+            label: name || String(id),
+            value: id,
+            searchText: `${id} ${name} ${desc}`.trim(),
+            meta: { id, name, desc }
+          };
+        });
+
+        this.formConfig.fields.find(f => f.key === 'branchId')!.options$ =
+          of(branchOptions);
+
         this.service.getCnCL1List().subscribe({
           next: (cnc: any) => {
 
-            const cncOptions =
-              (Array.isArray(cnc) ? cnc : cnc?.data ?? [])
-                .map((c: any) => ({
-                  label: c.name,
-                  value: c.id
-                }));
+            const cncArray = (Array.isArray(cnc) ? cnc : cnc?.data ?? []);
 
-            this.formConfig.fields.find(f => f.key === 'cncL1Id')!.options =
-              cncOptions;
+            const cncOptions = cncArray.map((c: any) => {
+              const id = +(c.id ?? c.ID ?? c.cncL1Id ?? c.CncL1Id ?? c.CNC_L1_ID ?? null);
+              if (Number.isNaN(id)) return null;
 
-            // ===== SET FORM DATA AFTER OPTIONS =====
+              const name = (c.name ?? c.Name ?? c.code ?? '').toString().trim();
+              const desc = (c.desc ?? c.description ?? c.CNCL1Desc ?? c.CNC_L1_Desc ?? '').toString().trim();
+
+              return {
+                label: name || String(id),
+                value: id,
+                searchText: `${id} ${name} ${desc}`.trim(),
+                meta: { id, name, desc }
+              };
+            }).filter(Boolean as any);
+
+            this.formConfig.fields.find(f => f.key === 'cncL1Id')!.options$ =
+              of(cncOptions);
+
+            // SET VALUES AFTER OPTIONS READY
             this.formData = {
               branchId: row.branchId,
               cncL1Id: row.cncL1Id,
@@ -196,17 +257,12 @@ export class BL1 implements OnInit {
             };
 
             this.showForm = true;
-          },
-          error: () => {
-            this.showForm = true;
           }
         });
-      },
-      error: () => {
-        this.showForm = true;
       }
     });
   }
+
 
   /* =======================
      SUBMIT

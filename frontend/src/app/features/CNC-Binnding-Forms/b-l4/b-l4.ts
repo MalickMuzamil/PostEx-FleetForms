@@ -35,6 +35,8 @@ export class BL4 implements OnInit {
 
   formData: any = {};
   addLoading = false;
+  l3Map: Record<number, string> = {};
+  l4Map: Record<number, string> = {};
 
   constructor(
     private service: OpsCncL3L4MappingService,
@@ -47,9 +49,43 @@ export class BL4 implements OnInit {
 
   load() {
     this.loading = true;
-    this.service.getAll().subscribe({
+
+    forkJoin({
+      data: this.service.getAll(),
+      l3: this.service.getCnCL3List(),
+      l4: this.service.getCnCL4List()
+    }).subscribe({
       next: (res: any) => {
-        this.rows = Array.isArray(res) ? res : (res?.data ?? []);
+
+        const rows = Array.isArray(res.data)
+          ? res.data
+          : (res.data?.data ?? []);
+
+        const l3Arr = Array.isArray(res.l3)
+          ? res.l3
+          : (res.l3?.data ?? []);
+
+        const l4Arr = Array.isArray(res.l4)
+          ? res.l4
+          : (res.l4?.data ?? []);
+
+        this.l3Map = {};
+        l3Arr.forEach((x: any) => {
+          this.l3Map[x.id] = x.name;
+        });
+
+        this.l4Map = {};
+        l4Arr.forEach((x: any) => {
+          this.l4Map[x.id] = x.name;
+        });
+
+        this.rows = rows.map((r: any) => ({
+          ...r,
+          cncL3Name: this.l3Map[r.cncL3Id] || r.cncL3Id,
+          cncL4Name: this.l4Map[r.cncL4Id] || r.cncL4Id,
+          effectiveDate: r.effectiveDate?.split('T')[0]
+        }));
+
         this.loading = false;
       },
       error: () => this.loading = false
@@ -65,37 +101,33 @@ export class BL4 implements OnInit {
     this.selectedId = null;
     this.formData = {};
 
+    const l3Lock = this.formConfig.fields.find(f => f.key === 'cncL3Id');
+    if (l3Lock) l3Lock.disabled = false;
+
     forkJoin({
       l3: this.service.getCnCL3List(),
       l4: this.service.getCnCL4List(),
     }).subscribe({
       next: ({ l3, l4 }) => {
 
-        const l3Field = this.formConfig.fields.find(f => f.key === 'cncL3Id');
-        if (l3Field) {
-          const l3Any = l3 as any;
-          const arr = Array.isArray(l3Any) ? l3Any : l3Any?.data ?? [];
-          l3Field.options$ = of(
-            arr.map((x: any) => ({
-              label: x.name,
-              value: x.id,
-              meta: x
-            }))
-          );
-        }
+        const l3Arr = Array.isArray(l3) ? l3 : (l3 as any)?.data ?? [];
+        const l4Arr = Array.isArray(l4) ? l4 : (l4 as any)?.data ?? [];
 
-        const l4Field = this.formConfig.fields.find(f => f.key === 'cncL4Id');
-        if (l4Field) {
-          const l4Any = l4 as any;
-          const arr = Array.isArray(l4Any) ? l4Any : l4Any?.data ?? [];
-          l4Field.options$ = of(
-            arr.map((x: any) => ({
-              label: x.name,
-              value: x.id,
-              meta: x
-            }))
-          );
-        }
+        this.formConfig.fields.find(f => f.key === 'cncL3Id')!.options$ =
+          of(l3Arr.map((x: any) => ({
+            label: x.name,
+            value: x.id,
+            searchText: `${x.id} ${x.name} ${x.desc}`.trim(),
+            meta: { id: x.id, name: x.name, desc: x.desc }
+          })));
+
+        this.formConfig.fields.find(f => f.key === 'cncL4Id')!.options$ =
+          of(l4Arr.map((x: any) => ({
+            label: x.name,
+            value: x.id,
+            searchText: `${x.id} ${x.name} ${x.desc}`.trim(),
+            meta: { id: x.id, name: x.name, desc: x.desc }
+          })));
 
         this.showForm = true;
         this.addLoading = false;
@@ -112,6 +144,9 @@ export class BL4 implements OnInit {
     this.isEdit = true;
     this.selectedId = row.id;
 
+    const l3Lock = this.formConfig.fields.find(f => f.key === 'cncL3Id');
+    if (l3Lock) l3Lock.disabled = true;
+
     forkJoin({
       l3: this.service.getCnCL3List(),
       l4: this.service.getCnCL4List(),
@@ -121,12 +156,21 @@ export class BL4 implements OnInit {
         const l3Arr = Array.isArray(l3) ? l3 : (l3 as any)?.data ?? [];
         const l4Arr = Array.isArray(l4) ? l4 : (l4 as any)?.data ?? [];
 
-        // 🔥 use options instead of options$
-        this.formConfig.fields.find(f => f.key === 'cncL3Id')!.options =
-          l3Arr.map((x: any) => ({ label: x.name, value: x.id }));
+        this.formConfig.fields.find(f => f.key === 'cncL3Id')!.options$ =
+          of(l3Arr.map((x: any) => ({
+            label: x.name,
+            value: x.id,
+            searchText: `${x.id} ${x.name} ${x.desc}`.trim(),
+            meta: { id: x.id, name: x.name, desc: x.desc }
+          })));
 
-        this.formConfig.fields.find(f => f.key === 'cncL4Id')!.options =
-          l4Arr.map((x: any) => ({ label: x.name, value: x.id }));
+        this.formConfig.fields.find(f => f.key === 'cncL4Id')!.options$ =
+          of(l4Arr.map((x: any) => ({
+            label: x.name,
+            value: x.id,
+            searchText: `${x.id} ${x.name} ${x.desc}`.trim(),
+            meta: { id: x.id, name: x.name, desc: x.desc }
+          })));
 
         this.formData = {
           cncL3Id: row.cncL3Id,
@@ -138,7 +182,6 @@ export class BL4 implements OnInit {
       }
     });
   }
-
 
   onSubmit(payload: any) {
 

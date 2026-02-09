@@ -21,7 +21,7 @@ import { OpsCncL1L2MappingService } from '../../../core/services/OpsCncL1L2Mappi
   styleUrl: './b-l2.css',
 })
 export class BL2 implements OnInit {
-formConfig = OPS_CNC_L1_L2_MAPPING_FORM;
+  formConfig = OPS_CNC_L1_L2_MAPPING_FORM;
   tableConfig = OPS_CNC_L1_L2_MAPPING_TABLE;
 
   rows: any[] = [];
@@ -35,10 +35,13 @@ formConfig = OPS_CNC_L1_L2_MAPPING_FORM;
   formData: any = {};
   addLoading = false;
 
+  l1Map: Record<number, string> = {};
+  l2Map: Record<number, string> = {};
+
   constructor(
     private service: OpsCncL1L2MappingService,
     private notification: NzNotificationService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.load();
@@ -46,9 +49,45 @@ formConfig = OPS_CNC_L1_L2_MAPPING_FORM;
 
   load() {
     this.loading = true;
-    this.service.getAll().subscribe({
+
+    forkJoin({
+      data: this.service.getAll(),
+      l1: this.service.getCnCL1List(),
+      l2: this.service.getCnCL2List()
+    }).subscribe({
       next: (res: any) => {
-        this.rows = Array.isArray(res) ? res : (res?.data ?? []);
+
+        const rows = Array.isArray(res.data)
+          ? res.data
+          : (res.data?.data ?? []);
+
+        const l1Arr = Array.isArray(res.l1)
+          ? res.l1
+          : (res.l1?.data ?? []);
+
+        const l2Arr = Array.isArray(res.l2)
+          ? res.l2
+          : (res.l2?.data ?? []);
+
+        // build lookup
+        this.l1Map = {};
+        l1Arr.forEach((x: any) => {
+          this.l1Map[x.id] = x.name;
+        });
+
+        this.l2Map = {};
+        l2Arr.forEach((x: any) => {
+          this.l2Map[x.id] = x.name;
+        });
+
+        // map rows
+        this.rows = rows.map((r: any) => ({
+          ...r,
+          cncL1Name: this.l1Map[r.cncL1Id] || r.cncL1Id,
+          cncL2Name: this.l2Map[r.cncL2Id] || r.cncL2Id,
+          effectiveDate: r.effectiveDate?.split('T')[0]
+        }));
+
         this.loading = false;
       },
       error: () => this.loading = false
@@ -63,6 +102,14 @@ formConfig = OPS_CNC_L1_L2_MAPPING_FORM;
     this.isEdit = false;
     this.selectedId = null;
     this.formData = {};
+
+    const l1Field = this.formConfig.fields.find(
+      f => f.key === 'cncL1Id'
+    );
+
+    if (l1Field) {
+      l1Field.disabled = false;
+    }
 
     forkJoin({
       l1: this.service.getCnCL1List(),
@@ -122,6 +169,14 @@ formConfig = OPS_CNC_L1_L2_MAPPING_FORM;
 
     this.isEdit = true;
     this.selectedId = row.id;
+
+    const l1Field = this.formConfig.fields.find(
+      f => f.key === 'cncL1Id'
+    );
+
+    if (l1Field) {
+      l1Field.disabled = true;
+    }
 
     forkJoin({
       l1: this.service.getCnCL1List(),
