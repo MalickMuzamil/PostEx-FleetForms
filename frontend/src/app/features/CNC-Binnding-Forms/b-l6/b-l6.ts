@@ -34,6 +34,8 @@ export class BL6 implements OnInit {
 
   formData: any = {};
   addLoading = false;
+  l5Map: Record<number, string> = {};
+  l6Map: Record<number, string> = {};
 
   constructor(
     private service: OpsCncL5L6MappingService,
@@ -46,9 +48,43 @@ export class BL6 implements OnInit {
 
   load() {
     this.loading = true;
-    this.service.getAll().subscribe({
+
+    forkJoin({
+      data: this.service.getAll(),
+      l5: this.service.getCnCL5List(),
+      l6: this.service.getCnCL6List()
+    }).subscribe({
       next: (res: any) => {
-        this.rows = Array.isArray(res) ? res : (res?.data ?? []);
+
+        const rows = Array.isArray(res.data)
+          ? res.data
+          : (res.data?.data ?? []);
+
+        const l5Arr = Array.isArray(res.l5)
+          ? res.l5
+          : (res.l5?.data ?? []);
+
+        const l6Arr = Array.isArray(res.l6)
+          ? res.l6
+          : (res.l6?.data ?? []);
+
+        this.l5Map = {};
+        l5Arr.forEach((x: any) => {
+          this.l5Map[x.id] = x.name;
+        });
+
+        this.l6Map = {};
+        l6Arr.forEach((x: any) => {
+          this.l6Map[x.id] = x.name;
+        });
+
+        this.rows = rows.map((r: any) => ({
+          ...r,
+          cncL5Name: this.l5Map[r.cncL5Id] || r.cncL5Id,
+          cncL6Name: this.l6Map[r.cncL6Id] || r.cncL6Id,
+          effectiveDate: r.effectiveDate?.split('T')[0]
+        }));
+
         this.loading = false;
       },
       error: () => this.loading = false
@@ -64,6 +100,9 @@ export class BL6 implements OnInit {
     this.selectedId = null;
     this.formData = {};
 
+    const l5Lock = this.formConfig.fields.find(f => f.key === 'cncL5Id');
+    if (l5Lock) l5Lock.disabled = false;
+
     forkJoin({
       l5: this.service.getCnCL5List(),
       l6: this.service.getCnCL6List(),
@@ -73,27 +112,21 @@ export class BL6 implements OnInit {
         const l5Arr = Array.isArray(l5) ? l5 : (l5 as any)?.data ?? [];
         const l6Arr = Array.isArray(l6) ? l6 : (l6 as any)?.data ?? [];
 
-        const l5Field = this.formConfig.fields.find(f => f.key === 'cncL5Id');
-        if (l5Field) {
-          l5Field.options$ = of(
-            l5Arr.map((x: any) => ({
-              label: x.name,
-              value: x.id,
-              meta: x
-            }))
-          );
-        }
+        this.formConfig.fields.find(f => f.key === 'cncL5Id')!.options$ =
+          of(l5Arr.map((x: any) => ({
+            label: x.name,
+            value: x.id,
+            searchText: `${x.id} ${x.name} ${x.desc}`.trim(),
+            meta: { id: x.id, name: x.name, desc: x.desc }
+          })));
 
-        const l6Field = this.formConfig.fields.find(f => f.key === 'cncL6Id');
-        if (l6Field) {
-          l6Field.options$ = of(
-            l6Arr.map((x: any) => ({
-              label: x.name,
-              value: x.id,
-              meta: x
-            }))
-          );
-        }
+        this.formConfig.fields.find(f => f.key === 'cncL6Id')!.options$ =
+          of(l6Arr.map((x: any) => ({
+            label: x.name,
+            value: x.id,
+            searchText: `${x.id} ${x.name} ${x.desc}`.trim(),
+            meta: { id: x.id, name: x.name, desc: x.desc }
+          })));
 
         this.showForm = true;
         this.addLoading = false;
@@ -110,6 +143,9 @@ export class BL6 implements OnInit {
     this.isEdit = true;
     this.selectedId = row.id;
 
+    const l5Lock = this.formConfig.fields.find(f => f.key === 'cncL5Id');
+    if (l5Lock) l5Lock.disabled = true;
+
     forkJoin({
       l5: this.service.getCnCL5List(),
       l6: this.service.getCnCL6List(),
@@ -119,17 +155,21 @@ export class BL6 implements OnInit {
         const l5Arr = Array.isArray(l5) ? l5 : (l5 as any)?.data ?? [];
         const l6Arr = Array.isArray(l6) ? l6 : (l6 as any)?.data ?? [];
 
-        this.formConfig.fields.find(f => f.key === 'cncL5Id')!.options =
-          l5Arr.map((x: any) => ({
+        this.formConfig.fields.find(f => f.key === 'cncL5Id')!.options$ =
+          of(l5Arr.map((x: any) => ({
             label: x.name,
-            value: x.id
-          }));
+            value: x.id,
+            searchText: `${x.id} ${x.name} ${x.desc}`.trim(),
+            meta: { id: x.id, name: x.name, desc: x.desc }
+          })));
 
-        this.formConfig.fields.find(f => f.key === 'cncL6Id')!.options =
-          l6Arr.map((x: any) => ({
+        this.formConfig.fields.find(f => f.key === 'cncL6Id')!.options$ =
+          of(l6Arr.map((x: any) => ({
             label: x.name,
-            value: x.id
-          }));
+            value: x.id,
+            searchText: `${x.id} ${x.name} ${x.desc}`.trim(),
+            meta: { id: x.id, name: x.name, desc: x.desc }
+          })));
 
         this.formData = {
           cncL5Id: row.cncL5Id,

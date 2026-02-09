@@ -71,9 +71,9 @@ export const OPS_CNC_L4_L5_MAPPING_TABLE: TableConfig = {
 
   columns: [
     { key: 'id', title: 'ID' },
-    { key: 'cncL4Id', title: 'CnC L4' },
+    { key: 'cncL4Name', title: 'CnC L4' },
     { key: 'cncL4Description', title: 'CnC L4 Description' },
-    { key: 'cncL5Id', title: 'CnC L5' },
+    { key: 'cncL5Name', title: 'CnC L5' },
     { key: 'cncL5Description', title: 'CnC L5 Description' },
     { key: 'effectiveDate', title: 'Effective Date' },
   ],

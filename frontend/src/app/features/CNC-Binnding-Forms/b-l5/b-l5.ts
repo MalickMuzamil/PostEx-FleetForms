@@ -35,6 +35,8 @@ export class BL5 implements OnInit {
 
   formData: any = {};
   addLoading = false;
+  l4Map: Record<number, string> = {};
+  l5Map: Record<number, string> = {};
 
   constructor(
     private service: OpsCncL4L5MappingService,
@@ -47,15 +49,48 @@ export class BL5 implements OnInit {
 
   load() {
     this.loading = true;
-    this.service.getAll().subscribe({
+
+    forkJoin({
+      data: this.service.getAll(),
+      l4: this.service.getCnCL4List(),
+      l5: this.service.getCnCL5List()
+    }).subscribe({
       next: (res: any) => {
-        this.rows = Array.isArray(res) ? res : (res?.data ?? []);
+
+        const rows = Array.isArray(res.data)
+          ? res.data
+          : (res.data?.data ?? []);
+
+        const l4Arr = Array.isArray(res.l4)
+          ? res.l4
+          : (res.l4?.data ?? []);
+
+        const l5Arr = Array.isArray(res.l5)
+          ? res.l5
+          : (res.l5?.data ?? []);
+
+        this.l4Map = {};
+        l4Arr.forEach((x: any) => {
+          this.l4Map[x.id] = x.name;
+        });
+
+        this.l5Map = {};
+        l5Arr.forEach((x: any) => {
+          this.l5Map[x.id] = x.name;
+        });
+
+        this.rows = rows.map((r: any) => ({
+          ...r,
+          cncL4Name: this.l4Map[r.cncL4Id] || r.cncL4Id,
+          cncL5Name: this.l5Map[r.cncL5Id] || r.cncL5Id,
+          effectiveDate: r.effectiveDate?.split('T')[0]
+        }));
+
         this.loading = false;
       },
       error: () => this.loading = false
     });
   }
-
 
   openAdd() {
 
@@ -66,6 +101,9 @@ export class BL5 implements OnInit {
     this.selectedId = null;
     this.formData = {};
 
+    const l4Lock = this.formConfig.fields.find(f => f.key === 'cncL4Id');
+    if (l4Lock) l4Lock.disabled = false;
+
     forkJoin({
       l4: this.service.getCnCL4List(),
       l5: this.service.getCnCL5List(),
@@ -75,27 +113,21 @@ export class BL5 implements OnInit {
         const l4Arr = Array.isArray(l4) ? l4 : (l4 as any)?.data ?? [];
         const l5Arr = Array.isArray(l5) ? l5 : (l5 as any)?.data ?? [];
 
-        const l4Field = this.formConfig.fields.find(f => f.key === 'cncL4Id');
-        if (l4Field) {
-          l4Field.options$ = of(
-            l4Arr.map((x: any) => ({
-              label: x.name,
-              value: x.id,
-              meta: x
-            }))
-          );
-        }
+        this.formConfig.fields.find(f => f.key === 'cncL4Id')!.options$ =
+          of(l4Arr.map((x: any) => ({
+            label: x.name,
+            value: x.id,
+            searchText: `${x.id} ${x.name} ${x.desc}`.trim(),
+            meta: { id: x.id, name: x.name, desc: x.desc }
+          })));
 
-        const l5Field = this.formConfig.fields.find(f => f.key === 'cncL5Id');
-        if (l5Field) {
-          l5Field.options$ = of(
-            l5Arr.map((x: any) => ({
-              label: x.name,
-              value: x.id,
-              meta: x
-            }))
-          );
-        }
+        this.formConfig.fields.find(f => f.key === 'cncL5Id')!.options$ =
+          of(l5Arr.map((x: any) => ({
+            label: x.name,
+            value: x.id,
+            searchText: `${x.id} ${x.name} ${x.desc}`.trim(),
+            meta: { id: x.id, name: x.name, desc: x.desc }
+          })));
 
         this.showForm = true;
         this.addLoading = false;
@@ -112,6 +144,9 @@ export class BL5 implements OnInit {
     this.isEdit = true;
     this.selectedId = row.id;
 
+    const l4Lock = this.formConfig.fields.find(f => f.key === 'cncL4Id');
+    if (l4Lock) l4Lock.disabled = true;
+
     forkJoin({
       l4: this.service.getCnCL4List(),
       l5: this.service.getCnCL5List(),
@@ -121,17 +156,21 @@ export class BL5 implements OnInit {
         const l4Arr = Array.isArray(l4) ? l4 : (l4 as any)?.data ?? [];
         const l5Arr = Array.isArray(l5) ? l5 : (l5 as any)?.data ?? [];
 
-        this.formConfig.fields.find(f => f.key === 'cncL4Id')!.options =
-          l4Arr.map((x: any) => ({
+        this.formConfig.fields.find(f => f.key === 'cncL4Id')!.options$ =
+          of(l4Arr.map((x: any) => ({
             label: x.name,
-            value: x.id
-          }));
+            value: x.id,
+            searchText: `${x.id} ${x.name} ${x.desc}`.trim(),
+            meta: { id: x.id, name: x.name, desc: x.desc }
+          })));
 
-        this.formConfig.fields.find(f => f.key === 'cncL5Id')!.options =
-          l5Arr.map((x: any) => ({
+        this.formConfig.fields.find(f => f.key === 'cncL5Id')!.options$ =
+          of(l5Arr.map((x: any) => ({
             label: x.name,
-            value: x.id
-          }));
+            value: x.id,
+            searchText: `${x.id} ${x.name} ${x.desc}`.trim(),
+            meta: { id: x.id, name: x.name, desc: x.desc }
+          })));
 
         this.formData = {
           cncL4Id: row.cncL4Id,
