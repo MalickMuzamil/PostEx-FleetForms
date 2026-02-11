@@ -6,6 +6,7 @@ import {
 
 import { provideRouter } from '@angular/router';
 import {
+  HTTP_INTERCEPTORS,
   provideHttpClient,
   withInterceptorsFromDi,
 } from '@angular/common/http';
@@ -26,6 +27,6 @@ export const appConfig: ApplicationConfig = {
     provideAnimations(),
     provideNzI18n(en_US),
 
-    AuthInterceptor,
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
   ],
 };
