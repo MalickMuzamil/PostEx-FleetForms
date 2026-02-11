@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { AuthLayout } from './layout/auth-layout/auth-layout';
 import { MainLayout } from './layout/main-layout/main-layout';
 import { AuthGuard } from './core/guards/auth-guard';
+import { LoginGuard } from './core/guards/login-guard';
 
 export const routes: Routes = [
   {
@@ -10,13 +11,9 @@ export const routes: Routes = [
     children: [
       {
         path: 'login',
+        canActivate: [LoginGuard],
         loadComponent: () =>
           import('./auth/login/login').then((m) => m.LoginComponent),
-      },
-      {
-        path: 'signup',
-        loadComponent: () =>
-          import('./auth/signup/signup').then((m) => m.Signup),
       },
     ],
   },
@@ -24,7 +21,7 @@ export const routes: Routes = [
   {
     path: '',
     component: MainLayout,
-    // canActivate: [AuthGuard],
+    canActivate: [AuthGuard],
     children: [
       {
         path: '',

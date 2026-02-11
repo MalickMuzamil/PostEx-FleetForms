@@ -3,7 +3,10 @@ import { CanActivate, Router } from '@angular/router';
 
 function isTokenExpired(token: string): boolean {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const payload = JSON.parse(atob(padded));
     const exp = payload?.exp;
     if (!exp) return true;
     return exp <= Math.floor(Date.now() / 1000);
@@ -13,19 +16,15 @@ function isTokenExpired(token: string): boolean {
 }
 
 @Injectable({ providedIn: 'root' })
-export class AuthGuard implements CanActivate {
+export class LoginGuard implements CanActivate {
   constructor(private router: Router) {}
 
   canActivate(): boolean {
     const token = localStorage.getItem('token');
-
-    if (!token || isTokenExpired(token)) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('UserData');
-      this.router.navigate(['/auth/login']);
+    if (token && !isTokenExpired(token)) {
+      this.router.navigateByUrl('/', { replaceUrl: true }); // login page history se bhi hat jayega
       return false;
     }
-
     return true;
   }
 }

@@ -1,13 +1,15 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, tap, catchError, of, map, Observable } from 'rxjs';
 import { GeneralService } from './general-service';
+import { Router } from '@angular/router';
+
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private authed$ = new BehaviorSubject<boolean>(false);
   private endpoint = '/auth';
 
-  constructor(private api: GeneralService) {}
+  constructor(private api: GeneralService, private router: Router) { }
 
   isAuthenticatedSync() {
     return this.authed$.value;
@@ -26,8 +28,10 @@ export class AuthService {
     );
   }
 
-  logout() {
+  logout() {    
     localStorage.removeItem('token');
+    localStorage.removeItem('UserData');
+    this.router.navigateByUrl('/auth/login', { replaceUrl: true });
     this.setAuthenticated(false);
   }
 
@@ -35,7 +39,7 @@ export class AuthService {
     return !!localStorage.getItem('token');
   }
 
-  login(payload: { email: string; password: string }): Observable<any> {
+  login(payload: { username: string; password: string }): Observable<any> {
     return this.api.post(`${this.endpoint}/login`, payload);
   }
 

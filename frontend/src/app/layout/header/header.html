@@ -1,4 +1,31 @@
-<i
-  class="fas fa-bars trigger"
-  (click)="toggle.emit()">
-</i>
+<div class="app-header">
+  <i class="fas fa-bars trigger" (click)="toggle.emit()"></i>
+
+  <div class="header-right">
+    <div nz-dropdown nzTrigger="click" [nzDropdownMenu]="menu" class="user-box">
+      <nz-avatar [nzSrc]="avatarUrl" nzSize="default">
+      </nz-avatar>
+
+      <!-- <i nz-icon nzType="down"></i> -->
+    </div>
+
+    <nz-dropdown-menu #menu="nzDropdownMenu">
+      <ul nz-menu>
+        <!-- Username inside dropdown -->
+        <li nz-menu-item disabled class="user-info">
+          {{ user?.username }}
+        </li>
+        <li nz-menu-item disabled class="user-info">
+          {{ user?.role }}
+        </li>
+
+        <li nz-menu-divider></li>
+
+        <li nz-menu-item (click)="logout()">
+          <i nz-icon nzType="logout"></i>
+          Logout
+        </li>
+      </ul>
+    </nz-dropdown-menu>
+  </div>
+</div>

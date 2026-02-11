@@ -8,20 +8,33 @@
             <p class="text-muted mb-4">Sign in to continue</p>
 
             <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-              <!-- Email -->
+              <!-- Username -->
               <div class="mb-3">
-                <label for="email" class="form-label fw-semibold">
-                  Email <span class="text-danger">*</span>
+                <label for="username" class="form-label fw-semibold">
+                  Username <span class="text-danger">*</span>
                 </label>
-
-                <input type="email" id="email" class="form-control form-control-lg" placeholder="email@example.com"
-                  formControlName="email" [class.is-invalid]="emailCtrl?.touched && emailCtrl?.invalid" />
-
-                <div class="invalid-feedback" *ngIf="emailCtrl?.touched && emailCtrl?.errors">
-                  <div *ngIf="emailCtrl?.errors?.['required']">Email is required</div>
-                  <div *ngIf="emailCtrl?.errors?.['invalidEmail']">Invalid email format</div>
-                  <div *ngIf="emailCtrl?.errors?.['maxLength']">
-                    Max {{ emailCtrl?.errors?.['maxLength']?.requiredLength }} characters allowed
+              
+                <input type="text" id="username" class="form-control form-control-lg" placeholder="e.g. 12345.XXXXX"
+                  autocomplete="username" formControlName="username" (input)="onUsernameInput($event)"
+                  [class.is-invalid]="usernameCtrl?.touched && usernameCtrl?.invalid" />
+              
+                <div class="form-text">
+                  Format: <strong>empID.name</strong>
+                </div>
+              
+                <div class="invalid-feedback" *ngIf="usernameCtrl?.touched && usernameCtrl?.errors">
+                  <div *ngIf="usernameCtrl?.errors?.['required']">Username is required</div>
+              
+                  <div *ngIf="usernameCtrl?.errors?.['pattern']">
+                    Username must be like <strong>10909.MUZAMMIL</strong>
+                  </div>
+              
+                  <div *ngIf="usernameCtrl?.errors?.['minlength']">
+                    Minimum {{ usernameCtrl?.errors?.['minlength']?.requiredLength }} characters
+                  </div>
+              
+                  <div *ngIf="usernameCtrl?.errors?.['maxlength']">
+                    Max {{ usernameCtrl?.errors?.['maxlength']?.requiredLength }} characters allowed
                   </div>
                 </div>
               </div>
@@ -31,17 +44,20 @@
                 <label for="password" class="form-label fw-semibold">
                   Password <span class="text-danger">*</span>
                 </label>
-
-                <div class="input-group input-group-lg">
-                  <input [type]="showPassword ? 'text' : 'password'" id="password" class="form-control"
-                    placeholder="••••••••" formControlName="password"
-                    [class.is-invalid]="passwordCtrl?.touched && passwordCtrl?.invalid" />
-                  <button type="button" class="btn btn-outline-secondary" (click)="showPassword = !showPassword"
-                    [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
-                    {{ showPassword ? 'Hide' : 'Show' }}
-                  </button>
+              
+                <div class="input-group input-group-lg position-relative">
+                  <input [type]="showPassword ? 'text' : 'password'" id="password" class="form-control pe-5" placeholder="••••••••"
+                    formControlName="password" [class.is-invalid]="passwordCtrl?.touched && passwordCtrl?.invalid" />
+              
+                  <!-- Eye Icon -->
+                  <span class="position-absolute top-50 end-0 translate-middle-y me-3 cursor-pointer text-muted"
+                    (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+                    role="button">
+                    <i class="fa" [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'">
+                    </i>
+                  </span>
                 </div>
-
+              
                 <div class="invalid-feedback d-block" *ngIf="passwordCtrl?.touched && passwordCtrl?.errors">
                   <div *ngIf="passwordCtrl?.errors?.['required']">Password is required</div>
                   <div *ngIf="passwordCtrl?.errors?.['minlength']">
@@ -50,12 +66,6 @@
                 </div>
               </div>
 
-              <!-- Forgot -->
-              <div class="d-flex justify-content-end mb-4">
-                <a href="javascript:void(0)" class="link-primary small text-decoration-none">
-                  Forgot password?
-                </a>
-              </div>
 
               <!-- Button -->
               <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="loading">
@@ -63,14 +73,6 @@
                 Login
               </button>
 
-              <div class="text-center mt-4">
-                <span class="text-muted small">
-                  Don’t have an account?
-                  <a routerLink="/auth/signup" class="link-primary fw-semibold text-decoration-none">
-                    Sign up
-                  </a>
-                </span>
-              </div>
             </form>
           </div>
         </div>

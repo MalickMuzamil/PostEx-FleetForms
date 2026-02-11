@@ -12,7 +12,6 @@ import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { AppValidators } from '../../core/services/validators';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -24,7 +23,6 @@ import { CommonModule } from '@angular/common';
     NzButtonModule,
     ReactiveFormsModule,
     CommonModule,
-    RouterLink,
   ],
   selector: 'app-login',
   templateUrl: './login.html',
@@ -34,22 +32,31 @@ export class LoginComponent {
   loading = false;
   showPassword = false;
 
+  private readonly USERNAME_PATTERN = /^\d{1,10}\.[A-Za-z]{2,}$/;
+
   constructor(
     private fb: FormBuilder,
     private auth: AuthService,
     private router: Router,
     private msg: NzMessageService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.form = this.fb.group({
-      email: this.fb.control('', { validators: [Validators.required, AppValidators.email(30)], updateOn: 'blur' }),
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      username: this.fb.control('', {
+        validators: [
+          Validators.required,
+          Validators.maxLength(30),
+          Validators.pattern(this.USERNAME_PATTERN),
+        ],
+        updateOn: 'blur',
+      }),
+      password: ['', [Validators.required, Validators.minLength(3)]],
     });
   }
 
-  get emailCtrl() {
-    return this.form.get('email');
+  get usernameCtrl() {
+    return this.form.get('username');
   }
 
   get passwordCtrl() {
@@ -65,11 +72,16 @@ export class LoginComponent {
 
     this.loading = true;
 
-    const payload = this.form.value as { email: string; password: string };
+    const payload = {
+      username: String(this.form.value.username || '').trim(),
+      password: String(this.form.value.password || ''),
+    };
 
     this.auth.login(payload).subscribe({
       next: (res: any) => {
-        if (res?.token) localStorage.setItem('token', res.token);
+        localStorage.setItem('token', res.token);
+
+        localStorage.setItem('UserData', JSON.stringify(res.user));
 
         this.auth.setAuthenticated(true);
 
@@ -85,5 +97,16 @@ export class LoginComponent {
         this.loading = false;
       },
     });
+  }
+
+  onUsernameInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+
+    let v = input.value.replace(/[^0-9A-Za-z.]/g, '');
+
+    v = v.toUpperCase();
+
+    input.value = v;
+    this.usernameCtrl?.setValue(v, { emitEvent: false });
   }
 }

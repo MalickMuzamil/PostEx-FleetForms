@@ -1,24 +1,42 @@
 import sql from "mssql";
-import { dbConfig } from "./db.js";
+import { authDbConfig, appDbConfig } from "./db.js";
 import { logger } from "../loggers/winston.js";
 
-let pool;
+let authPool;
+let appPool;
 
+// 🔐 Auth DB (SecurityCatalog)
+export const getAuthPool = async () => {
+  try {
+    if (authPool) return authPool;
+
+    authPool = await new sql.ConnectionPool(authDbConfig).connect();
+    await authPool.request().query("SELECT DB_NAME() AS db");
+    logger.info("✅ Auth DB connected");
+
+    return authPool;
+  } catch (error) {
+    logger.error("❌ Auth DB connection failed");
+    logger.error(error);
+    authPool = null;
+    throw error;
+  }
+};
+
+// 📦 App DB (GoGreen)
 export const getPool = async () => {
   try {
-    if (pool) return pool;
+    if (appPool) return appPool;
 
-    pool = await sql.connect(dbConfig);
+    appPool = await new sql.ConnectionPool(appDbConfig).connect();
+    await appPool.request().query("SELECT DB_NAME() AS db");
+    logger.info("✅ App DB connected");
 
-    // quick test
-    await pool.request().query("SELECT 1 AS ok");
-    logger.info("✅ SQL Server connected");
-
-    return pool;
+    return appPool;
   } catch (error) {
-    logger.error("❌ SQL Server connection failed");
+    logger.error("❌ App DB connection failed");
     logger.error(error);
-    pool = null;
+    appPool = null;
     throw error;
   }
 };

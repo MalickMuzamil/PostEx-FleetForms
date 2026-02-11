@@ -12,7 +12,11 @@ export const env = {
     dbPort: Number(process.env.DB_PORT || 1433),
     dbUser: process.env.DB_USER,
     dbPassword: process.env.DB_PASSWORD,
-    dbName: process.env.DB_NAME || "master",
+
+    // ✅ Separate DB names
+    appDbName: process.env.APP_DB_NAME || "GoGreen",
+    authDbName: process.env.AUTH_DB_NAME || "SecurityCatalog",
+
     dbEncrypt: process.env.DB_ENCRYPT === "true",
     dbTrustCert: process.env.DB_TRUST_CERT === "true",
 };
