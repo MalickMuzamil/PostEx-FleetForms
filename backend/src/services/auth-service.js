@@ -1,80 +1,63 @@
 import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
 import sql from "mssql";
-import { getPool } from "../config/sql-config.js";
+import { getAuthPool } from "../config/sql-config.js";
 
 export default class AuthService {
-    async login(email, password) {
-        const pool = await getPool();
+    async login(username, password) {
+        const pool = await getAuthPool();
 
+        if (!username || !password) throw this._unauthorized();
+
+        const cleanUsername = String(username).trim();
+        const cleanPassword = String(password).trim();
+
+    //     const debug = await pool.request()
+    //         .input("loginId", sql.VarChar(50), cleanUsername)
+    //         .query(`
+    //     SELECT DB_NAME() AS current_db, @@SERVERNAME AS server_name;
+
+    //     SELECT 
+    //       Login_Id,
+    //       DATALENGTH(Login_Password) AS pass_bytes,
+    //       CONVERT(varchar(32), Login_Password, 2) AS stored_hash
+    //     FROM dbo.users
+    //     WHERE Login_Id = @loginId;
+    //   `);
+
+        // console.log("DB CHECK:", debug.recordsets?.[0]?.[0]);     
+        // console.log("USER CHECK:", debug.recordsets?.[1]);        
+
+        // ✅ Actual login query (MD5)
         const result = await pool
             .request()
-            .input("email", sql.VarChar, email)
+            .input("loginId", sql.VarChar(50), cleanUsername)
+            .input("password", sql.VarChar(150), cleanPassword)
             .query(`
-        SELECT id, email, passwordHash, role
-        FROM users
-        WHERE email = @email
+        SELECT Login_Id, Login_Role, Login_Blocked
+        FROM dbo.users
+        WHERE Login_Id = @loginId
+          AND Login_Password = HASHBYTES('MD5', @password);
       `);
+
+        // console.log("Auth query result:", result.recordset);
 
         const user = result.recordset?.[0];
         if (!user) throw this._unauthorized();
 
-        const ok = await bcrypt.compare(password, user.passwordHash);
-        if (!ok) throw this._unauthorized();
+        if (user.Login_Blocked) throw new Error("User is blocked. Contact administrator.");
 
         const token = jwt.sign(
-            { sub: user.id, email: user.email, role: user.role || "user" },
+            { sub: user.ID, username: user.Login_Id, role: user.Login_Role || "user" },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
         );
 
-        return { token, user: { id: user.id, email: user.email, role: user.role || "user" } };
-    }
-
-    async signup({ name, email, password }) {
-        const pool = await getPool();
-
-        const exists = await pool
-            .request()
-            .input("email", sql.VarChar, email)
-            .query(`SELECT id FROM users WHERE email = @email`);
-
-        if (exists.recordset?.length) throw this._conflict("Email already exists");
-
-        const passwordHash = await bcrypt.hash(password, 10);
-
-        const created = await pool
-            .request()
-            .input("name", sql.VarChar, name)
-            .input("email", sql.VarChar, email)
-            .input("passwordHash", sql.VarChar, passwordHash)
-            .input("role", sql.VarChar, "user")
-            .query(`
-        INSERT INTO users (name, email, passwordHash, role)
-        OUTPUT INSERTED.id, INSERTED.email, INSERTED.role
-        VALUES (@name, @email, @passwordHash, @role)
-      `);
-
-        const user = created.recordset?.[0];
-
-        const token = jwt.sign(
-            { sub: user.id, email: user.email, role: user.role || "user" },
-            process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
-        );
-
-        return { token, user: { id: user.id, email: user.email, role: user.role || "user" } };
+        return { token, user: { id: user.ID, username: user.Login_Id, role: user.Login_Role || "user" } };
     }
 
     _unauthorized() {
-        const err = new Error("Invalid email or password");
+        const err = new Error("Invalid username or password");
         err.status = 401;
-        return err;
-    }
-
-    _conflict(message) {
-        const err = new Error(message);
-        err.status = 409;
         return err;
     }
 }

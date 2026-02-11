@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 
 import { logger } from "./loggers/winston.js";
 import { errorHandler } from "./middleware/error-middleware.js";
-import { getPool } from "./config/sql-config.js";
+import { getPool, getAuthPool } from "./config/sql-config.js";
 import authRoutes from "./routes/auth-routes.js";
 
 // import employeesRoutes from "./routes/employees.routes.js";
@@ -102,6 +102,7 @@ const PORT = Number(process.env.PORT || 5000);
 (async () => {
     try {
         await getPool();
+        await getAuthPool();
         logger.info("✅ MSSQL connected");
 
         app.listen(PORT, () => {
