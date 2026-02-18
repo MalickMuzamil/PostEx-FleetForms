@@ -19,9 +19,11 @@ export default class AuthService {
         if (!email) throw this._badRequest("Email required");
         if (!otpCode) throw this._badRequest("otpCode required");
 
-        // Frontend already verifies OTP via SDK.
-        // Here you can issue your own JWT/session if you want.
-        return { ok: true };
+        const user = { email: String(email).trim().toLowerCase() };
+
+        const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+        return { ok: true, token, user };
     }
 
     _badRequest(msg) {

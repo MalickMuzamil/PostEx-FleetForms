@@ -7,6 +7,7 @@ import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { AuthService } from '../../core/services/auth-service';
 
 @Component({
   selector: 'app-passkey',
@@ -24,22 +25,20 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 export class Passkey {
   enabling = false;
 
-  // ✅ default: dont allow leaving passkey page
   allowLeave = false;
 
   constructor(
     private router: Router,
-    private msg: NzMessageService
-  ) {}
+    private msg: NzMessageService,
+     private auth: AuthService
+  ) { }
 
   ngOnInit(): void {
-    // ✅ put an extra entry so back doesn't escape to otp/login
     history.pushState(null, '', location.href);
   }
 
   @HostListener('window:popstate')
   onBrowserBack() {
-    // ✅ STRICT: if not allowed to leave, keep user on passkey
     if (!this.allowLeave) {
       history.pushState(null, '', location.href);
       this.router.navigateByUrl('/auth/passkey', { replaceUrl: true });
@@ -49,23 +48,34 @@ export class Passkey {
   skipForNow() {
     sessionStorage.removeItem('auth.loginDone');
     sessionStorage.removeItem('auth.otpVerified');
+    this.auth.setPasskeyEnabled(false);
 
-    this.allowLeave = true; // ✅ now allow navigation
+    this.allowLeave = true; 
     this.router.navigateByUrl('/', { replaceUrl: true });
   }
 
-  enablePasskey() {
-    this.enabling = true;
+ async enablePasskey() {
+  this.enabling = true;
 
-    setTimeout(() => {
-      this.enabling = false;
-      this.msg.success('Passkey enabled (UI only)');
+  try {
+    const email = this.auth.getOtpEmail(); 
+    if (!email) throw new Error('Email missing');
 
-      sessionStorage.removeItem('auth.loginDone');
-      sessionStorage.removeItem('auth.otpVerified');
+    await this.auth.registerPasskey(email);
+    this.auth.setPasskeyEnabled(true);
 
-      this.allowLeave = true; // ✅ now allow navigation
-      this.router.navigateByUrl('/', { replaceUrl: true });
-    }, 600);
+    this.msg.success('Passkey enabled');
+
+    sessionStorage.removeItem('auth.loginDone');
+    sessionStorage.removeItem('auth.otpVerified');
+
+    this.allowLeave = true;
+    this.router.navigateByUrl('/', { replaceUrl: true });
+  } catch (e: any) {
+    this.msg.error(e?.message || 'Passkey setup failed');
+  } finally {
+    this.enabling = false;
   }
+}
+
 }

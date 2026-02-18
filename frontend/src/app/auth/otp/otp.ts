@@ -26,14 +26,14 @@ export class OtpComponent {
     private auth: AuthService,
     private router: Router,
     private msg: NzMessageService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.email = this.auth.getOtpEmail();
     this.form = this.fb.group({
-      otpCode: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(8)]],
+      otpCode: ['', [Validators.required,
+      Validators.minLength(4), Validators.maxLength(8)]],
     });
-
     if (!this.email) {
       this.msg.warning('Email missing, please login again');
       this.router.navigateByUrl('/auth/login', { replaceUrl: true });
@@ -47,14 +47,34 @@ export class OtpComponent {
     }
 
     this.loading = true;
+
     try {
-      const otpCode = this.form.value.otpCode;
+      const otpCode = String(this.form.value.otpCode ?? '').trim();
+      const email = this.auth.getOtpEmail();
+      if (!email) throw new Error('Email missing');
+
+      // 1) PostEx SDK OTP verify
       await this.auth.verifyOtp(otpCode);
 
+      // 2) Backend se JWT generate karwao
+      const resp: any = await this.auth
+        .issueJwtAfterOtp(email, otpCode)   // ✅ correct call
+        .toPromise();
+
+      if (!resp?.token) throw new Error('Token not returned from backend');
+
+      // 3) Save token + mark authenticated
+      localStorage.setItem('token', resp.token);
+      this.auth.setAuthenticated(true);
+
+      // 4) mark otp verified
       this.auth.setOtpVerified();
 
       this.msg.success('OTP verified');
+
+      // 5) go to passkey prompt
       this.router.navigateByUrl('/auth/passkey', { replaceUrl: true });
+
     } catch (err: any) {
       this.msg.error(err?.message || 'OTP verification failed');
     } finally {

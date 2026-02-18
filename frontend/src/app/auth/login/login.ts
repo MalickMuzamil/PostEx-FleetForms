@@ -42,25 +42,66 @@ export class LoginComponent {
     }
 
     this.loading = true;
-    const email = this.form.value.email;
+    const email = String(this.form.value.email || '').trim().toLowerCase();
 
     try {
+      // ✅ 1) Real check: does user have any passkey credentials registered?
+      const hasPasskey = await this.auth.hasPasskeyRegistered(email);
+
+      // ✅ 2) Always call initiateAuth (your startOtp) to trigger either OTP or challenge
       const result: any = await this.auth.startOtp(email);
 
-      if (result?.status === 'otp_sent') {
+      // ✅ 3) If user DOES NOT have passkey registered -> ALWAYS go OTP (ignore any challenge)
+      if (!hasPasskey) {
+        sessionStorage.setItem('auth.loginDone', '1');
+        sessionStorage.removeItem('auth.otpVerified');
+
         this.msg.success('OTP sent to email');
         this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
-      } else if (result?.status === 'webauthn_challenge') {
-        this.msg.info('Passkey required (webauthn)');
-        // agar passkey flow implement karna ho to yahan handle karo
-      } else {
-        this.msg.success('Auth initiated');
-        this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
+        return;
       }
+
+      // ✅ 4) If user HAS passkey registered -> try passkey login ONLY if challenge is present
+      if (result?.status === 'webauthn_challenge' || result?.status === 'webauthn_ready') {
+        const challenge = result?.challenge;
+        const rp = result?.rp;
+        const credentialIds = result?.credentialIds;
+
+        // fallback to OTP if challenge payload missing
+        if (!challenge || !rp || !Array.isArray(credentialIds) || credentialIds.length === 0) {
+          sessionStorage.setItem('auth.loginDone', '1');
+          sessionStorage.removeItem('auth.otpVerified');
+
+          this.msg.warning('Passkey challenge missing, using OTP.');
+          this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
+          return;
+        }
+
+        const res: any = await this.auth.authenticateWithPasskey({ challenge, rp, credentialIds });
+
+        const token = res?.access_token || res?.token;
+        if (token) localStorage.setItem('token', token);
+
+        sessionStorage.removeItem('auth.loginDone');
+        sessionStorage.removeItem('auth.otpVerified');
+
+        this.msg.success('Logged in with passkey');
+        this.router.navigateByUrl('/', { replaceUrl: true });
+        return;
+      }
+
+      // ✅ 5) If passkey registered but backend still did OTP flow -> go OTP
+      sessionStorage.setItem('auth.loginDone', '1');
+      sessionStorage.removeItem('auth.otpVerified');
+
+      this.msg.success('OTP sent to email');
+      this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
+
     } catch (err: any) {
-      this.msg.error(err?.message || 'Failed to send OTP');
+      this.msg.error(err?.message || 'Failed to login');
     } finally {
       this.loading = false;
     }
   }
+
 }
