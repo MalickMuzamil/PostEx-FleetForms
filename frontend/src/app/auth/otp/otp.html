@@ -1,37 +1,69 @@
-<div class="auth-page">
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4 p-md-5">
+                    <h4 class="mb-1 fw-semibold">Verify OTP</h4>
+                    <p class="text-muted mb-4">Enter the code we sent to your email.</p>
 
-    <div class="auth-wrapper">
+                    <div *ngIf="email" class="alert alert-info d-flex align-items-center rounded-3" role="alert">
+                        <div class="me-2">
+                            <!-- info icon (optional) -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
+                                viewBox="0 0 16 16">
+                                <path
+                                    d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM8.93 6.588 8 10.5c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287z" />
+                                <circle cx="8" cy="4.5" r="1" />
+                            </svg>
+                        </div>
+                        <div>
+                            OTP sent to: <b>{{ email }}</b>
+                        </div>
+                    </div>
 
-        <nz-card nzBordered class="auth-card">
+                    <form [formGroup]="form" (ngSubmit)="verify()">
+                        <!-- OTP -->
+                        <div class="mb-3">
+                            <label class="form-label">OTP Code</label>
 
-            <h2 class="title">OTP Verification</h2>
-            <p class="subtitle">Enter the OTP sent to your registered device</p>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <!-- key icon (optional) -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                        viewBox="0 0 16 16">
+                                        <path
+                                            d="M3 8a5 5 0 1 1 9.584 1.5H16v2h-2v2h-2v2H9.5v-3.084A5 5 0 0 1 3 8zm5-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" />
+                                    </svg>
+                                </span>
 
-            <form nz-form [formGroup]="form" (ngSubmit)="verifyOtp()">
+                                <input type="text" class="form-control" formControlName="otpCode"
+                                    placeholder="Enter OTP" inputmode="numeric" autocomplete="one-time-code" />
+                            </div>
 
-                <!-- OTP -->
-                <nz-form-item>
-                    <nz-form-label [nzRequired]="true">OTP</nz-form-label>
+                            <small class="text-muted d-block mt-2">
+                                Check your inbox/spam folder if you don’t see it.
+                            </small>
+                        </div>
 
-                    <nz-form-control [nzErrorTip]="'OTP must be 4 to 8 digits'">
-                        <input nz-input formControlName="otp" placeholder="Enter OTP" maxlength="8" />
-                    </nz-form-control>
-                </nz-form-item>
+                        <!-- Actions -->
+                        <div class="d-grid gap-2 d-sm-flex">
+                            <button type="submit" class="btn btn-primary flex-fill rounded-3 py-2" [disabled]="loading">
+                                <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"
+                                    aria-hidden="true"></span>
+                                {{ loading ? 'Verifying...' : 'Verify' }}
+                            </button>
 
-                <!-- Verify Button -->
-                <button nz-button nzType="primary" nzSize="large" class="w-100" [nzLoading]="loading">
-                    Verify OTP
-                </button>
+                            <button type="button" class="btn btn-outline-secondary flex-fill rounded-3 py-2"
+                                (click)="resend()" [disabled]="resendLoading">
+                                <span *ngIf="resendLoading" class="spinner-border spinner-border-sm me-2"
+                                    aria-hidden="true"></span>
+                                {{ resendLoading ? 'Resending...' : 'Resend OTP' }}
+                            </button>
+                        </div>
+                    </form>
 
-                <!-- Resend -->
-                <button nz-button nzType="link" class="w-100 mt-2" type="button" (click)="resend()">
-                    Resend OTP
-                </button>
-
-            </form>
-
-        </nz-card>
-
+                </div>
+            </div>
+        </div>
     </div>
-
 </div>

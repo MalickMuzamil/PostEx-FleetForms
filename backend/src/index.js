@@ -41,6 +41,8 @@ import Bindingcnclevel5level6 from './routes/opsCncL5L6MappingRoutes.js';
 dotenv.config();
 
 const app = express();
+app.use(express.json());
+
 
 // security + basics
 app.use(helmet());

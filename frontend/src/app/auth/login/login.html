@@ -1,80 +1,47 @@
-<div class="auth-page">
-  <div class="container">
-    <div class="row justify-content-center align-items-center min-vh-100">
-      <div class="col-12 col-sm-10 col-md-7 col-lg-7 col-xl-6">
-        <div class="card shadow-lg border-0 rounded-4">
-          <div class="card-body p-4 p-md-5">
-            <h3 class="fw-bold mb-1">Login</h3>
-            <p class="text-muted mb-4">Sign in to continue</p>
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+      <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-body p-4 p-md-5">
+          <h4 class="mb-1 fw-semibold">Login</h4>
+          <p class="text-muted mb-4">Enter your email to receive an OTP.</p>
 
-            <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-              <!-- Username -->
-              <div class="mb-3">
-                <label for="username" class="form-label fw-semibold">
-                  Username <span class="text-danger">*</span>
-                </label>
-              
-                <input type="text" id="username" class="form-control form-control-lg" placeholder="e.g. 12345.XXXXX"
-                  autocomplete="username" formControlName="username" (input)="onUsernameInput($event)"
-                  [class.is-invalid]="usernameCtrl?.touched && usernameCtrl?.invalid" />
-              
-                <div class="form-text">
-                  Format: <strong>empID.name</strong>
-                </div>
-              
-                <div class="invalid-feedback" *ngIf="usernameCtrl?.touched && usernameCtrl?.errors">
-                  <div *ngIf="usernameCtrl?.errors?.['required']">Username is required</div>
-              
-                  <div *ngIf="usernameCtrl?.errors?.['pattern']">
-                    Username must be like <strong>10909.MUZAMMIL</strong>
-                  </div>
-              
-                  <div *ngIf="usernameCtrl?.errors?.['minlength']">
-                    Minimum {{ usernameCtrl?.errors?.['minlength']?.requiredLength }} characters
-                  </div>
-              
-                  <div *ngIf="usernameCtrl?.errors?.['maxlength']">
-                    Max {{ usernameCtrl?.errors?.['maxlength']?.requiredLength }} characters allowed
-                  </div>
-                </div>
+          <form [formGroup]="form" (ngSubmit)="submit()">
+            <!-- Email -->
+            <div class="mb-3">
+              <label class="form-label">Email</label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <!-- optional icon -->
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                    viewBox="0 0 16 16">
+                    <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v.217l-8 4.8-8-4.8V4z" />
+                    <path
+                      d="M0 5.383v6.734A2 2 0 0 0 2 14h12a2 2 0 0 0 2-1.883V5.383l-7.555 4.533a1 1 0 0 1-.89 0L0 5.383z" />
+                  </svg>
+                </span>
+
+                <input type="email" class="form-control" placeholder="name@example.com" formControlName="email"
+                  [class.is-invalid]="form.get('email')?.invalid && (form.get('email')?.dirty || form.get('email')?.touched)" />
               </div>
 
-              <!-- Password -->
-              <div class="mb-2">
-                <label for="password" class="form-label fw-semibold">
-                  Password <span class="text-danger">*</span>
-                </label>
-              
-                <div class="input-group input-group-lg position-relative">
-                  <input [type]="showPassword ? 'text' : 'password'" id="password" class="form-control pe-5" placeholder="••••••••"
-                    formControlName="password" [class.is-invalid]="passwordCtrl?.touched && passwordCtrl?.invalid" />
-              
-                  <!-- Eye Icon -->
-                  <span class="position-absolute top-50 end-0 translate-middle-y me-3 cursor-pointer text-muted"
-                    (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
-                    role="button">
-                    <i class="fa" [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'">
-                    </i>
-                  </span>
-                </div>
-              
-                <div class="invalid-feedback d-block" *ngIf="passwordCtrl?.touched && passwordCtrl?.errors">
-                  <div *ngIf="passwordCtrl?.errors?.['required']">Password is required</div>
-                  <div *ngIf="passwordCtrl?.errors?.['minlength']">
-                    Minimum {{ passwordCtrl?.errors?.['minlength']?.requiredLength }} characters
-                  </div>
-                </div>
+              <div class="invalid-feedback d-block"
+                *ngIf="form.get('email')?.invalid && (form.get('email')?.dirty || form.get('email')?.touched)">
+                Please enter a valid email.
               </div>
+            </div>
 
+            <!-- Button -->
+            <button type="submit" class="btn btn-primary w-100 rounded-3 py-2" [disabled]="loading || form.invalid">
+              <span *ngIf="loading" class="spinner-border spinner-border-sm me-2" role="status"
+                aria-hidden="true"></span>
+              {{ loading ? 'Sending...' : 'Send OTP' }}
+            </button>
 
-              <!-- Button -->
-              <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="loading">
-                <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
-                Login
-              </button>
-
-            </form>
-          </div>
+            <div class="text-center mt-3 small text-muted">
+              By continuing, you agree to our Terms & Privacy Policy.
+            </div>
+          </form>
         </div>
       </div>
     </div>

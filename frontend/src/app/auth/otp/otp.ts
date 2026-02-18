@@ -1,72 +1,76 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd/message';
-
+import { AuthService } from '../../core/services/auth-service';
+import { CommonModule } from '@angular/common';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 
 @Component({
-  selector: 'app-otp',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    NzCardModule,
-    NzFormModule,
-    NzInputModule,
-    NzButtonModule
-  ],
+  imports: [CommonModule, ReactiveFormsModule, NzCardModule, NzFormModule, NzInputModule, NzButtonModule],
+  selector: 'app-otp',
   templateUrl: './otp.html',
-  styleUrl: './otp.css',
 })
-export class OTP {
+export class OtpComponent {
   form!: FormGroup;
   loading = false;
+  resendLoading = false;
+  email = '';
 
   constructor(
     private fb: FormBuilder,
+    private auth: AuthService,
     private router: Router,
     private msg: NzMessageService
-  ) { }
+  ) {}
 
   ngOnInit() {
+    this.email = this.auth.getOtpEmail();
     this.form = this.fb.group({
-      otp: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(8)]],
+      otpCode: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(8)]],
     });
+
+    if (!this.email) {
+      this.msg.warning('Email missing, please login again');
+      this.router.navigateByUrl('/auth/login', { replaceUrl: true });
+    }
   }
 
-  get otpCtrl() {
-    return this.form.get('otp');
-  }
-
-  verifyOtp() {
+  async verify() {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.msg.error('Enter valid OTP');
       return;
     }
 
     this.loading = true;
+    try {
+      const otpCode = this.form.value.otpCode;
+      await this.auth.verifyOtp(otpCode);
 
-    const otpValue = this.form.value.otp;
-    setTimeout(() => {
+      this.auth.setOtpVerified();
 
-      sessionStorage.setItem('auth.otpVerified', '1');
-
-      this.msg.success('OTP verified successfully');
-
-      this.loading = false;
-
+      this.msg.success('OTP verified');
       this.router.navigateByUrl('/auth/passkey', { replaceUrl: true });
-
-    }, 600);
+    } catch (err: any) {
+      this.msg.error(err?.message || 'OTP verification failed');
+    } finally {
+      this.loading = false;
+    }
   }
 
-  resend() {
-    this.msg.success('OTP resent successfully');
+  async resend() {
+    this.resendLoading = true;
+    try {
+      await this.auth.resendOtp();
+      this.msg.success('OTP resent');
+    } catch (err: any) {
+      this.msg.error(err?.message || 'Failed to resend OTP');
+    } finally {
+      this.resendLoading = false;
+    }
   }
 }

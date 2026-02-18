@@ -23,7 +23,7 @@ export const routes: Routes = [
         path: 'otp',
         canActivate: [OtpGuard],
         loadComponent: () =>
-          import('./auth/otp/otp').then(m => m.OTP),
+          import('./auth/otp/otp').then(m => m.OtpComponent),
       },
 
       {

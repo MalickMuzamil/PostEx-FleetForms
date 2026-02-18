@@ -1,11 +1,6 @@
 import { Component } from '@angular/core';
-import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { AuthService } from '../../core/services/auth-service';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -16,23 +11,13 @@ import { CommonModule } from '@angular/common';
 
 @Component({
   standalone: true,
-  imports: [
-    NzCardModule,
-    NzFormModule,
-    NzInputModule,
-    NzButtonModule,
-    ReactiveFormsModule,
-    CommonModule,
-  ],
+  imports: [NzCardModule, NzFormModule, NzInputModule, NzButtonModule, ReactiveFormsModule, CommonModule],
   selector: 'app-login',
   templateUrl: './login.html',
 })
 export class LoginComponent {
   form!: FormGroup;
   loading = false;
-  showPassword = false;
-
-  private readonly USERNAME_PATTERN = /^\d{1,10}\.[A-Za-z]{2,}$/;
 
   constructor(
     private fb: FormBuilder,
@@ -43,72 +28,39 @@ export class LoginComponent {
 
   ngOnInit(): void {
     this.form = this.fb.group({
-      username: this.fb.control('', {
-        validators: [
-          Validators.required,
-          Validators.maxLength(30),
-          Validators.pattern(this.USERNAME_PATTERN),
-        ],
+      email: this.fb.control('', {
+        validators: [Validators.required, Validators.email, Validators.maxLength(80)],
         updateOn: 'blur',
       }),
-      password: ['', [Validators.required, Validators.minLength(3)]],
     });
   }
 
-  get usernameCtrl() {
-    return this.form.get('username');
-  }
-
-  get passwordCtrl() {
-    return this.form.get('password');
-  }
-
-  submit() {
+  async submit() {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.msg.error('Please fix validation errors first.');
       return;
     }
 
     this.loading = true;
+    const email = this.form.value.email;
 
-    const payload = {
-      username: String(this.form.value.username || '').trim(),
-      password: String(this.form.value.password || ''),
-    };
+    try {
+      const result: any = await this.auth.startOtp(email);
 
-    this.auth.login(payload).subscribe({
-      next: (res: any) => {
-        localStorage.setItem('token', res.token);
-
-        localStorage.setItem('UserData', JSON.stringify(res.user));
-
-        this.auth.setAuthenticated(true);
-
-        this.msg.success('Login successful ✅');
-        sessionStorage.setItem('auth.loginDone', '1');
-        sessionStorage.removeItem('auth.otpVerified');
-        this.router.navigateByUrl('/auth/otp');
-      },
-      error: (err) => {
-        const message = err?.error?.message || 'Login failed';
-        this.msg.error(message);
-        this.loading = false;
-      },
-      complete: () => {
-        this.loading = false;
-      },
-    });
-  }
-
-  onUsernameInput(event: Event) {
-    const input = event.target as HTMLInputElement;
-
-    let v = input.value.replace(/[^0-9A-Za-z.]/g, '');
-
-    v = v.toUpperCase();
-
-    input.value = v;
-    this.usernameCtrl?.setValue(v, { emitEvent: false });
+      if (result?.status === 'otp_sent') {
+        this.msg.success('OTP sent to email');
+        this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
+      } else if (result?.status === 'webauthn_challenge') {
+        this.msg.info('Passkey required (webauthn)');
+        // agar passkey flow implement karna ho to yahan handle karo
+      } else {
+        this.msg.success('Auth initiated');
+        this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
+      }
+    } catch (err: any) {
+      this.msg.error(err?.message || 'Failed to send OTP');
+    } finally {
+      this.loading = false;
+    }
   }
 }
