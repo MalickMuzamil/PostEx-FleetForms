@@ -86,7 +86,9 @@ export class LoginComponent {
         this.auth.setAuthenticated(true);
 
         this.msg.success('Login successful ✅');
-        this.router.navigateByUrl('/');
+        sessionStorage.setItem('auth.loginDone', '1');
+        sessionStorage.removeItem('auth.otpVerified');
+        this.router.navigateByUrl('/auth/otp');
       },
       error: (err) => {
         const message = err?.error?.message || 'Login failed';

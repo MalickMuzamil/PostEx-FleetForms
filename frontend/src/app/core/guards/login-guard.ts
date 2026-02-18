@@ -20,9 +20,12 @@ export class LoginGuard implements CanActivate {
   constructor(private router: Router) {}
 
   canActivate(): boolean {
+    const inFlow = sessionStorage.getItem('auth.loginDone') === '1';
+    if (inFlow) return true;
+
     const token = localStorage.getItem('token');
     if (token && !isTokenExpired(token)) {
-      this.router.navigateByUrl('/', { replaceUrl: true }); // login page history se bhi hat jayega
+      this.router.navigateByUrl('/', { replaceUrl: true });
       return false;
     }
     return true;

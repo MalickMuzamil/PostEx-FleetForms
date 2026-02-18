@@ -3,6 +3,9 @@ import { AuthLayout } from './layout/auth-layout/auth-layout';
 import { MainLayout } from './layout/main-layout/main-layout';
 import { AuthGuard } from './core/guards/auth-guard';
 import { LoginGuard } from './core/guards/login-guard';
+import { PasskeyGuard } from './core/guards/passkey-guard';
+import { OtpGuard } from './core/guards/otp-guard';
+import { PasskeyDeactivateGuard } from './core/guards/passkey-deactivate-guard';
 
 export const routes: Routes = [
   {
@@ -13,7 +16,22 @@ export const routes: Routes = [
         path: 'login',
         canActivate: [LoginGuard],
         loadComponent: () =>
-          import('./auth/login/login').then((m) => m.LoginComponent),
+          import('./auth/login/login').then(m => m.LoginComponent),
+      },
+
+      {
+        path: 'otp',
+        canActivate: [OtpGuard],
+        loadComponent: () =>
+          import('./auth/otp/otp').then(m => m.OTP),
+      },
+
+      {
+        path: 'passkey',
+        canActivate: [PasskeyGuard],
+        canDeactivate: [PasskeyDeactivateGuard],
+        loadComponent: () =>
+          import('./auth/passkey/passkey').then(m => m.Passkey),
       },
     ],
   },
@@ -188,7 +206,7 @@ export const routes: Routes = [
             './features/CNC-Binnding-Forms/b-l6/b-l6'
           ).then((m) => m.BL6),
       },
-      
+
     ],
   },
 ];
