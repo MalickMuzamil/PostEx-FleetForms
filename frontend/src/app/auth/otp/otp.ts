@@ -56,23 +56,23 @@ export class OtpComponent {
       // 1) PostEx SDK OTP verify
       await this.auth.verifyOtp(otpCode);
 
-      // 2) Backend se JWT generate karwao
-      const resp: any = await this.auth
-        .issueJwtAfterOtp(email, otpCode)   // ✅ correct call
-        .toPromise();
-
+      // 2) Backend se JWT
+      const resp: any = await this.auth.issueJwtAfterOtp(email, otpCode).toPromise();
       if (!resp?.token) throw new Error('Token not returned from backend');
 
-      // 3) Save token + mark authenticated
+      // 3) Save token
       localStorage.setItem('token', resp.token);
-      this.auth.setAuthenticated(true);
+      localStorage.setItem('UserData', JSON.stringify(resp.user || {}));
 
-      // 4) mark otp verified
+      // 4) ✅ Now call verify API (separate)
+      const v: any = await this.auth.verifyToken().toPromise();
+      if (v?.user) localStorage.setItem('UserData', JSON.stringify(v.user));
+
+      // 5) set flags
+      this.auth.setAuthenticated(true);
       this.auth.setOtpVerified();
 
       this.msg.success('OTP verified');
-
-      // 5) go to passkey prompt
       this.router.navigateByUrl('/auth/passkey', { replaceUrl: true });
 
     } catch (err: any) {
@@ -81,6 +81,7 @@ export class OtpComponent {
       this.loading = false;
     }
   }
+
 
   async resend() {
     this.resendLoading = true;

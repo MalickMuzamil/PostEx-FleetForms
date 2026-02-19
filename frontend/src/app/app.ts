@@ -12,10 +12,13 @@ import { AuthService } from './core/services/auth-service';
 export class App {
   protected readonly title = signal('postex-fleetforms');
 
-  //Will remove in future.
   constructor(private authService: AuthService) {
-    this.authService.verifyToken().subscribe({
-      error: () => {},
-    });
+    if (this.authService.hasToken()) {
+      this.authService.verifyToken().subscribe({
+        error: () => {
+          this.authService.logout();
+        },
+      });
+    }
   }
 }

@@ -10,18 +10,60 @@ export default class AuthService {
 
     async startOtp(email) {
         if (!email) throw this._badRequest("Email required");
-
-        // Frontend will call PostEx SDK and send OTP itself.
         return { ok: true, email };
     }
 
     async verifyOtp(email, otpCode) {
         if (!email) throw this._badRequest("Email required");
         if (!otpCode) throw this._badRequest("otpCode required");
+        return this.issueJwt(email);
+    }
 
-        const user = { email: String(email).trim().toLowerCase() };
+    async issueJwt(email) {
+        if (!email) throw this._badRequest("Email required");
 
-        const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "7d" });
+        const cleanEmail = String(email).trim().toLowerCase();
+
+        const pool = await getAuthPool();
+        const result = await pool
+            .request()
+            .input("email", sql.VarChar(80), cleanEmail)
+            .query(`
+      SELECT
+        Login_Id,
+        Login_Name,
+        Login_Role,
+        Login_Blocked,
+        Login_EMail
+      FROM dbo.users
+      WHERE LOWER(Login_EMail) = @email
+    `);
+
+        const u = result.recordset?.[0];
+        if (!u) throw this._badRequest("User not found");
+
+        if (u.Login_Blocked === 1 || u.Login_Blocked === true) {
+            throw this._badRequest("User is blocked");
+        }
+
+        const payload = {
+            loginId: u.Login_Id,
+            email: u.Login_EMail,
+            role: u.Login_Role,
+            name: u.Login_Name, 
+        };
+
+        const token = jwt.sign(payload, process.env.JWT_SECRET, {
+            expiresIn: "7d"
+        });
+
+        const user = {
+            loginId: u.Login_Id,
+            name: u.Login_Name,  
+            email: u.Login_EMail,
+            role: u.Login_Role,
+            blocked: !!u.Login_Blocked
+        };
 
         return { ok: true, token, user };
     }

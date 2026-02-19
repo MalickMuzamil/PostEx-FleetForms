@@ -42,5 +42,17 @@ export const verifyOtp = async (req, res) => {
 };
 
 export const verify = (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
     return res.json({ ok: true, user: req.user });
 };
+
+export const issueJwt = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const result = await authService.issueJwt(email);
+        return res.json(result);
+    } catch (e) {
+        return res.status(e.status || 500).json({ message: e.message || "JWT issue failed" });
+    }
+};
+

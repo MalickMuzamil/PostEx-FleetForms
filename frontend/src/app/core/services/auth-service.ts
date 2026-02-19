@@ -172,4 +172,8 @@ export class AuthService {
       otpCode
     });
   }
+
+  issueJwtAfterPasskey(email: string) {
+  return this.api.post('/auth/issue-jwt', { email });
+}
 }
