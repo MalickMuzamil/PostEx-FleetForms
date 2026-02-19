@@ -76,7 +76,8 @@ export class AuthService {
   async resendOtp() {
     const email = localStorage.getItem(this.otpEmailKey) || '';
     if (!email) throw new Error('Email missing, go back to login');
-    return this.startOtp(email);
+
+    return this.auth.resendOTP();
   }
 
   getOtpEmail() {
@@ -174,6 +175,6 @@ export class AuthService {
   }
 
   issueJwtAfterPasskey(email: string) {
-  return this.api.post('/auth/issue-jwt', { email });
-}
+    return this.api.post('/auth/issue-jwt', { email });
+  }
 }

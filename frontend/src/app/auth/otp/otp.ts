@@ -53,22 +53,17 @@ export class OtpComponent {
       const email = this.auth.getOtpEmail();
       if (!email) throw new Error('Email missing');
 
-      // 1) PostEx SDK OTP verify
       await this.auth.verifyOtp(otpCode);
 
-      // 2) Backend se JWT
       const resp: any = await this.auth.issueJwtAfterOtp(email, otpCode).toPromise();
       if (!resp?.token) throw new Error('Token not returned from backend');
 
-      // 3) Save token
       localStorage.setItem('token', resp.token);
       localStorage.setItem('UserData', JSON.stringify(resp.user || {}));
 
-      // 4) ✅ Now call verify API (separate)
       const v: any = await this.auth.verifyToken().toPromise();
       if (v?.user) localStorage.setItem('UserData', JSON.stringify(v.user));
 
-      // 5) set flags
       this.auth.setAuthenticated(true);
       this.auth.setOtpVerified();
 
