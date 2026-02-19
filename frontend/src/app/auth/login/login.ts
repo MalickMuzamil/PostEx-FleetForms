@@ -30,7 +30,6 @@ export class LoginComponent {
     this.form = this.fb.group({
       email: this.fb.control('', {
         validators: [Validators.required, Validators.email, Validators.maxLength(80)],
-        updateOn: 'blur',
       }),
     });
   }

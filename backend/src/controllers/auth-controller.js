@@ -55,4 +55,3 @@ export const issueJwt = async (req, res) => {
         return res.status(e.status || 500).json({ message: e.message || "JWT issue failed" });
     }
 };
-

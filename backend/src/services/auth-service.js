@@ -50,7 +50,7 @@ export default class AuthService {
             loginId: u.Login_Id,
             email: u.Login_EMail,
             role: u.Login_Role,
-            name: u.Login_Name, 
+            name: u.Login_Name,
         };
 
         const token = jwt.sign(payload, process.env.JWT_SECRET, {
@@ -59,7 +59,7 @@ export default class AuthService {
 
         const user = {
             loginId: u.Login_Id,
-            name: u.Login_Name,  
+            name: u.Login_Name,
             email: u.Login_EMail,
             role: u.Login_Role,
             blocked: !!u.Login_Blocked
