@@ -11,12 +11,6 @@
             <input nz-input class="filters__search" placeholder="Search by name/email" [(ngModel)]="search"
                 (ngModelChange)="applyFilter()" />
 
-            <nz-select class="filters__select" [(ngModel)]="roleFilter" (ngModelChange)="applyFilter()" nzAllowClear
-                nzPlaceHolder="Filter Role">
-                <nz-option nzValue="ADMIN" nzLabel="ADMIN"></nz-option>
-                <nz-option nzValue="USER" nzLabel="USER"></nz-option>
-            </nz-select>
-
             <nz-select class="filters__select" [(ngModel)]="statusFilter" (ngModelChange)="applyFilter()" nzAllowClear
                 nzPlaceHolder="Filter Status">
                 <nz-option nzValue="active" nzLabel="Active"></nz-option>
@@ -35,7 +29,6 @@
                     <th>Name</th>
                     <th>Email</th>
                     <th>Role</th>
-                    <th>Status</th>
                     <th class="col-actions">Actions</th>
                 </tr>
             </thead>
@@ -51,16 +44,15 @@
                         </nz-tag>
                     </td>
 
-                    <td>
-                        <nz-switch [ngModel]="u.active" (ngModelChange)="toggleActive(u, $event)"></nz-switch>
-                    </td>
-
                     <td class="actions">
-                        <button nz-button nzType="default" (click)="openEdit(u)">Edit</button>
-
-                        <nz-popconfirm nzTitle="Delete this user?" (nzOnConfirm)="deleteUser(u)">
-                            <button nz-button nzDanger>Delete</button>
-                        </nz-popconfirm>
+                        <button nz-button nzType="default" (click)="openEdit(u)" [disabled]="saving">
+                            Edit
+                        </button>
+                    
+                        <button nz-button nzType="default" nzDanger nz-popconfirm nzPopconfirmTitle="Delete this user?" nzOkText="Yes"
+                            nzCancelText="No" (nzOnConfirm)="deleteUser(u)" [disabled]="saving">
+                            Delete
+                        </button>
                     </td>
                 </tr>
             </tbody>

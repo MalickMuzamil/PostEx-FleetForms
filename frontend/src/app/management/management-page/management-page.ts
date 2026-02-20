@@ -83,7 +83,7 @@ export class ManagementPage implements OnInit {
 
     if (!this.isAdmin) return;
 
-    this.applyFilter();
+    this.loadUsers();
   }
 
   private getUserDataFromStorage(): UserData | null {
@@ -146,7 +146,17 @@ export class ManagementPage implements OnInit {
     this.error = '';
     this.editing = u;
 
-    this.form = { name: u.name, lastName: '', email: u.email, role: (u.role as UiRole) || 'USER' };
+    const parts = (u.name || '').trim().split(/\s+/);
+    const firstName = parts.shift() || '';
+    const lastName = parts.join(' ');
+
+    this.form = {
+      name: firstName,
+      lastName,
+      email: u.email,
+      role: (u.role as UiRole) || 'USER'
+    };
+
     this.modalVisible = true;
   }
 
@@ -160,7 +170,7 @@ export class ManagementPage implements OnInit {
     this.error = '';
 
     const firstName = this.form.name.trim();
-    const lastName = (this.form.lastName || '').trim() || 'Postex'; // ✅ fallback
+    const lastName = (this.form.lastName || '').trim() || 'Postex';
     const email = this.form.email.trim().toLowerCase();
     const uiRole: UiRole = this.form.role;
 
@@ -174,6 +184,39 @@ export class ManagementPage implements OnInit {
 
     (async () => {
       try {
+        // ✅ EDIT FLOW
+        if (this.editing) {
+          const userId = this.editing.id;
+
+          const payload = {
+            firstName,
+            lastName,
+            roles: [backendRole],
+            metadata: { updatedBy: 'ui' },
+            status: this.editing.active ? 'active' : 'inactive'
+          };
+
+          await this.updateUserOnServer(userId, payload);
+
+          // ✅ Update UI row locally
+          this.users = this.users.map(x =>
+            x.id === userId
+              ? {
+                ...x,
+                name: `${firstName} ${lastName}`.trim(),
+                role: backendRole, // (UI me ADMIN/USER chahiye ho to uiRole rakh lena)
+              }
+              : x
+          );
+
+          this.applyFilter();
+          this.showToast('User updated');
+          this.modalVisible = false;
+          this.editing = null;
+          return;
+        }
+
+        // ✅ CREATE FLOW (same as before)
         const payload = {
           email,
           firstName,
@@ -182,11 +225,12 @@ export class ManagementPage implements OnInit {
         };
 
         await this.createUserOnServer(payload);
+        await this.loadUsers();
 
         this.showToast('User created on server');
         this.modalVisible = false;
       } catch (e: any) {
-        this.error = e?.message || 'Create user failed';
+        this.error = e?.message || (this.editing ? 'Update user failed' : 'Create user failed');
       } finally {
         this.saving = false;
       }
@@ -199,16 +243,26 @@ export class ManagementPage implements OnInit {
     this.showToast(active ? 'User activated' : 'User deactivated');
   }
 
-  deleteUser(u: { id: string }): void {
-    this.users = this.users.filter(x => x.id !== u.id);
-    this.applyFilter();
-    this.showToast('User deleted');
+  async deleteUser(u: { id: string }): Promise<void> {
+    this.error = '';
+
+    try {
+      await this.deleteUserOnServer(u.id);
+
+      // ✅ refresh from backend
+      await this.loadUsers();
+
+      this.showToast('User deleted');
+    } catch (e: any) {
+      this.error = e?.message || 'Delete user failed';
+    }
   }
 
   private async createUserOnServer(payload: any) {
     const url = `${environment.POSTEX_BASE_URL}/public/v1/tenant/users`;
 
-    const accessToken = localStorage.getItem('auth_sdk_refresh_token');
+    // const accessToken = localStorage.getItem('auth_sdk_refresh_token');
+    const accessToken = this.getAccessToken();
     if (!accessToken) throw new Error('Access token missing. Please login again.');
 
     const res = await fetch(url, {
@@ -224,6 +278,107 @@ export class ManagementPage implements OnInit {
 
     if (!res.ok) {
       throw new Error(data?.message || data?.error?.message || `Create user failed (${res.status})`);
+    }
+
+    return data;
+  }
+
+  private getAccessToken(): string {
+    const token = localStorage.getItem('postex.access_token');
+    if (!token) throw new Error('Access token missing. Please login again.');
+    return token;
+  }
+
+  private async fetchUsersFromServer(): Promise<UserRow[]> {
+    const url = `${environment.POSTEX_BASE_URL}/public/v1/tenant/users`;
+    const token = this.getAccessToken();
+
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      throw new Error(data?.message || data?.error?.message || `Fetch users failed (${res.status})`);
+    }
+
+    const list = data?.data?.users;
+
+    if (!Array.isArray(list)) {
+      throw new Error('Unexpected response: users list not found');
+    }
+
+    return list.map((u: any) => ({
+      id: String(u.id ?? ''),
+      name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
+      email: String(u.email ?? ''),
+      role: String(u.roles?.[0] ?? 'USER'),
+      active: Boolean(u.enabled)
+    }));
+  }
+
+  async loadUsers(): Promise<void> {
+    this.loading = true;
+    this.error = '';
+
+    try {
+      const rows = await this.fetchUsersFromServer();
+      this.users = rows;
+      this.applyFilter();
+    } catch (e: any) {
+      this.error = e?.message || 'Failed to load users';
+      this.users = [];
+      this.filteredUsers = [];
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  private async updateUserOnServer(userId: string, payload: any) {
+    const url = `${environment.POSTEX_BASE_URL}/public/v1/tenant/users/${encodeURIComponent(userId)}`;
+
+    const accessToken = this.getAccessToken();
+
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      throw new Error(data?.message || data?.error?.message || `Update user failed (${res.status})`);
+    }
+
+    return data;
+  }
+
+  private async deleteUserOnServer(userId: string) {
+    const url = `${environment.POSTEX_BASE_URL}/public/v1/tenant/users/${encodeURIComponent(
+      userId
+    )}?permanent=true`;
+
+    const accessToken = this.getAccessToken();
+
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      throw new Error(data?.message || data?.error?.message || `Delete user failed (${res.status})`);
     }
 
     return data;
