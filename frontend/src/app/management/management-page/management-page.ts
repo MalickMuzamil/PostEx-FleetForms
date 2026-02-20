@@ -8,7 +8,8 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
-import { NzSwitchModule } from 'ng-zorro-antd/switch';
+// ✅ active/inactive removed => switch module not needed
+// import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { Component, OnInit } from '@angular/core';
@@ -23,9 +24,10 @@ type UserData = {
   roles?: string[];
 };
 
-type UserRow = { id: string; name: string; email: string; role: string; active: boolean };
-
 type UiRole = 'USER' | 'ADMIN';
+
+// ✅ active removed + role now UiRole (ADMIN/USER) in UI
+type UserRow = { id: string; name: string; email: string; role: UiRole };
 
 @Component({
   selector: 'app-management-page',
@@ -41,7 +43,6 @@ type UiRole = 'USER' | 'ADMIN';
     NzModalModule,
     NzInputModule,
     NzSelectModule,
-    NzSwitchModule,
     NzTagModule,
     NzAlertModule,
     CommonModule,
@@ -60,7 +61,6 @@ export class ManagementPage implements OnInit {
 
   search = '';
   roleFilter: UiRole | null = null;
-  statusFilter: 'active' | 'inactive' | null = null;
 
   modalVisible = false;
   saving = false;
@@ -105,11 +105,16 @@ export class ManagementPage implements OnInit {
     return email.toLowerCase().endsWith('@postexglobal.com');
   }
 
-  private mapRoleForBackend(uiRole: UiRole): string {
-    const r = (uiRole || '').toUpperCase();
-
-    if (r === 'ADMIN') return 'postex-auth-admin';
+  // ✅ backend -> UI role mapping
+  private mapRoleForUI(backendRole: string): UiRole {
+    const r = (backendRole || '').toLowerCase();
+    if (r === 'postex-auth-admin') return 'ADMIN';
     return 'USER';
+  }
+
+  // ✅ UI -> backend role mapping
+  private mapRoleForBackend(uiRole: UiRole): string {
+    return uiRole === 'ADMIN' ? 'postex-auth-admin' : 'USER';
   }
 
   applyFilter(): void {
@@ -119,19 +124,15 @@ export class ManagementPage implements OnInit {
       const matchesSearch =
         !s || u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s);
 
-      const matchesRole = !this.roleFilter || (u.role as UiRole) === this.roleFilter;
+      const matchesRole = !this.roleFilter || u.role === this.roleFilter;
 
-      const matchesStatus =
-        !this.statusFilter || (this.statusFilter === 'active' ? u.active : !u.active);
-
-      return matchesSearch && matchesRole && matchesStatus;
+      return matchesSearch && matchesRole;
     });
   }
 
   resetFilters(): void {
     this.search = '';
     this.roleFilter = null;
-    this.statusFilter = null;
     this.applyFilter();
   }
 
@@ -154,7 +155,7 @@ export class ManagementPage implements OnInit {
       name: firstName,
       lastName,
       email: u.email,
-      role: (u.role as UiRole) || 'USER'
+      role: u.role || 'USER' // ✅ FIX: no casting, no blank dropdown
     };
 
     this.modalVisible = true;
@@ -192,20 +193,20 @@ export class ManagementPage implements OnInit {
             firstName,
             lastName,
             roles: [backendRole],
-            metadata: { updatedBy: 'ui' },
-            status: this.editing.active ? 'active' : 'inactive'
+            metadata: { updatedBy: 'ui' }
+            // ✅ status/active removed
           };
 
           await this.updateUserOnServer(userId, payload);
 
-          // ✅ Update UI row locally
+          // ✅ Update UI row locally (UI role stays ADMIN/USER)
           this.users = this.users.map(x =>
             x.id === userId
               ? {
-                ...x,
-                name: `${firstName} ${lastName}`.trim(),
-                role: backendRole, // (UI me ADMIN/USER chahiye ho to uiRole rakh lena)
-              }
+                  ...x,
+                  name: `${firstName} ${lastName}`.trim(),
+                  role: uiRole
+                }
               : x
           );
 
@@ -216,7 +217,7 @@ export class ManagementPage implements OnInit {
           return;
         }
 
-        // ✅ CREATE FLOW (same as before)
+        // ✅ CREATE FLOW
         const payload = {
           email,
           firstName,
@@ -237,21 +238,12 @@ export class ManagementPage implements OnInit {
     })();
   }
 
-  toggleActive(u: { id: string }, active: boolean): void {
-    this.users = this.users.map(x => (x.id === u.id ? { ...x, active } : x));
-    this.applyFilter();
-    this.showToast(active ? 'User activated' : 'User deactivated');
-  }
-
   async deleteUser(u: { id: string }): Promise<void> {
     this.error = '';
 
     try {
       await this.deleteUserOnServer(u.id);
-
-      // ✅ refresh from backend
       await this.loadUsers();
-
       this.showToast('User deleted');
     } catch (e: any) {
       this.error = e?.message || 'Delete user failed';
@@ -261,7 +253,6 @@ export class ManagementPage implements OnInit {
   private async createUserOnServer(payload: any) {
     const url = `${environment.POSTEX_BASE_URL}/public/v1/tenant/users`;
 
-    // const accessToken = localStorage.getItem('auth_sdk_refresh_token');
     const accessToken = this.getAccessToken();
     if (!accessToken) throw new Error('Access token missing. Please login again.');
 
@@ -312,13 +303,16 @@ export class ManagementPage implements OnInit {
       throw new Error('Unexpected response: users list not found');
     }
 
-    return list.map((u: any) => ({
-      id: String(u.id ?? ''),
-      name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
-      email: String(u.email ?? ''),
-      role: String(u.roles?.[0] ?? 'USER'),
-      active: Boolean(u.enabled)
-    }));
+    return list.map((u: any) => {
+      const backendRole = String(u.roles?.[0] ?? 'USER');
+
+      return {
+        id: String(u.id ?? ''),
+        name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
+        email: String(u.email ?? ''),
+        role: this.mapRoleForUI(backendRole) // ✅ FIX: ADMIN/USER in UI
+      };
+    });
   }
 
   async loadUsers(): Promise<void> {
@@ -340,7 +334,6 @@ export class ManagementPage implements OnInit {
 
   private async updateUserOnServer(userId: string, payload: any) {
     const url = `${environment.POSTEX_BASE_URL}/public/v1/tenant/users/${encodeURIComponent(userId)}`;
-
     const accessToken = this.getAccessToken();
 
     const res = await fetch(url, {
@@ -362,10 +355,7 @@ export class ManagementPage implements OnInit {
   }
 
   private async deleteUserOnServer(userId: string) {
-    const url = `${environment.POSTEX_BASE_URL}/public/v1/tenant/users/${encodeURIComponent(
-      userId
-    )}?permanent=true`;
-
+    const url = `${environment.POSTEX_BASE_URL}/public/v1/tenant/users/${encodeURIComponent(userId)}?permanent=true`;
     const accessToken = this.getAccessToken();
 
     const res = await fetch(url, {

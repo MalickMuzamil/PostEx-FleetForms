@@ -11,12 +11,6 @@
             <input nz-input class="filters__search" placeholder="Search by name/email" [(ngModel)]="search"
                 (ngModelChange)="applyFilter()" />
 
-            <nz-select class="filters__select" [(ngModel)]="statusFilter" (ngModelChange)="applyFilter()" nzAllowClear
-                nzPlaceHolder="Filter Status">
-                <nz-option nzValue="active" nzLabel="Active"></nz-option>
-                <nz-option nzValue="inactive" nzLabel="Inactive"></nz-option>
-            </nz-select>
-
             <button nz-button (click)="resetFilters()">Reset</button>
         </div>
 
