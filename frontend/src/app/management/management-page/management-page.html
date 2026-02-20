@@ -1,0 +1,112 @@
+<nz-result *ngIf="!isAdmin" nzStatus="403" nzTitle="Access denied" nzSubTitle="This page is only for ADMIN users.">
+</nz-result>
+
+<ng-container *ngIf="isAdmin">
+    <nz-card nzTitle="User Management" [nzExtra]="extraTpl">
+        <ng-template #extraTpl>
+            <button nz-button nzType="primary" (click)="openCreate()">Add User</button>
+        </ng-template>
+
+        <div class="filters">
+            <input nz-input class="filters__search" placeholder="Search by name/email" [(ngModel)]="search"
+                (ngModelChange)="applyFilter()" />
+
+            <nz-select class="filters__select" [(ngModel)]="roleFilter" (ngModelChange)="applyFilter()" nzAllowClear
+                nzPlaceHolder="Filter Role">
+                <nz-option nzValue="ADMIN" nzLabel="ADMIN"></nz-option>
+                <nz-option nzValue="USER" nzLabel="USER"></nz-option>
+            </nz-select>
+
+            <nz-select class="filters__select" [(ngModel)]="statusFilter" (ngModelChange)="applyFilter()" nzAllowClear
+                nzPlaceHolder="Filter Status">
+                <nz-option nzValue="active" nzLabel="Active"></nz-option>
+                <nz-option nzValue="inactive" nzLabel="Inactive"></nz-option>
+            </nz-select>
+
+            <button nz-button (click)="resetFilters()">Reset</button>
+        </div>
+
+        <nz-alert *ngIf="toast" nzType="success" [nzMessage]="toast" nzShowIcon class="msg"></nz-alert>
+        <nz-alert *ngIf="error" nzType="error" [nzMessage]="error" nzShowIcon class="msg"></nz-alert>
+
+        <nz-table [nzData]="filteredUsers" [nzLoading]="loading">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th class="col-actions">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr *ngFor="let u of filteredUsers">
+                    <td>{{ u.name }}</td>
+                    <td>{{ u.email }}</td>
+
+                    <td>
+                        <nz-tag [nzColor]="u.role === 'ADMIN' ? 'red' : 'blue'">
+                            {{ u.role }}
+                        </nz-tag>
+                    </td>
+
+                    <td>
+                        <nz-switch [ngModel]="u.active" (ngModelChange)="toggleActive(u, $event)"></nz-switch>
+                    </td>
+
+                    <td class="actions">
+                        <button nz-button nzType="default" (click)="openEdit(u)">Edit</button>
+
+                        <nz-popconfirm nzTitle="Delete this user?" (nzOnConfirm)="deleteUser(u)">
+                            <button nz-button nzDanger>Delete</button>
+                        </nz-popconfirm>
+                    </td>
+                </tr>
+            </tbody>
+        </nz-table>
+    </nz-card>
+
+    <nz-modal [(nzVisible)]="modalVisible" [nzTitle]="editing ? 'Edit User' : 'Add User'"
+        [nzOkText]="editing ? 'Update' : 'Create'" (nzOnCancel)="closeModal()" (nzOnOk)="save()" [nzOkLoading]="saving"
+        [nzBodyStyle]="{ padding: '24px' }">
+        <ng-container *nzModalContent>
+            <div class="modal-grid">
+
+                <div class="field">
+                    <label>First Name</label>
+                    <input nz-input [(ngModel)]="form.name" placeholder="e.g. Ali" />
+                </div>
+
+                <div class="field">
+                    <label>Last Name (optional)</label>
+                    <input nz-input [(ngModel)]="form.lastName" placeholder="e.g. Khan" />
+                    <small>If empty, we will send <b>Postex</b></small>
+                </div>
+
+                <div class="field">
+                    <label>Email</label>
+                    <input nz-input [(ngModel)]="form.email" [disabled]="!!editing"
+                        placeholder="name@postexglobal.com" />
+                    <small>Only @postexglobal.com emails allowed</small>
+                </div>
+
+                <div class="field">
+                    <label>Role</label>
+                    <nz-select [(ngModel)]="form.role">
+                        <nz-option nzValue="USER" nzLabel="USER"></nz-option>
+                        <nz-option nzValue="ADMIN" nzLabel="ADMIN"></nz-option>
+                    </nz-select>
+
+                    <small *ngIf="form.role === 'ADMIN'">
+                        Backend role will be sent as <b>postex-auth-admin</b>
+                    </small>
+                    <small *ngIf="form.role === 'USER'">
+                        Backend role will be sent as <b>postex</b>
+                    </small>
+                </div>
+
+            </div>
+        </ng-container>
+    </nz-modal>
+</ng-container>

@@ -207,6 +207,14 @@ export const routes: Routes = [
           ).then((m) => m.BL6),
       },
 
+      {
+        path: 'users',
+        loadComponent: () =>
+          import(
+            './management/management-page/management-page'
+          ).then((m) => m.ManagementPage),
+      },
+
     ],
   },
 ];

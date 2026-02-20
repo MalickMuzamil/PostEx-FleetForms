@@ -13,10 +13,15 @@
       <ul nz-menu>
         <!-- Username inside dropdown -->
         <li nz-menu-item disabled class="user-info">
-          {{ user?.name }}
+          {{ user?.name || user?.email }}
         </li>
         <li nz-menu-item disabled class="user-info">
-          Role : {{ user?.role }}
+          Roles : {{ rolesText }}
+        </li>
+
+        <li nz-menu-item (click)="goToUsers()">
+          <i nz-icon nzType="team"></i>
+          User Management
         </li>
 
         <li nz-menu-divider></li>

@@ -55,15 +55,6 @@ export class OtpComponent {
 
       await this.auth.verifyOtp(otpCode);
 
-      const resp: any = await this.auth.issueJwtAfterOtp(email, otpCode).toPromise();
-      if (!resp?.token) throw new Error('Token not returned from backend');
-
-      localStorage.setItem('token', resp.token);
-      localStorage.setItem('UserData', JSON.stringify(resp.user || {}));
-
-      const v: any = await this.auth.verifyToken().toPromise();
-      if (v?.user) localStorage.setItem('UserData', JSON.stringify(v.user));
-
       this.auth.setAuthenticated(true);
       this.auth.setOtpVerified();
 

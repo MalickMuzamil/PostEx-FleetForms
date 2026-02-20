@@ -23,7 +23,7 @@ export class LoginGuard implements CanActivate {
     const inFlow = sessionStorage.getItem('auth.loginDone') === '1';
     if (inFlow) return true;
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('postex-auth-token');
     if (token && !isTokenExpired(token)) {
       this.router.navigateByUrl('/', { replaceUrl: true });
       return false;

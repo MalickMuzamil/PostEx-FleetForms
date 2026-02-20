@@ -16,16 +16,25 @@ function isTokenExpired(token: string): boolean {
 export class AuthGuard implements CanActivate {
   constructor(private router: Router) {}
 
-  canActivate(): boolean {
-    const token = localStorage.getItem('token');
+ canActivate(): boolean {
+  // ✅ Prefer PostEx access token
+  const token =
+    localStorage.getItem('postex.access_token') ||
+    localStorage.getItem('postex-auth-token');
 
-    if (!token || isTokenExpired(token)) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('UserData');
-      this.router.navigate(['/auth/login']);
-      return false;
-    }
+  if (!token || isTokenExpired(token)) {
+    localStorage.removeItem('postex.access_token');
+    localStorage.removeItem('postex.refresh_token');
+    localStorage.removeItem('postex.user');
+    localStorage.removeItem('postex-auth-token');
 
-    return true;
+    localStorage.removeItem('postex-auth-token');
+    localStorage.removeItem('UserData');
+
+    this.router.navigate(['/auth/login']);
+    return false;
   }
+
+  return true;
+}
 }

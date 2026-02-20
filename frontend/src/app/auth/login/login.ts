@@ -35,90 +35,85 @@ export class LoginComponent {
   }
 
   async submit() {
-  if (this.form.invalid) {
-    this.form.markAllAsTouched();
-    return;
-  }
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
 
-  this.loading = true;
-  const email = String(this.form.value.email || '').trim().toLowerCase();
+    this.loading = true;
+    const email = String(this.form.value.email || '').trim().toLowerCase();
 
-  try {
-    // ✅ 1) check passkey registered?
-    const hasPasskey = await this.auth.hasPasskeyRegistered(email);
+    try {
+      const hasPasskey = await this.auth.hasPasskeyRegistered(email);
 
-    // ✅ 2) start auth (OTP or challenge)
-    const result: any = await this.auth.startOtp(email);
+      const result: any = await this.auth.startOtp(email);
 
-    // ✅ 3) no passkey -> OTP
-    if (!hasPasskey) {
+      if (!hasPasskey) {
+        sessionStorage.setItem('auth.loginDone', '1');
+        sessionStorage.removeItem('auth.otpVerified');
+
+        this.msg.success('OTP sent to email');
+        this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
+        return;
+      }
+
+      if (result?.status === 'webauthn_challenge' || result?.status === 'webauthn_ready') {
+        const challenge = result?.challenge;
+        const rp = result?.rp;
+        const credentialIds = result?.credentialIds;
+
+        if (!challenge || !rp || !Array.isArray(credentialIds) || credentialIds.length === 0) {
+          sessionStorage.setItem('auth.loginDone', '1');
+          sessionStorage.removeItem('auth.otpVerified');
+
+          this.msg.warning('Passkey challenge missing, using OTP.');
+          this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
+          return;
+        }
+
+        const res: any = await this.auth.authenticateWithPasskey({ challenge, rp, credentialIds });
+
+        const data = res?.data ?? res;
+
+        const accessToken = data?.access_token || data?.token || data?.accessToken || null;
+        const refreshToken = data?.refresh_token || data?.refreshToken || null;
+
+        if (accessToken) localStorage.setItem('postex.access_token', accessToken);
+        if (refreshToken) localStorage.setItem('postex.refresh_token', refreshToken);
+
+        const user = {
+          login: data?.login,
+          userName: data?.userName,
+          name: data?.name,
+          email: data?.email,
+          realm: data?.realm,
+          apps: data?.apps || [],
+          roles: data?.roles || [],
+          token_type: data?.token_type,
+          auth_method: data?.auth_method,
+        };
+        localStorage.setItem('postex.user', JSON.stringify(user));
+        sessionStorage.removeItem('auth.loginDone');
+        sessionStorage.removeItem('auth.otpVerified');
+
+        this.msg.success('Logged in with passkey');
+        this.router.navigateByUrl('/', { replaceUrl: true });
+        return;
+      }
+
       sessionStorage.setItem('auth.loginDone', '1');
       sessionStorage.removeItem('auth.otpVerified');
 
       this.msg.success('OTP sent to email');
       this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
-      return;
+
+    } catch (err: any) {
+      this.msg.error(err?.message || 'Failed to login');
+    } finally {
+      this.loading = false;
     }
-
-    // ✅ 4) passkey registered + challenge present -> passkey login
-    if (result?.status === 'webauthn_challenge' || result?.status === 'webauthn_ready') {
-      const challenge = result?.challenge;
-      const rp = result?.rp;
-      const credentialIds = result?.credentialIds;
-
-      // fallback to OTP if challenge payload missing
-      if (!challenge || !rp || !Array.isArray(credentialIds) || credentialIds.length === 0) {
-        sessionStorage.setItem('auth.loginDone', '1');
-        sessionStorage.removeItem('auth.otpVerified');
-
-        this.msg.warning('Passkey challenge missing, using OTP.');
-        this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
-        return;
-      }
-
-      // 4.1) PostEx passkey authenticate
-      const res: any = await this.auth.authenticateWithPasskey({ challenge, rp, credentialIds });
-
-      // ✅ store PostEx token separately (optional)
-      const postexToken = res?.access_token || res?.token;
-      if (postexToken) localStorage.setItem('postex-auth-token', postexToken);
-
-      // ❌ IMPORTANT: Do NOT overwrite backend JWT
-      // localStorage.setItem('token', postexToken);  <-- remove forever
-
-      // 4.2) ✅ now ask backend to issue OUR JWT for route protection
-      const jwtResp: any = await this.auth.issueJwtAfterPasskey(email).toPromise();
-      if (!jwtResp?.token) throw new Error('Backend JWT not returned');
-
-      localStorage.setItem('token', jwtResp.token);
-      localStorage.setItem('UserData', JSON.stringify(jwtResp.user || {}));
-
-      // 4.3) verify token with backend (optional but good)
-      const v: any = await this.auth.verifyToken().toPromise();
-      if (v?.user) localStorage.setItem('UserData', JSON.stringify(v.user));
-
-      // flags
-      sessionStorage.removeItem('auth.loginDone');
-      sessionStorage.removeItem('auth.otpVerified');
-
-      this.msg.success('Logged in with passkey');
-      this.router.navigateByUrl('/', { replaceUrl: true });
-      return;
-    }
-
-    // ✅ 5) passkey registered but no challenge -> OTP
-    sessionStorage.setItem('auth.loginDone', '1');
-    sessionStorage.removeItem('auth.otpVerified');
-
-    this.msg.success('OTP sent to email');
-    this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
-
-  } catch (err: any) {
-    this.msg.error(err?.message || 'Failed to login');
-  } finally {
-    this.loading = false;
   }
-}
+
 
 
 }

@@ -35,7 +35,6 @@ export class AuthService {
 
     localStorage.setItem(this.otpEmailKey, email);
 
-    // token optional - store only if exists (even if you don't want to send it)
     const token =
       result?.token ??
       result?.data?.token ??
@@ -64,7 +63,11 @@ export class AuthService {
     if (!email) throw new Error('Email missing, please initiate OTP again');
 
     try {
-      return await (this.auth as any).verifyOTP(otp);
+      const resp = await (this.auth as any).verifyOTP(otp);
+
+      this.storePostexSession(resp);
+
+      return resp;
     } catch (e: any) {
       if (e instanceof AuthSDKFetchError) {
         throw new Error(e?.response?.data?.message || 'OTP verification failed');
@@ -94,9 +97,11 @@ export class AuthService {
   }
 
   logout() {
-    localStorage.removeItem('token');
+    localStorage.removeItem('postex-auth-token');
+    localStorage.removeItem('postex.access_token');
+    localStorage.removeItem('postex.refresh_token');
+    localStorage.removeItem('postex.user');
     localStorage.removeItem('UserData');
-
     sessionStorage.removeItem('auth.loginDone');
     sessionStorage.removeItem('auth.otpVerified');
 
@@ -105,16 +110,7 @@ export class AuthService {
   }
 
   hasToken(): boolean {
-    return !!localStorage.getItem('token');
-  }
-
-  verifyToken() {
-    return this.api.get('/auth/verify').pipe(
-      tap(() => {
-        console.log('Token verified');
-        this.setAuthenticated(true);
-      })
-    );
+    return !!localStorage.getItem('postex-auth-token') || !!localStorage.getItem('postex.access_token');
   }
 
   setAuthenticated(val: boolean) {
@@ -167,14 +163,38 @@ export class AuthService {
     return Array.isArray(credentialIds) && credentialIds.length > 0;
   }
 
-  issueJwtAfterOtp(email: string, otpCode: string) {
-    return this.api.post('/auth/verify-otp', {
-      email,
-      otpCode
-    });
+  private postexAccessKey = 'postex.access_token';
+  private postexRefreshKey = 'postex.refresh_token';
+  private postexUserKey = 'postex.user';
+
+
+  storePostexSession(resp: any) {
+    const data = resp?.data ?? resp;
+
+    const access = data?.access_token;
+    const refresh = data?.refresh_token;
+
+    if (access) localStorage.setItem(this.postexAccessKey, access);
+    if (access) localStorage.setItem('postex-auth-token', access);
+    if (refresh) localStorage.setItem(this.postexRefreshKey, refresh);
+
+    const user = {
+      email: data?.email,
+      name: data?.name,
+      userName: data?.userName,
+      realm: data?.realm,
+      roles: data?.roles || [],
+      apps: data?.apps || [],
+      auth_method: data?.auth_method,
+    };
+    localStorage.setItem(this.postexUserKey, JSON.stringify(user));
   }
 
-  issueJwtAfterPasskey(email: string) {
-    return this.api.post('/auth/issue-jwt', { email });
+  getPostexAccessToken() {
+    return localStorage.getItem(this.postexAccessKey);
+  }
+
+  verifyTokenFromBackend() {
+    return this.api.get('/auth/verify-token').toPromise();
   }
 }

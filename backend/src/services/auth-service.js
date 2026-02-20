@@ -16,56 +16,39 @@ export default class AuthService {
     async verifyOtp(email, otpCode) {
         if (!email) throw this._badRequest("Email required");
         if (!otpCode) throw this._badRequest("otpCode required");
-        return this.issueJwt(email);
-    }
 
-    async issueJwt(email) {
-        if (!email) throw this._badRequest("Email required");
+        const normalizedEmail = String(email).trim().toLowerCase();
 
-        const cleanEmail = String(email).trim().toLowerCase();
-
+        // ✅ 1) DB se user nikaalo
         const pool = await getAuthPool();
-        const result = await pool
-            .request()
-            .input("email", sql.VarChar(80), cleanEmail)
+
+        const dbRes = await pool.request()
+            .input("email", sql.VarChar, normalizedEmail)
             .query(`
-      SELECT
-        Login_Id,
-        Login_Name,
-        Login_Role,
-        Login_Blocked,
-        Login_EMail
-      FROM dbo.users
-      WHERE LOWER(Login_EMail) = @email
-    `);
+        SELECT TOP 1
+          id,
+          name,
+          email,
+          phone,
+          role
+        FROM Users
+        WHERE LOWER(email) = @email
+      `);
 
-        const u = result.recordset?.[0];
-        if (!u) throw this._badRequest("User not found");
+        const user = dbRes.recordset?.[0];
+        if (!user) throw this._badRequest("User not found");
 
-        if (u.Login_Blocked === 1 || u.Login_Blocked === true) {
-            throw this._badRequest("User is blocked");
-        }
+        // const payload = {
+        //     id: user.id,
+        //     email: user.email,
+        //     role: user.role
+        // };
 
-        const payload = {
-            loginId: u.Login_Id,
-            email: u.Login_EMail,
-            role: u.Login_Role,
-            name: u.Login_Name,
-        };
+        return { ok: true, user };
 
-        const token = jwt.sign(payload, process.env.JWT_SECRET, {
-            expiresIn: "7d"
-        });
+        // const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-        const user = {
-            loginId: u.Login_Id,
-            name: u.Login_Name,
-            email: u.Login_EMail,
-            role: u.Login_Role,
-            blocked: !!u.Login_Blocked
-        };
-
-        return { ok: true, token, user };
+        // return { ok: true, token, user };
     }
 
     _badRequest(msg) {

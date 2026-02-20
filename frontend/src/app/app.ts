@@ -13,12 +13,21 @@ export class App {
   protected readonly title = signal('postex-fleetforms');
 
   constructor(private authService: AuthService) {
-    if (this.authService.hasToken()) {
-      this.authService.verifyToken().subscribe({
-        error: () => {
-          this.authService.logout();
-        },
-      });
+
+    const token = localStorage.getItem('postex-auth-token');
+
+    if (!token) {
+      this.authService.setAuthenticated(false);
+      return;
     }
+
+    this.authService.verifyTokenFromBackend()
+      .then(() => {
+        this.authService.setAuthenticated(true);
+      })
+      .catch(() => {
+        localStorage.removeItem('postex-auth-token');
+        this.authService.setAuthenticated(false);
+      });
   }
 }
