@@ -215,6 +215,22 @@ export const routes: Routes = [
           ).then((m) => m.ManagementPage),
       },
 
+      {
+        path: 'attendance',
+        loadComponent: () =>
+          import(
+            './features/attendance-report/attendance-report'
+          ).then((m) => m.AttendanceReport),
+      },
+
+      {
+        path: 'attendance-bulk-preview',
+        loadComponent: () =>
+          import(
+            './features/attendance-report/bulk-view/bulk-view'
+          ).then((m) => m.BulkView),
+      },
+
     ],
   },
 ];

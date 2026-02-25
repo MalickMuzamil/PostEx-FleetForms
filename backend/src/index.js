@@ -37,6 +37,9 @@ import Bindingcnclevel3level4 from './routes/opsCncL3L4MappingRoutes.js';
 import Bindingcnclevel4level5 from './routes/opsCncL4L5MappingRoutes.js';
 import Bindingcnclevel5level6 from './routes/opsCncL5L6MappingRoutes.js';
 
+//Attendance Form
+import Attendance from './routes/attendance-routes.js';
+
 
 dotenv.config();
 
@@ -93,6 +96,8 @@ app.use("/cnc-l2-l3-mapping", Bindingcnclevel2level3);
 app.use("/cnc-l3-l4-mapping", Bindingcnclevel3level4);
 app.use("/cnc-l4-l5-mapping", Bindingcnclevel4level5);
 app.use("/cnc-l5-l6-mapping", Bindingcnclevel5level6);
+
+app.use("/attendance", Attendance);
 
 
 // error handler (last)
