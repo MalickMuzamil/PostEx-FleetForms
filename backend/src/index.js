@@ -40,6 +40,9 @@ import Bindingcnclevel5level6 from './routes/opsCncL5L6MappingRoutes.js';
 //Attendance Form
 import Attendance from './routes/attendance-routes.js';
 
+//Fake Attempt Form
+import courierFakeAttemptsRoutes from './routes/courierfakeattemptsRoutes.js';
+
 
 dotenv.config();
 
@@ -98,6 +101,7 @@ app.use("/cnc-l4-l5-mapping", Bindingcnclevel4level5);
 app.use("/cnc-l5-l6-mapping", Bindingcnclevel5level6);
 
 app.use("/attendance", Attendance);
+app.use("/courier-fake-attempts", courierFakeAttemptsRoutes);
 
 
 // error handler (last)
