@@ -231,6 +231,24 @@ export const routes: Routes = [
           ).then((m) => m.BulkView),
       },
 
+
+      {
+        path: 'courier-fake-attempts',
+        loadComponent: () =>
+          import(
+            './features/courier-fake-attempts/courier-fake-attempts'
+          ).then((m) => m.CourierFakeAttempts),
+      },
+
+
+      {
+        path: 'courier-fake-attempts-bulk-preview',
+        loadComponent: () =>
+          import(
+            './features/courier-fake-attempts/bulk-view/bulk-view'
+          ).then((m) => m.BulkView),
+      },
+
     ],
   },
 ];

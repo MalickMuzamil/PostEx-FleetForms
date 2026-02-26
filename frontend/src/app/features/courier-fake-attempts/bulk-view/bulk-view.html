@@ -1,0 +1,249 @@
+<div class="container-fluid mt-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <!-- LEFT -->
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-outline-secondary" routerLink="/courier-fake-attempts">
+            ← Back
+          </button>
+
+          <button class="btn btn-success px-4"
+                  *ngIf="selectedValidCount >= 1"
+                  [disabled]="!canProceed"
+                  (click)="proceedBulkImport()">
+            <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
+            {{ bulkSaving ? 'Processing...' : 'Proceed' }}
+          </button>
+        </div>
+
+        <!-- RIGHT -->
+        <h4 class="fw-bold mb-0 text-end">Courier Fake Attempts Bulk Preview</h4>
+      </div>
+
+      <nz-spin [nzSpinning]="isLoading" [nzTip]="loadingText">
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 40px">
+                  <input type="checkbox" class="form-check-input"
+                         [ngModel]="checkAll"
+                         (ngModelChange)="onToggleAll($event)"
+                         [disabled]="isLoading" />
+                </th>
+
+                <th>#</th>
+
+                <th>CNNo</th>
+                <th>BranchName</th>
+                <th>Attempts</th>
+                <th>CourierID</th>
+                <th>Rider</th>
+                <th>Fake_Attempts</th>
+                <th>Date</th>
+                <th>IsArchived</th>
+                <th>CreatedBy</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <ng-container *ngFor="let row of rows; trackBy: trackByRow">
+                <tr [class.table-warning]="row.checked"
+                    [class.table-danger]="(row.errors?.length ?? 0) > 0">
+
+                  <!-- Checkbox -->
+                  <td>
+                    <input type="checkbox" class="form-check-input"
+                           [(ngModel)]="row.checked"
+                           (change)="onRowToggle(row, row.checked)"
+                           [disabled]="isLoading || !row.isValid" />
+                  </td>
+
+                  <!-- Row No -->
+                  <td>{{ row.rowNo }}</td>
+
+                  <!-- CNNo -->
+                  <td>
+                    <div class="cell-wrap">
+                      <input class="form-control form-control-sm"
+                             [(ngModel)]="row.cnNo"
+                             [disabled]="isLoading"
+                             (ngModelChange)="onRowTextChange(row)" />
+
+                      <div class="cell-msg">
+                        <div class="field-err" *ngIf="hasErr(row,'CNNo is required')">
+                          <span class="dot"></span>
+                          <strong>CNNo is required</strong>
+                          <span class="file" *ngIf="row.rawCnNo">Value: <strong>{{ row.rawCnNo }}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="field-err" *ngIf="hasErrLike(row,'Duplicate with row')">
+                      <span class="dot"></span>
+                      <strong>{{ getErrLike(row,'Duplicate with row') }}</strong>
+                    </div>
+                  </td>
+
+                  <!-- BranchName -->
+                  <td>
+                    <div class="cell-wrap">
+                      <input class="form-control form-control-sm"
+                             [(ngModel)]="row.branchName"
+                             [disabled]="isLoading"
+                             (ngModelChange)="onRowTextChange(row)" />
+                      <div class="cell-msg">
+                        <div class="field-err" *ngIf="hasErr(row,'BranchName is required')">
+                          <span class="dot"></span>
+                          <strong>BranchName is required</strong>
+                          <span class="file" *ngIf="row.rawBranchName">Value: <strong>{{ row.rawBranchName }}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Attempts -->
+                  <td>
+                    <div class="cell-wrap">
+                      <input class="form-control form-control-sm"
+                             [(ngModel)]="row.attempts"
+                             [disabled]="isLoading"
+                             (ngModelChange)="onRowTextChange(row)" />
+                      <div class="cell-msg">
+                        <div class="field-err" *ngIf="hasErr(row,'Attempts is required')">
+                          <span class="dot"></span>
+                          <strong>Attempts is required</strong>
+                          <span class="file" *ngIf="row.rawAttempts">Value: <strong>{{ row.rawAttempts }}</strong></span>
+                        </div>
+                        <div class="field-err" *ngIf="hasErr(row,'Attempts: Invalid number')">
+                          <span class="dot"></span>
+                          <strong>Attempts invalid number</strong>
+                          <span class="file" *ngIf="row.rawAttempts">Value: <strong>{{ row.rawAttempts }}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- CourierID -->
+                  <td>
+                    <div class="cell-wrap">
+                      <input class="form-control form-control-sm"
+                             [(ngModel)]="row.courierId"
+                             [disabled]="isLoading"
+                             (ngModelChange)="onRowTextChange(row)" />
+                      <div class="cell-msg">
+                        <div class="field-err" *ngIf="hasErr(row,'CourierID is required')">
+                          <span class="dot"></span>
+                          <strong>CourierID is required</strong>
+                          <span class="file" *ngIf="row.rawCourierId">Value: <strong>{{ row.rawCourierId }}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Rider -->
+                  <td>
+                    <div class="cell-wrap">
+                      <input class="form-control form-control-sm"
+                             [(ngModel)]="row.rider"
+                             [disabled]="isLoading"
+                             (ngModelChange)="onRowTextChange(row)" />
+                      <div class="cell-msg">
+                        <div class="field-err" *ngIf="hasErr(row,'Rider is required')">
+                          <span class="dot"></span>
+                          <strong>Rider is required</strong>
+                          <span class="file" *ngIf="row.rawRider">Value: <strong>{{ row.rawRider }}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Fake_Attempts -->
+                  <td>
+                    <div class="cell-wrap">
+                      <input class="form-control form-control-sm"
+                             [(ngModel)]="row.fakeAttempts"
+                             [disabled]="isLoading"
+                             (ngModelChange)="onRowTextChange(row)" />
+                      <div class="cell-msg">
+                        <div class="field-err" *ngIf="hasErr(row,'Fake_Attempts is required')">
+                          <span class="dot"></span>
+                          <strong>Fake_Attempts is required</strong>
+                          <span class="file" *ngIf="row.rawFakeAttempts">Value: <strong>{{ row.rawFakeAttempts }}</strong></span>
+                        </div>
+                        <div class="field-err" *ngIf="hasErr(row,'Fake_Attempts: Invalid number')">
+                          <span class="dot"></span>
+                          <strong>Fake_Attempts invalid number</strong>
+                          <span class="file" *ngIf="row.rawFakeAttempts">Value: <strong>{{ row.rawFakeAttempts }}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Date -->
+                  <td>
+                    <div class="cell-wrap">
+                      <nz-date-picker nzFormat="yyyy-MM-dd"
+                                      nzSize="small"
+                                      [formControl]="row.dateControl"
+                                      [nzDisabled]="isLoading"
+                                      (ngModelChange)="onRowDateChange(row)"></nz-date-picker>
+
+                      <div class="cell-msg">
+                        <div class="field-err" *ngIf="hasErr(row,'Date is required')">
+                          <span class="dot"></span>
+                          <strong>Date is required</strong>
+                          <span class="file" *ngIf="row.rawDate">Value: <strong>{{ row.rawDate }}</strong></span>
+                        </div>
+
+                        <div class="field-err" *ngIf="hasErr(row,'Invalid Date')">
+                          <span class="dot"></span>
+                          <strong>Invalid Date</strong>
+                          <span class="file" *ngIf="row.rawDate">Value: <strong>{{ row.rawDate }}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- IsArchived -->
+                  <td>
+                    <div class="cell-wrap">
+                      <select class="form-select form-select-sm"
+                              [(ngModel)]="row.isArchived"
+                              [disabled]="isLoading"
+                              (ngModelChange)="onRowArchivedChange(row)">
+                        <option [ngValue]="0">0</option>
+                        <option [ngValue]="1">1</option>
+                      </select>
+
+                      <div class="cell-msg">
+                        <div class="field-err" *ngIf="hasErr(row,'IsArchived is required')">
+                          <span class="dot"></span>
+                          <strong>IsArchived is required</strong>
+                          <span class="file" *ngIf="row.rawIsArchived">Value: <strong>{{ row.rawIsArchived }}</strong></span>
+                        </div>
+
+                        <div class="field-err" *ngIf="hasErr(row,'IsArchived must be 0 or 1')">
+                          <span class="dot"></span>
+                          <strong>IsArchived must be 0 or 1</strong>
+                          <span class="file" *ngIf="row.rawIsArchived">Value: <strong>{{ row.rawIsArchived }}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- CreatedBy (readonly) -->
+                  <td>
+                    <input class="form-control form-control-sm" [value]="row.createdBy" disabled />
+                  </td>
+
+                </tr>
+              </ng-container>
+            </tbody>
+          </table>
+        </div>
+      </nz-spin>
+    </div>
+  </div>
+</div>

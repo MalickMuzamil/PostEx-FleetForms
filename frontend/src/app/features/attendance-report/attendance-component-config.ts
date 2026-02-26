@@ -67,8 +67,8 @@ export const ATTENDANCE_EDIT_FORM: FormConfig = {
 
 export const ATTENDANCE_TABLE: TableConfig = {
   globalSearch: {
-    placeholder: 'Search Employee, Date, Status',
-    keys: ['employeeId', 'employeeName', 'attendanceDateDisplay', 'statusDisplay'],
+    placeholder: 'Search Employee, Department, Division, Branch, Zone',
+    keys: ['employeeId', 'employeeName', 'department', 'division', 'branch', 'zone'],
     rules: {
       mode: 'alphanumeric',
       maxLength: 20,
