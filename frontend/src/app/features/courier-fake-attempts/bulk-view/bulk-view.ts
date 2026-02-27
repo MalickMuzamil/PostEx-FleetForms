@@ -454,6 +454,7 @@ export class BulkView {
 
     this.updateHasValidRow();
     this.checkDuplicateInFile();
+    this.enforceSelectionRules();
   }
 
   private applyLocalValidationsSafe() {
@@ -479,11 +480,16 @@ export class BulkView {
   updateHasValidRow() {
     for (const r of this.rows) {
       r.isValid = this.isRowValid(r);
-      if (!r.isValid) r.checked = false;
+
+      if (!r.isValid || this.hasErrLike(r, 'Duplicate with row')) {
+        r.checked = false;
+      }
     }
 
     this.hasValidRow = this.rows.some((r) => r.isValid === true);
-    this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+
+    const validRows = this.rows.filter(r => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    this.checkAll = validRows.length > 0 && validRows.every(r => r.checked);
   }
 
   // ---------------- UI EVENTS ----------------
@@ -494,8 +500,10 @@ export class BulkView {
   }
 
   onRowToggle(row: BulkFakeAttemptsRow, checked: boolean) {
-    row.checked = checked && !!row.isValid;
-    this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+    const canSelect = !!row.isValid && !this.hasErrLike(row, 'Duplicate with row');
+    row.checked = checked && canSelect;
+
+    this.enforceSelectionRules();
   }
 
   onRowDateChange(row: BulkFakeAttemptsRow) {
@@ -621,8 +629,6 @@ export class BulkView {
     else this.removeErr(row, msg);
   }
 
-  // ✅ same attendance wali duplicate style
-  // yahan key: CNNo|Date
   private checkDuplicateInFile() {
     const map = new Map<string, BulkFakeAttemptsRow[]>();
 
@@ -637,7 +643,6 @@ export class BulkView {
       map.set(key, arr);
     }
 
-    // clear old duplicate errors
     for (const row of this.rows) {
       row.errors = (row.errors ?? []).filter((e) => !e.startsWith('Duplicate with row'));
     }
@@ -652,6 +657,8 @@ export class BulkView {
         });
       }
     });
+
+    this.enforceSelectionRules();
   }
 
   hasErrLike(row: BulkFakeAttemptsRow, prefix: string): boolean {
@@ -662,11 +669,8 @@ export class BulkView {
     return (row.errors ?? []).find((e) => String(e).startsWith(prefix)) ?? null;
   }
 
-  // ✅ CreatedBy from localStorage roles (sirf ye customize)
   private getCreatedBy(): string {
     try {
-      // tum ne jo object diya us mein roles array hai
-      // hume sirf "postex-auth-admin" check karna hai
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (!k) continue;
@@ -683,4 +687,18 @@ export class BulkView {
 
     return 'User';
   }
+
+  private enforceSelectionRules() {
+    for (const r of this.rows) {
+      r.isValid = this.isRowValid(r);
+
+      if (!r.isValid || this.hasErrLike(r, 'Duplicate with row')) {
+        r.checked = false;
+      }
+    }
+
+    const validRows = this.rows.filter(r => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    this.checkAll = validRows.length > 0 && validRows.every(r => r.checked);
+  }
+
 }
