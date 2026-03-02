@@ -311,9 +311,14 @@ export class CallLogsBulkView {
 
       const rawIsArchived = String(getVal(r, 'IsArchived') ?? '').trim();
 
-      // Customer_Number
+      // Customer_Number (must be exactly 11 digits)
       const customerNumber = rawCustomerNumber || null;
-      if (!customerNumber) errors.push(this.CUST_REQUIRED);
+
+      if (!customerNumber) {
+        errors.push(this.CUST_REQUIRED);
+      } else if (!/^\d{11}$/.test(rawCustomerNumber)) {
+        errors.push('Customer_Number must be exactly 11 digits');
+      }
 
       // Consignee_Cell_Length (number)
       const consigneeCellLength = this.toNumberOrNull(rawConsigneeCellLength);
@@ -422,6 +427,7 @@ export class CallLogsBulkView {
   private clearManagedErrors(row: BulkCallLogsRow) {
     [
       this.CUST_REQUIRED,
+      'Customer_Number must be exactly 11 digits', // ✅ ADD THIS
       this.CONS_REQUIRED,
       this.CONS_INVALID,
       this.MASTER_REQUIRED,
@@ -446,7 +452,11 @@ export class CallLogsBulkView {
       this.clearManagedErrors(row);
 
       const cust = String(row.customerNumber ?? '').trim();
-      if (!cust) this.addErr(row, this.CUST_REQUIRED);
+      if (!cust) {
+        this.addErr(row, this.CUST_REQUIRED);
+      } else if (!/^\d{11}$/.test(cust)) {
+        this.addErr(row, 'Customer_Number must be exactly 11 digits');
+      }
 
       // Consignee_Cell_Length
       const consRaw = String(row.consigneeCellLength ?? '').trim();

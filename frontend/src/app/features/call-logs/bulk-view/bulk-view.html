@@ -71,6 +71,12 @@
                                                     <span class="dot"></span><strong>{{ getErrLike(row,'Duplicate with row') }}</strong>
                                                 </div>
                                             </div>
+
+                                            <div class="field-err" *ngIf="hasErr(row,'Customer_Number must be exactly 11 digits')">
+                                                <span class="dot"></span>
+                                                <strong>Customer_Number must be exactly 11 digits</strong>
+                                                <span class="file" *ngIf="row.rawCustomerNumber">Value: <strong>{{ row.rawCustomerNumber }}</strong></span>
+                                            </div>
                                         </div>
                                     </td>
 
