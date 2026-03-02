@@ -1,0 +1,253 @@
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-outline-secondary" routerLink="/call-logs">← Back</button>
+
+                    <button class="btn btn-success px-4" *ngIf="selectedValidCount >= 1" [disabled]="!canProceed"
+                        (click)="proceedBulkImport()">
+                        <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
+                        {{ bulkSaving ? 'Processing...' : 'Proceed' }}
+                    </button>
+                </div>
+
+                <h4 class="fw-bold mb-0 text-end">Call Logs Bulk Preview</h4>
+            </div>
+
+            <nz-spin [nzSpinning]="isLoading" [nzTip]="loadingText">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px">
+                                    <input type="checkbox" class="form-check-input" [ngModel]="checkAll"
+                                        (ngModelChange)="onToggleAll($event)" [disabled]="isLoading" />
+                                </th>
+
+                                <th>#</th>
+
+                                <th>Customer_Number</th>
+                                <th>Consignee_Cell_Length</th>
+                                <th>Master_No</th>
+                                <th>Agent Duration</th>
+                                <th>Total Duration</th>
+                                <th>Extension</th>
+                                <th>Call_Response</th>
+                                <th>Time</th>
+                                <th>Recording</th>
+                                <th>IsArchived</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <ng-container *ngFor="let row of rows; trackBy: trackByRow">
+                                <tr [class.table-warning]="row.checked"
+                                    [class.table-danger]="(row.errors?.length ?? 0) > 0">
+
+                                    <td>
+                                        <input type="checkbox" class="form-check-input" [(ngModel)]="row.checked"
+                                            (change)="onRowToggle(row, row.checked)"
+                                            [disabled]="isLoading || !row.isValid" />
+                                    </td>
+
+                                    <td>{{ row.rowNo }}</td>
+
+                                    <!-- Customer_Number -->
+                                    <td>
+                                        <div class="cell-wrap">
+                                            <input class="form-control form-control-sm" [(ngModel)]="row.customerNumber"
+                                                [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
+                                            <div class="cell-msg">
+                                                <div class="field-err"
+                                                    *ngIf="hasErr(row,'Customer_Number is required')">
+                                                    <span class="dot"></span><strong>Customer_Number is
+                                                        required</strong>
+                                                    <span class="file" *ngIf="row.rawCustomerNumber">Value: <strong>{{
+                                                            row.rawCustomerNumber }}</strong></span>
+                                                </div>
+                                                <div class="field-err" *ngIf="hasErrLike(row,'Duplicate with row')">
+                                                    <span class="dot"></span><strong>{{ getErrLike(row,'Duplicate with row') }}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="cell-wrap">
+                                            <input class="form-control form-control-sm"
+                                                [(ngModel)]="row.consigneeCellLength" [disabled]="isLoading"
+                                                (ngModelChange)="onRowTextChange(row)" />
+                                            <div class="cell-msg">
+                                                <div class="field-err"
+                                                    *ngIf="hasErr(row,'Consignee_Cell_Length is required')">
+                                                    <span class="dot"></span><strong>Consignee_Cell_Length is
+                                                        required</strong>
+                                                    <span class="file" *ngIf="row.rawConsigneeCellLength">Value:
+                                                        <strong>{{ row.rawConsigneeCellLength }}</strong></span>
+                                                </div>
+                                                <div class="field-err"
+                                                    *ngIf="hasErr(row,'Consignee_Cell_Length: Invalid number')">
+                                                    <span class="dot"></span><strong>Consignee_Cell_Length invalid
+                                                        number</strong>
+                                                    <span class="file" *ngIf="row.rawConsigneeCellLength">Value:
+                                                        <strong>{{ row.rawConsigneeCellLength }}</strong></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Master_No -->
+                                    <td>
+                                        <div class="cell-wrap">
+                                            <input class="form-control form-control-sm" [(ngModel)]="row.masterNo"
+                                                [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
+                                            <div class="cell-msg">
+                                                <div class="field-err" *ngIf="hasErr(row,'Master_No is required')">
+                                                    <span class="dot"></span><strong>Master_No is required</strong>
+                                                    <span class="file" *ngIf="row.rawMasterNo">Value: <strong>{{
+                                                            row.rawMasterNo }}</strong></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Agent Duration -->
+                                    <td>
+                                        <div class="cell-wrap">
+                                            <input class="form-control form-control-sm" [(ngModel)]="row.agentDuration"
+                                                [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
+                                            <div class="cell-msg">
+                                                <div class="field-err" *ngIf="hasErr(row,'Agent Duration is required')">
+                                                    <span class="dot"></span><strong>Agent Duration is required</strong>
+                                                    <span class="file" *ngIf="row.rawAgentDuration">Value: <strong>{{
+                                                            row.rawAgentDuration }}</strong></span>
+                                                </div>
+                                                <div class="field-err"
+                                                    *ngIf="hasErr(row,'Agent Duration: Invalid format')">
+                                                    <span class="dot"></span><strong>Agent Duration invalid (use seconds
+                                                        or HH:mm:ss)</strong>
+                                                    <span class="file" *ngIf="row.rawAgentDuration">Value: <strong>{{
+                                                            row.rawAgentDuration }}</strong></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Total Duration -->
+                                    <td>
+                                        <div class="cell-wrap">
+                                            <input class="form-control form-control-sm" [(ngModel)]="row.totalDuration"
+                                                [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
+                                            <div class="cell-msg">
+                                                <div class="field-err" *ngIf="hasErr(row,'Total Duration is required')">
+                                                    <span class="dot"></span><strong>Total Duration is required</strong>
+                                                    <span class="file" *ngIf="row.rawTotalDuration">Value: <strong>{{
+                                                            row.rawTotalDuration }}</strong></span>
+                                                </div>
+                                                <div class="field-err"
+                                                    *ngIf="hasErr(row,'Total Duration: Invalid format')">
+                                                    <span class="dot"></span><strong>Total Duration invalid (use seconds
+                                                        or HH:mm:ss)</strong>
+                                                    <span class="file" *ngIf="row.rawTotalDuration">Value: <strong>{{
+                                                            row.rawTotalDuration }}</strong></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Extension -->
+                                    <td>
+                                        <div class="cell-wrap">
+                                            <input class="form-control form-control-sm" [(ngModel)]="row.extension"
+                                                [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
+                                            <div class="cell-msg">
+                                                <div class="field-err"
+                                                    *ngIf="hasErr(row,'Extension: Max 20 characters allowed')">
+                                                    <span class="dot"></span><strong>Extension max 20</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Call_Response -->
+                                    <td>
+                                        <div class="cell-wrap">
+                                            <input class="form-control form-control-sm" [(ngModel)]="row.callResponse"
+                                                [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
+                                            <div class="cell-msg">
+                                                <div class="field-err" *ngIf="hasErr(row,'Call_Response is required')">
+                                                    <span class="dot"></span><strong>Call_Response is required</strong>
+                                                    <span class="file" *ngIf="row.rawCallResponse">Value: <strong>{{
+                                                            row.rawCallResponse }}</strong></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Time (datetime) -->
+                                    <td>
+                                        <div class="cell-wrap">
+                                            <nz-date-picker nzSize="small" [nzShowTime]="{ nzFormat: 'HH:mm:ss' }"
+                                                nzFormat="yyyy-MM-dd HH:mm:ss" [formControl]="row.timeControl"
+                                                [nzDisabled]="isLoading" (ngModelChange)="onRowTimeChange(row)">
+                                            </nz-date-picker>
+
+                                            <div class="cell-msg">
+                                                <div class="field-err" *ngIf="hasErr(row,'Time is required')">
+                                                    <span class="dot"></span><strong>Time is required</strong>
+                                                    <span class="file" *ngIf="row.rawTime">Value: <strong>{{ row.rawTime
+                                                            }}</strong></span>
+                                                </div>
+                                                <div class="field-err" *ngIf="hasErr(row,'Invalid Time')">
+                                                    <span class="dot"></span><strong>Invalid Time</strong>
+                                                    <span class="file" *ngIf="row.rawTime">Value: <strong>{{ row.rawTime
+                                                            }}</strong></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Recording -->
+                                    <td>
+                                        <div class="cell-wrap">
+                                            <input class="form-control form-control-sm" [(ngModel)]="row.recording"
+                                                [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
+                                            <div class="cell-msg"></div>
+                                        </div>
+                                    </td>
+
+                                    <!-- IsArchived -->
+                                    <td>
+                                        <div class="cell-wrap">
+                                            <select class="form-select form-select-sm" [(ngModel)]="row.isArchived"
+                                                [disabled]="isLoading" (ngModelChange)="onRowArchivedChange(row)">
+                                                <option [ngValue]="0">0</option>
+                                                <option [ngValue]="1">1</option>
+                                            </select>
+
+                                            <div class="cell-msg">
+                                                <div class="field-err" *ngIf="hasErr(row,'IsArchived is required')">
+                                                    <span class="dot"></span><strong>IsArchived is required</strong>
+                                                    <span class="file" *ngIf="row.rawIsArchived">Value: <strong>{{
+                                                            row.rawIsArchived }}</strong></span>
+                                                </div>
+                                                <div class="field-err" *ngIf="hasErr(row,'IsArchived must be 0 or 1')">
+                                                    <span class="dot"></span><strong>IsArchived must be 0 or 1</strong>
+                                                    <span class="file" *ngIf="row.rawIsArchived">Value: <strong>{{
+                                                            row.rawIsArchived }}</strong></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                </tr>
+                            </ng-container>
+                        </tbody>
+                    </table>
+                </div>
+            </nz-spin>
+        </div>
+    </div>
+</div>

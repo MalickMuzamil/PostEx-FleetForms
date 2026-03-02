@@ -249,6 +249,22 @@ export const routes: Routes = [
           ).then((m) => m.BulkView),
       },
 
+      {
+        path: 'call-logs',
+        loadComponent: () =>
+          import(
+            './features/call-logs/call-logs'
+          ).then((m) => m.CallLogs),
+      },
+
+      {
+        path: 'call-logs-bulk-preview',
+        loadComponent: () =>
+          import(
+            './features/call-logs/bulk-view/bulk-view'
+          ).then((m) => m.CallLogsBulkView),
+      },
+
     ],
   },
 ];
