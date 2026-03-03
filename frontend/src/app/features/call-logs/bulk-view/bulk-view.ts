@@ -412,7 +412,6 @@ export class CallLogsBulkView {
 
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
-    this.checkDuplicateInFile(); // ✅ duplicates enabled
   }
 
   // ---------------- ERROR HELPERS ----------------
@@ -443,7 +442,6 @@ export class CallLogsBulkView {
     ].forEach((m) => this.removeErr(row, m));
 
     row.errors = (row.errors ?? []).filter((e) => !/Max 20 characters allowed/i.test(e));
-    row.errors = (row.errors ?? []).filter((e) => !e.startsWith('Duplicate with row'));
   }
 
   // ---------------- VALIDATIONS ----------------
@@ -497,7 +495,6 @@ export class CallLogsBulkView {
     }
 
     this.updateHasValidRow();
-    this.checkDuplicateInFile();
     this.enforceSelectionRules();
   }
 
@@ -526,15 +523,12 @@ export class CallLogsBulkView {
   updateHasValidRow() {
     for (const r of this.rows) {
       r.isValid = this.isRowValid(r);
-
-      if (!r.isValid || this.hasErrLike(r, 'Duplicate with row')) {
-        r.checked = false;
-      }
+      if (!r.isValid) r.checked = false;
     }
 
-    this.hasValidRow = this.rows.some((r) => r.isValid === true);
+    this.hasValidRow = this.rows.some(r => r.isValid === true);
 
-    const validRows = this.rows.filter(r => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    const validRows = this.rows.filter(r => r.isValid);
     this.checkAll = validRows.length > 0 && validRows.every(r => r.checked);
   }
 
@@ -546,7 +540,7 @@ export class CallLogsBulkView {
   }
 
   onRowToggle(row: BulkCallLogsRow, checked: boolean) {
-    const canSelect = !!row.isValid && !this.hasErrLike(row, 'Duplicate with row');
+    const canSelect = !!row.isValid;
     row.checked = checked && canSelect;
     this.enforceSelectionRules();
   }
@@ -599,16 +593,25 @@ export class CallLogsBulkView {
 
     try {
       const chunks = this.chunk(payloads, 200);
+
+      let insertedTotal = 0;
+      let lastMsg = '';
+
       for (const ch of chunks) {
-        await new Promise<void>((resolve, reject) => {
+        const res: any = await new Promise((resolve, reject) => {
           this.callLogsService.importBulk(ch).subscribe({
-            next: () => resolve(),
+            next: (resp) => resolve(resp),
             error: (e) => reject(e),
           });
         });
+
+        lastMsg = res?.message || lastMsg;
+        insertedTotal += Number(res?.data?.inserted || 0);
       }
 
-      this.toast('success', 'Success', `Imported (${selected.length}) rows`);
+      // ✅ show backend message
+      this.toast('success', 'Success', lastMsg || `Imported (${insertedTotal}) rows`);
+
       this.removeRowsRef(selected);
     } catch (e: any) {
       this.toast('error', 'Error', e?.error?.message || e?.message || 'Bulk import failed');
@@ -684,62 +687,13 @@ export class CallLogsBulkView {
     else this.removeErr(row, msg);
   }
 
-  // ✅ DUPLICATE CHECK (Customer_Number + Master_No + Time)
-  private duplicateKey(row: BulkCallLogsRow): string {
-    const cust = String(row.customerNumber ?? '').trim();
-    const master = String(row.masterNo ?? '').trim();
-    // const t = row.timeControl?.value ? this.toYMDHMS(row.timeControl.value) : '';
-    // return `${cust}|${master}|${t}`;
-    return `${cust}|${master}`;
-  }
-
-  private checkDuplicateInFile() {
-    const map = new Map<string, BulkCallLogsRow[]>();
-
-    for (const row of this.rows) {
-      const cust = String(row.customerNumber ?? '').trim();
-      const master = String(row.masterNo ?? '').trim();
-      const t = row.timeControl?.value ? this.toYMDHMS(row.timeControl.value) : '';
-      if (!cust || !master || !t) continue;
-
-      const key = this.duplicateKey(row);
-      const arr = map.get(key) ?? [];
-      arr.push(row);
-      map.set(key, arr);
-    }
-
-    for (const row of this.rows) {
-      row.errors = (row.errors ?? []).filter((e) => !e.startsWith('Duplicate with row'));
-    }
-
-    map.forEach((rows) => {
-      if (rows.length > 1) {
-        const rowNos = rows.map((r) => r.rowNo).join(', ');
-        rows.forEach((r) => {
-          this.addErr(r, `Duplicate with row(s): ${rowNos}`);
-          r.checked = false;
-        });
-      }
-    });
-
-    this.enforceSelectionRules();
-  }
-
-  hasErrLike(row: BulkCallLogsRow, prefix: string): boolean {
-    return (row.errors ?? []).some((e) => String(e).startsWith(prefix));
-  }
-
-  getErrLike(row: BulkCallLogsRow, prefix: string): string | null {
-    return (row.errors ?? []).find((e) => String(e).startsWith(prefix)) ?? null;
-  }
-
   private enforceSelectionRules() {
     for (const r of this.rows) {
       r.isValid = this.isRowValid(r);
-      if (!r.isValid || this.hasErrLike(r, 'Duplicate with row')) r.checked = false;
+      if (!r.isValid) r.checked = false;
     }
 
-    const validRows = this.rows.filter(r => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    const validRows = this.rows.filter(r => r.isValid);
     this.checkAll = validRows.length > 0 && validRows.every(r => r.checked);
   }
 }

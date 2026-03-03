@@ -276,8 +276,7 @@ export class BulkView {
     if (!this.uidCounter) this.uidCounter = Date.now();
 
     const getVal = (rowObj: any, key: string) => rowObj?.[this.columnMap[key]];
-
-    const createdBy = this.getCreatedBy(); // Admin/User
+    const createdBy = this.getCreatedBy();
 
     this.rows = (data || []).map((r, i) => {
       const errors: string[] = [];
@@ -299,10 +298,15 @@ export class BulkView {
       const branchName = rawBranchName || null;
       if (!branchName) errors.push(this.BR_REQUIRED);
 
-      // Attempts
-      const attempts = this.toNumberOrNull(rawAttempts);
-      if (rawAttempts === '') errors.push(this.ATT_REQUIRED);
-      else if (attempts === null) errors.push(this.ATT_INVALID);
+      // 🔥 Attempts (digits only)
+      let attempts: number | null = null;
+      if (rawAttempts === '') {
+        errors.push(this.ATT_REQUIRED);
+      } else if (!/^\d+$/.test(rawAttempts)) {
+        errors.push('Attempts must be digits only');
+      } else {
+        attempts = Number(rawAttempts);
+      }
 
       // CourierID
       const courierId = rawCourierId || null;
@@ -312,10 +316,15 @@ export class BulkView {
       const rider = rawRider || null;
       if (!rider) errors.push(this.RIDER_REQUIRED);
 
-      // Fake_Attempts
-      const fakeAttempts = this.toNumberOrNull(rawFakeAttempts);
-      if (rawFakeAttempts === '') errors.push(this.FAKE_REQUIRED);
-      else if (fakeAttempts === null) errors.push(this.FAKE_INVALID);
+      // 🔥 Fake_Attempts (digits only)
+      let fakeAttempts: number | null = null;
+      if (rawFakeAttempts === '') {
+        errors.push(this.FAKE_REQUIRED);
+      } else if (!/^\d+$/.test(rawFakeAttempts)) {
+        errors.push('Fake_Attempts must be digits only');
+      } else {
+        fakeAttempts = Number(rawFakeAttempts);
+      }
 
       // Date
       const date = this.parseAnyDate(rawDate);
@@ -331,7 +340,7 @@ export class BulkView {
         else errors.push(this.INVALID_ARCH);
       }
 
-      // ✅ Max length = 20
+      // Max length
       const checkMax = (val: string, label: string) => {
         if (val && val.length > this.MAX_LEN) errors.push(this.TOO_LONG(label));
       };
@@ -340,7 +349,7 @@ export class BulkView {
       checkMax(rawCourierId, 'CourierID');
       checkMax(rawRider, 'Rider');
 
-      const row: BulkFakeAttemptsRow = {
+      return {
         uid: ++this.uidCounter,
         rowNo: i + 1,
 
@@ -370,8 +379,6 @@ export class BulkView {
         errors,
         isValid: false,
       };
-
-      return row;
     });
 
     this.applyLocalValidationsSafe();
@@ -407,6 +414,8 @@ export class BulkView {
 
     row.errors = (row.errors ?? []).filter((e) => !/Max 20 characters allowed/i.test(e));
     row.errors = (row.errors ?? []).filter((e) => !e.startsWith('Duplicate with row'));
+    this.removeErr(row, 'Attempts must be digits only');
+    this.removeErr(row, 'Fake_Attempts must be digits only');
   }
 
   // ---------------- VALIDATIONS ----------------
@@ -420,10 +429,10 @@ export class BulkView {
       const br = String(row.branchName ?? '').trim();
       if (!br) this.addErr(row, this.BR_REQUIRED);
 
-      if (row.attempts === null || row.attempts === undefined) {
-        if (!String(row.rawAttempts ?? '').trim()) this.addErr(row, this.ATT_REQUIRED);
-        else this.addErr(row, this.ATT_INVALID);
-      }
+      // 🔥 Attempts strict
+      const attRaw = String(row.rawAttempts ?? '').trim();
+      if (!attRaw) this.addErr(row, this.ATT_REQUIRED);
+      else if (!/^\d+$/.test(attRaw)) this.addErr(row, 'Attempts must be digits only');
 
       const cId = String(row.courierId ?? '').trim();
       if (!cId) this.addErr(row, this.COURIER_REQUIRED);
@@ -431,10 +440,10 @@ export class BulkView {
       const rid = String(row.rider ?? '').trim();
       if (!rid) this.addErr(row, this.RIDER_REQUIRED);
 
-      if (row.fakeAttempts === null || row.fakeAttempts === undefined) {
-        if (!String(row.rawFakeAttempts ?? '').trim()) this.addErr(row, this.FAKE_REQUIRED);
-        else this.addErr(row, this.FAKE_INVALID);
-      }
+      // 🔥 Fake_Attempts strict
+      const fakeRaw = String(row.rawFakeAttempts ?? '').trim();
+      if (!fakeRaw) this.addErr(row, this.FAKE_REQUIRED);
+      else if (!/^\d+$/.test(fakeRaw)) this.addErr(row, 'Fake_Attempts must be digits only');
 
       const dt = row.dateControl?.value;
       if (!dt) {
@@ -445,7 +454,6 @@ export class BulkView {
       const arch = Number(row.isArchived);
       if (!(arch === 0 || arch === 1)) this.addErr(row, this.INVALID_ARCH);
 
-      // max len
       this.validateMaxLen(row, row.cnNo, 'CNNo');
       this.validateMaxLen(row, row.branchName, 'BranchName');
       this.validateMaxLen(row, row.courierId, 'CourierID');
@@ -555,16 +563,36 @@ export class BulkView {
 
     try {
       const chunks = this.chunk(payloads, 200);
+
+      let totalInserted = 0;
+      let totalUpdated = 0;
+      let serverMessage = '';
+
       for (const ch of chunks) {
-        await new Promise<void>((resolve, reject) => {
+        const res: any = await new Promise((resolve, reject) => {
           this.fakeService.importBulk(ch).subscribe({
-            next: () => resolve(),
+            next: (response) => resolve(response),
             error: (e) => reject(e),
           });
         });
+
+        if (res?.data) {
+          totalInserted += Number(res.data.inserted || 0);
+          totalUpdated += Number(res.data.updated || 0);
+        }
+
+        if (res?.message) {
+          serverMessage = res.message;
+        }
       }
 
-      this.toast('success', 'Success', `Imported (${selected.length}) rows`);
+      // ✅ show backend message
+      this.toast(
+        'success',
+        'Success',
+        serverMessage || `Inserted: ${totalInserted}, Updated: ${totalUpdated}`
+      );
+
       this.removeRowsRef(selected);
     } catch (e: any) {
       this.toast('error', 'Error', e?.error?.message || e?.message || 'Bulk import failed');
@@ -634,20 +662,25 @@ export class BulkView {
 
     for (const row of this.rows) {
       const cn = String(row.cnNo ?? '').trim();
+      const courier = String(row.courierId ?? '').trim();
       const dt = row.dateControl?.value ? this.toYMD(row.dateControl.value) : '';
-      if (!cn || !dt) continue;
 
-      const key = `${cn}|${dt}`;
+      if (!cn || !courier || !dt) continue;
+
+      // ✅ NEW KEY: CNNo + CourierID + Date
+      const key = `${cn}|${courier}|${dt}`;
+
       const arr = map.get(key) ?? [];
       arr.push(row);
       map.set(key, arr);
     }
 
+    // clear old duplicate errors
     for (const row of this.rows) {
       row.errors = (row.errors ?? []).filter((e) => !e.startsWith('Duplicate with row'));
     }
 
-    // apply
+    // apply new duplicates
     map.forEach((rows) => {
       if (rows.length > 1) {
         const rowNos = rows.map((r) => r.rowNo).join(', ');
@@ -699,6 +732,22 @@ export class BulkView {
 
     const validRows = this.rows.filter(r => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
     this.checkAll = validRows.length > 0 && validRows.every(r => r.checked);
+  }
+
+  onAttemptsInput(row: BulkFakeAttemptsRow, v: any) {
+    const s = String(v ?? '');
+    const cleaned = s.replace(/\D+/g, ''); // digits only
+    row.attempts = cleaned === '' ? null : Number(cleaned);
+    row.rawAttempts = s;
+    this.onRowTextChange(row);
+  }
+
+  onFakeAttemptsInput(row: BulkFakeAttemptsRow, v: any) {
+    const s = String(v ?? '');
+    const cleaned = s.replace(/\D+/g, '');
+    row.fakeAttempts = cleaned === '' ? null : Number(cleaned);
+    row.rawFakeAttempts = s;
+    this.onRowTextChange(row);
   }
 
 }

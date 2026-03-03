@@ -109,16 +109,16 @@
                       <input class="form-control form-control-sm"
                              [(ngModel)]="row.attempts"
                              [disabled]="isLoading"
-                             (ngModelChange)="onRowTextChange(row)" />
+                             (ngModelChange)="onAttemptsInput(row, $event)" />
                       <div class="cell-msg">
                         <div class="field-err" *ngIf="hasErr(row,'Attempts is required')">
                           <span class="dot"></span>
                           <strong>Attempts is required</strong>
                           <span class="file" *ngIf="row.rawAttempts">Value: <strong>{{ row.rawAttempts }}</strong></span>
                         </div>
-                        <div class="field-err" *ngIf="hasErr(row,'Attempts: Invalid number')">
+                        <div class="field-err" *ngIf="hasErr(row,'Attempts must be digits only')">
                           <span class="dot"></span>
-                          <strong>Attempts invalid number</strong>
+                          <strong>Attempts must be digits only</strong>
                           <span class="file" *ngIf="row.rawAttempts">Value: <strong>{{ row.rawAttempts }}</strong></span>
                         </div>
                       </div>
@@ -165,16 +165,16 @@
                       <input class="form-control form-control-sm"
                              [(ngModel)]="row.fakeAttempts"
                              [disabled]="isLoading"
-                             (ngModelChange)="onRowTextChange(row)" />
+                             (ngModelChange)="onFakeAttemptsInput(row, $event)" />
                       <div class="cell-msg">
                         <div class="field-err" *ngIf="hasErr(row,'Fake_Attempts is required')">
                           <span class="dot"></span>
                           <strong>Fake_Attempts is required</strong>
                           <span class="file" *ngIf="row.rawFakeAttempts">Value: <strong>{{ row.rawFakeAttempts }}</strong></span>
                         </div>
-                        <div class="field-err" *ngIf="hasErr(row,'Fake_Attempts: Invalid number')">
+                        <div class="field-err" *ngIf="hasErr(row,'Fake_Attempts must be digits only')">
                           <span class="dot"></span>
-                          <strong>Fake_Attempts invalid number</strong>
+                          <strong>Fake_Attempts must be digits only</strong>
                           <span class="file" *ngIf="row.rawFakeAttempts">Value: <strong>{{ row.rawFakeAttempts }}</strong></span>
                         </div>
                       </div>

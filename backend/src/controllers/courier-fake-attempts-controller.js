@@ -35,7 +35,7 @@ class CourierFakeAttemptsController {
             const data = await courierFakeAttemptsService.bulkImport({ payloads });
 
             return res.status(201).json({
-                message: "Courier Fake Attempts imported successfully (override by CNNo + Date).",
+                message: "Courier Fake Attempts imported successfully.",
                 data,
             });
         } catch (err) {

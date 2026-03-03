@@ -1,4 +1,5 @@
 // services/call-logs-service.js  (UPDATED to mssql + getPool)
+// ✅ DUPLICATION CHECK REMOVED (no "Duplicate in request" validation)
 
 import sql from "mssql";
 import { getPool } from "../config/sql-config.js";
@@ -158,18 +159,20 @@ class CallLogsService {
             await tx.commit();
             return { inserted, invalidCount: 0 };
         } catch (e) {
-            try { await tx.rollback(); } catch { }
+            try {
+                await tx.rollback();
+            } catch { }
             throw e;
         }
     }
 
     // =============================
     // VALIDATIONS (same logic as frontend)
+    // ✅ DUPLICATION VALIDATION REMOVED
     // =============================
     _validatePayloads(payloads) {
         const invalidRows = [];
         const valid = [];
-        const seen = new Set();
 
         (payloads || []).forEach((p, idx) => {
             const rowNo = idx + 1;
@@ -217,11 +220,7 @@ class CallLogsService {
             if (Extension && Extension.length > MAX) errors.push(`Extension: Max ${MAX} characters allowed`);
             if (Call_Response && Call_Response.length > MAX) errors.push(`Call_Response: Max ${MAX} characters allowed`);
 
-            if (Customer_Number && Master_No && Time) {
-                const key = `${Customer_Number}|${Master_No}|${Time}`;
-                if (seen.has(key)) errors.push("Duplicate in request (Customer_Number + Master_No + Time)");
-                else seen.add(key);
-            }
+            // ❌ Duplicate-in-request check removed
 
             if (errors.length) {
                 invalidRows.push({ rowNo, errors, payload: p });
@@ -272,8 +271,8 @@ class CallLogsService {
     _isDurationValid(v) {
         const s = String(v ?? "").trim();
         if (!s) return false;
-        if (/^\d+(\.\d+)?$/.test(s)) return true;         // seconds
-        if (/^\d{1,2}:\d{2}$/.test(s)) return true;       // mm:ss
+        if (/^\d+(\.\d+)?$/.test(s)) return true; // seconds
+        if (/^\d{1,2}:\d{2}$/.test(s)) return true; // mm:ss
         if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) return true; // HH:mm:ss
         return false;
     }

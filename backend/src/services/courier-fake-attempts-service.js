@@ -102,6 +102,7 @@ class CourierFakeAttemptsService {
         return {
             rowNo: index + 1,
             cnNo,
+            courierId,
             date: date ? this.toYMD(date) : null,
             reasons,
             isValid: reasons.length === 0,
@@ -127,7 +128,7 @@ class CourierFakeAttemptsService {
         // ✅ duplicate inside file: CNNo + Date
         const keyMap = new Map();
         validRows.forEach((r) => {
-            const k = `${r.cnNo}|${r.date}`;
+            const k = `${r.cnNo}|${r.courierId}|${r.date}`;
             const arr = keyMap.get(k) ?? [];
             arr.push(r);
             keyMap.set(k, arr);
@@ -139,8 +140,9 @@ class CourierFakeAttemptsService {
                     invalidRows.push({
                         rowNo: r.rowNo,
                         cnNo: r.cnNo,
+                        courierId: r.courierId,
                         date: r.date,
-                        reasons: ["Duplicate in file: CNNo + Date must be unique"],
+                        reasons: ["Duplicate in file: CNNo + CourierID + Date must be unique"],
                         isValid: false,
                     });
                 });
@@ -276,7 +278,8 @@ class CourierFakeAttemptsService {
         FROM dbo.CourierFakeAttempts T
         INNER JOIN #CourierFakeBulk S
           ON T.CNNo = S.CNNo
-         AND CAST(T.[Date] AS date) = CAST(S.[Date] AS date);
+            AND T.CourierID = S.CourierID
+            AND CAST(T.[Date] AS date) = CAST(S.[Date] AS date);
 
         SELECT @@ROWCOUNT AS UpdatedCount;
       `);
@@ -297,6 +300,7 @@ class CourierFakeAttemptsService {
           SELECT 1
           FROM dbo.CourierFakeAttempts T
           WHERE T.CNNo = S.CNNo
+            AND T.CourierID = S.CourierID
             AND CAST(T.[Date] AS date) = CAST(S.[Date] AS date)
         );
 

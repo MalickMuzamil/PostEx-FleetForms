@@ -40,7 +40,7 @@ class CallLogsController {
             const data = await callLogsService.bulkImport({ payloads });
 
             return res.status(201).json({
-                message: "Call Logs imported successfully (override by Customer_Number + Master_No + Time).",
+                message: "Call Logs imported successfully.",
                 data,
             });
         } catch (err) {
