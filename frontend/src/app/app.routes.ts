@@ -265,6 +265,24 @@ export const routes: Routes = [
           ).then((m) => m.CallLogsBulkView),
       },
 
+      {
+        path: 'branch-calender',
+        loadComponent: () =>
+          import(
+            './features/branch-calender/branch-calender'
+          ).then((m) => m.BranchCalender),
+      },
+
+      {
+        path: 'branch-calender-bulk-preview',
+        loadComponent: () =>
+          import(
+            './features/branch-calender/bulk-view/bulk-view'
+          ).then((m) => m.BulkView),
+      },
+
+      
+
     ],
   },
 ];

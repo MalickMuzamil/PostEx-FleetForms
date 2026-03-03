@@ -46,6 +46,9 @@ import courierFakeAttemptsRoutes from './routes/courierfakeattemptsRoutes.js';
 //Call Logs
 import callLogs from './routes/call-log-routes.js';
 
+//Branch Wise Calender
+import BranchCalender from './routes/branch-wise-calender-routes.js';
+
 
 dotenv.config();
 
@@ -106,6 +109,7 @@ app.use("/cnc-l5-l6-mapping", Bindingcnclevel5level6);
 app.use("/attendance", Attendance);
 app.use("/courier-fake-attempts", courierFakeAttemptsRoutes);
 app.use("/call-logs", callLogs);
+app.use("/branch-wise-calender", BranchCalender);
 
 
 // error handler (last)
