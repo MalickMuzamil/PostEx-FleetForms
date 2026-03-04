@@ -231,6 +231,58 @@ export const routes: Routes = [
           ).then((m) => m.BulkView),
       },
 
+
+      {
+        path: 'courier-fake-attempts',
+        loadComponent: () =>
+          import(
+            './features/courier-fake-attempts/courier-fake-attempts'
+          ).then((m) => m.CourierFakeAttempts),
+      },
+
+
+      {
+        path: 'courier-fake-attempts-bulk-preview',
+        loadComponent: () =>
+          import(
+            './features/courier-fake-attempts/bulk-view/bulk-view'
+          ).then((m) => m.BulkView),
+      },
+
+      {
+        path: 'call-logs',
+        loadComponent: () =>
+          import(
+            './features/call-logs/call-logs'
+          ).then((m) => m.CallLogs),
+      },
+
+      {
+        path: 'call-logs-bulk-preview',
+        loadComponent: () =>
+          import(
+            './features/call-logs/bulk-view/bulk-view'
+          ).then((m) => m.CallLogsBulkView),
+      },
+
+      {
+        path: 'branch-calender',
+        loadComponent: () =>
+          import(
+            './features/branch-calender/branch-calender'
+          ).then((m) => m.BranchCalender),
+      },
+
+      {
+        path: 'branch-calender-bulk-preview',
+        loadComponent: () =>
+          import(
+            './features/branch-calender/bulk-view/bulk-view'
+          ).then((m) => m.BulkView),
+      },
+
+      
+
     ],
   },
 ];
