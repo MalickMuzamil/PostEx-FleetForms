@@ -27,17 +27,16 @@ export class BranchCalender implements OnInit {
   data: any = {};
   tableData: any[] = [];
 
-  // ✅ REQUIRED (flexible) - file me BranchId ya BranchName, TranId ya TranName
+  // ✅ REQUIRED (backend aligned) - Tran is NOT required now
   private readonly REQUIRED_BASE = ['CALENDER_DATE', 'ISNOTWORKINGDAY', 'NOTWORKINGDAYDESC', 'ISARCHIVED'];
   private readonly BRANCH_KEYS = ['BRANCHID', 'BRANCH_NAME', 'BRANCHNAME'];
-  private readonly TRAN_KEYS = ['TRAN_ID', 'TRANID', 'TRAN_NAME', 'TRANNAME'];
 
   constructor(
     private calService: BranchWiseCalenderService,
     private router: Router,
     private notification: NzNotificationService,
     private modal: NzModalService
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.loadTable();
@@ -58,13 +57,14 @@ export class BranchCalender implements OnInit {
           const branchId = r.BRANCHID ?? r.branchId;
           const branchName = r.BranchName ?? r.branchName;
 
+          // NOTE: Tran fields may exist in older data, but not required for import
           const tranId = r.TRAN_ID ?? r.TRANID ?? r.tranId;
           const tranName = r.TranName ?? r.tranName;
 
           return {
-            id: r.ID ?? `${branchId ?? branchName}-${tranId ?? tranName}-${calDate ?? ''}`,
+            id: r.ID ?? `${branchId ?? branchName}-${calDate ?? ''}`,
 
-            tranDisplay: tranId ?? tranName ?? '-',
+            tranDisplay: tranId ?? tranName ?? '-', // display only
             branchDisplay: branchId ?? branchName ?? '-',
 
             calenderDate: calDate ? new Date(calDate) : null,
@@ -110,7 +110,7 @@ export class BranchCalender implements OnInit {
       if (!isValid) return;
 
       this.showModal = false;
-      this.router.navigate(['/branch-wise-calender-bulk-preview'], { state: { file } });
+      this.router.navigate(['/branch-calender-bulk-preview'], { state: { file } });
     }
   }
 
@@ -213,13 +213,9 @@ export class BranchCalender implements OnInit {
     // branch: at least one
     const hasBranch = this.BRANCH_KEYS.map((k) => this.normalizeHeader(k)).some((k) => set.has(k));
 
-    // tran: at least one
-    const hasTran = this.TRAN_KEYS.map((k) => this.normalizeHeader(k)).some((k) => set.has(k));
-
     const missing: string[] = [];
     if (missingBase.length) missing.push(...missingBase);
     if (!hasBranch) missing.push('BRANCHID/BRANCHNAME');
-    if (!hasTran) missing.push('TRAN_ID/TRANNAME');
 
     if (missing.length) {
       this.showInvalidFile(`Missing required columns: ${missing.join(', ')}`);

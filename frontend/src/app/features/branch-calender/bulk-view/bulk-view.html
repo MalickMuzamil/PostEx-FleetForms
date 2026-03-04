@@ -28,13 +28,11 @@
                                 </th>
 
                                 <th>#</th>
-                                <th>TRAN</th>
                                 <th>BRANCH</th>
                                 <th>CALENDER_DATE</th>
                                 <th>ISNOTWORKINGDAY</th>
                                 <th>NOTWORKINGDAYDESC</th>
                                 <th>IsArchived</th>
-                                <th>CreatedBy</th>
                             </tr>
                         </thead>
 
@@ -51,21 +49,15 @@
 
                                     <td>{{ row.rowNo }}</td>
 
-                                    <!-- TRAN (id or name) -->
-                                    <td>
-                                        <input class="form-control form-control-sm" [(ngModel)]="row.tran"
-                                            [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
-                                        <div class="field-err" *ngIf="hasErr(row,'TRAN is required')">
-                                            <span class="dot"></span><strong>TRAN is required</strong>
-                                        </div>
-                                    </td>
-
                                     <!-- BRANCH (id or name) -->
                                     <td>
                                         <input class="form-control form-control-sm" [(ngModel)]="row.branch"
                                             [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
                                         <div class="field-err" *ngIf="hasErr(row,'BRANCH is required')">
                                             <span class="dot"></span><strong>BRANCH is required</strong>
+                                        </div>
+                                        <div class="field-err" *ngIf="hasErr(row,'BRANCHID must be numeric (max 5 digits)')">
+                                            <span class="dot"></span><strong>BRANCHID must be numeric (max 5 digits)</strong>
                                         </div>
                                     </td>
 
@@ -119,9 +111,6 @@
                                         </div>
                                     </td>
 
-                                    <td>
-                                        <input class="form-control form-control-sm" [value]="row.createdBy" disabled />
-                                    </td>
                                 </tr>
 
                                 <!-- duplicate msg -->

@@ -17,12 +17,11 @@ export const BRANCH_WISE_CALENDER_FORM: FormConfig = {
 export const BRANCH_WISE_CALENDER_TABLE: TableConfig = {
   globalSearch: {
     placeholder: 'Search Branch, Date, Desc',
-    keys: ['branchDisplay', 'calenderDateDisplay', 'notWorkingDayDesc', 'tranDisplay'],
+    keys: ['branchDisplay', 'calenderDateDisplay', 'notWorkingDayDesc'],
     rules: { mode: 'alphanumeric', maxLength: 30, trim: true },
   },
 
   columns: [
-    { key: 'tranDisplay', title: 'TRAN' },                 // Tran_ID or TranName
     { key: 'branchDisplay', title: 'BRANCH' },            // BranchId or BranchName
     { key: 'calenderDateDisplay', title: 'CALENDER_DATE' },
     { key: 'isNotWorkingDayDisplay', title: 'ISNOTWORKINGDAY' },

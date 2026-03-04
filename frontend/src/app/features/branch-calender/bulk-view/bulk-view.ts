@@ -17,23 +17,20 @@ interface BulkCalRow {
   rowNo: number;
   uid: number;
 
-  tran: string | null;      // Tran_ID or TranName
-  branch: string | null;    // BranchID or BranchName
+  branch: string | null; // BranchID or BranchName
 
   calDate: Date | null;
   calDateControl: FormControl<Date | null>;
 
-  isNotWorkingDay: number;  // 0/1
+  isNotWorkingDay: number; // 0/1
   notWorkingDayDesc: string | null;
 
-  isArchived: number;       // 0/1
-  createdBy: string;
+  isArchived: number; // 0/1
 
   checked: boolean;
   errors?: string[];
   isValid?: boolean;
 
-  rawTran?: string;
   rawBranch?: string;
   rawCalDate?: string;
   rawIsNotWorking?: string;
@@ -72,19 +69,18 @@ export class BulkView {
 
   private localValidateTimer: any = null;
 
-  // ✅ flexible required logic
+  // ✅ required logic (Tran removed)
   readonly REQUIRED_BASE = ['CALENDER_DATE', 'ISNOTWORKINGDAY', 'NOTWORKINGDAYDESC', 'ISARCHIVED'];
   readonly BRANCH_KEYS = ['BRANCHID', 'BRANCH_NAME', 'BRANCHNAME'];
-  readonly TRAN_KEYS = ['TRAN_ID', 'TRANID', 'TRAN_NAME', 'TRANNAME'];
 
   // errors
-  private readonly TRAN_REQ = 'TRAN is required';
   private readonly BR_REQ = 'BRANCH is required';
   private readonly DATE_REQ = 'CALENDER_DATE is required';
   private readonly BAD_DATE = 'Invalid Date';
   private readonly BAD_NWD = 'ISNOTWORKINGDAY must be 0 or 1';
   private readonly DESC_REQ = 'NOTWORKINGDAYDESC is required';
   private readonly BAD_ARCH = 'IsArchived must be 0 or 1';
+  private readonly BR_BAD = 'BRANCHID must be numeric (max 5 digits)';
 
   constructor(
     private calService: BranchWiseCalenderService,
@@ -168,7 +164,10 @@ export class BulkView {
           return;
         }
 
-        this.fileHeaders = (rowsHeader[0] as any[]).map((h) => String(h ?? '').trim()).filter(Boolean);
+        this.fileHeaders = (rowsHeader[0] as any[])
+          .map((h) => String(h ?? '').trim())
+          .filter(Boolean);
+
         if (!this.fileHeaders.length) {
           this.toast('error', 'Invalid File', 'Excel header row is empty.');
           this.isLoading = false;
@@ -235,9 +234,6 @@ export class BulkView {
       return null;
     };
 
-    // optional (UI only)
-    this.columnMap['TRAN'] = pick(['TRAN_ID', 'TRANID', 'TRAN_NAME', 'TRANNAME']);
-
     // required
     this.columnMap['BRANCH'] = pick(['BRANCHID', 'BRANCH_NAME', 'BRANCHNAME']);
 
@@ -253,21 +249,19 @@ export class BulkView {
     if (!this.uidCounter) this.uidCounter = Date.now();
 
     const getVal = (rowObj: any, key: string) => rowObj?.[this.columnMap[key]];
-    const createdBy = this.getCreatedBy(); // UI only (ab backend ko nahi bhejna)
 
     this.rows = (data || []).map((r, i) => {
       const errors: string[] = [];
 
-      const rawTran = String(getVal(r, 'TRAN') ?? '').trim(); // optional UI
       const rawBranch = String(getVal(r, 'BRANCH') ?? '').trim();
       const rawCalDate = String(getVal(r, 'CALENDER_DATE') ?? '').trim();
       const rawIsNotWorking = String(getVal(r, 'ISNOTWORKINGDAY') ?? '').trim();
       const rawDesc = String(getVal(r, 'NOTWORKINGDAYDESC') ?? '').trim();
       const rawIsArchived = String(getVal(r, 'ISARCHIVED') ?? '').trim();
 
-      const tran = rawTran || null; // optional
       const branch = rawBranch || null;
       if (!branch) errors.push(this.BR_REQ);
+      else if (!this.isValidBranchId(branch)) errors.push(this.BR_BAD);
 
       const calDate = this.parseAnyDate(rawCalDate);
       if (!rawCalDate) errors.push(this.DATE_REQ);
@@ -286,9 +280,12 @@ export class BulkView {
         uid: ++this.uidCounter,
         rowNo: i + 1,
 
-        rawTran, rawBranch, rawCalDate, rawIsNotWorking, rawDesc, rawIsArchived,
+        rawBranch,
+        rawCalDate,
+        rawIsNotWorking,
+        rawDesc,
+        rawIsArchived,
 
-        tran, // optional
         branch,
 
         calDate,
@@ -298,7 +295,6 @@ export class BulkView {
         notWorkingDayDesc,
 
         isArchived: isArchived ?? 0,
-        createdBy, // UI only
 
         checked: false,
         errors,
@@ -315,14 +311,16 @@ export class BulkView {
     const s = String(v ?? '').trim();
     if (s === '') return null;
     const n = Number(s);
-    return (n === 0 || n === 1) ? n : null;
+    return n === 0 || n === 1 ? n : null;
   }
 
   private applyLocalValidations() {
     for (const row of this.rows) {
       row.errors = [];
 
-      if (!String(row.branch ?? '').trim()) row.errors.push(this.BR_REQ);
+      const br = String(row.branch ?? '').trim();
+      if (!br) row.errors.push(this.BR_REQ);
+      else if (!this.isValidBranchId(br)) row.errors.push(this.BR_BAD);
 
       const dt = row.calDateControl?.value;
       if (!dt) {
@@ -349,12 +347,14 @@ export class BulkView {
   }
 
   isRowValid(row: BulkCalRow): boolean {
-    return (row.errors?.length ?? 0) === 0 &&
+    return (
+      (row.errors?.length ?? 0) === 0 &&
       !!String(row.branch ?? '').trim() &&
       !!row.calDateControl?.value &&
       (Number(row.isNotWorkingDay) === 0 || Number(row.isNotWorkingDay) === 1) &&
       !!String(row.notWorkingDayDesc ?? '').trim() &&
-      (Number(row.isArchived) === 0 || Number(row.isArchived) === 1);
+      (Number(row.isArchived) === 0 || Number(row.isArchived) === 1)
+    );
   }
 
   updateHasValidRow() {
@@ -363,8 +363,8 @@ export class BulkView {
       if (!r.isValid || this.hasErrLike(r, 'Duplicate with row')) r.checked = false;
     }
 
-    const validRows = this.rows.filter(r => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
-    this.checkAll = validRows.length > 0 && validRows.every(r => r.checked);
+    const validRows = this.rows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    this.checkAll = validRows.length > 0 && validRows.every((r) => r.checked);
   }
 
   // --------------- UI events ---------------
@@ -407,13 +407,15 @@ export class BulkView {
 
     this.bulkSaving = true;
 
-    const payloads = selected.map((r) => ({
-      Branch: String(r.branch || '').trim(), // required
-      Calender_Date: r.calDateControl.value ? this.toYMD(r.calDateControl.value) : null,
-      IsNotWorkingDay: Number(r.isNotWorkingDay),
-      NotWorkingDayDesc: String(r.notWorkingDayDesc || '').trim(),
-      IsArchived: Number(r.isArchived),
-    })).filter(p => p.Branch && p.Calender_Date);
+    const payloads = selected
+      .map((r) => ({
+        Branch: String(r.branch || '').trim(),
+        Calender_Date: r.calDateControl.value ? this.toYMD(r.calDateControl.value) : null,
+        IsNotWorkingDay: Number(r.isNotWorkingDay),
+        NotWorkingDayDesc: String(r.notWorkingDayDesc || '').trim(),
+        IsArchived: Number(r.isArchived),
+      }))
+      .filter((p) => p.Branch && p.Calender_Date);
 
     try {
       const chunks = this.chunk(payloads, 200);
@@ -463,12 +465,10 @@ export class BulkView {
       map.set(key, arr);
     }
 
-    // remove old duplicate messages
     for (const row of this.rows) {
       row.errors = (row.errors ?? []).filter((e) => !e.startsWith('Duplicate with row'));
     }
 
-    // add duplicate messages
     map.forEach((rows) => {
       if (rows.length > 1) {
         const rowNos = rows.map((r) => r.rowNo).join(', ');
@@ -487,17 +487,13 @@ export class BulkView {
     return (row.errors ?? []).some((e) => String(e).startsWith(prefix));
   }
 
-  getErrLike(row: BulkCalRow, prefix: string): string | null {
-    return (row.errors ?? []).find((e) => String(e).startsWith(prefix)) ?? null;
-  }
-
   private enforceSelectionRules() {
     for (const r of this.rows) {
       r.isValid = this.isRowValid(r);
       if (!r.isValid || this.hasErrLike(r, 'Duplicate with row')) r.checked = false;
     }
-    const validRows = this.rows.filter(r => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
-    this.checkAll = validRows.length > 0 && validRows.every(r => r.checked);
+    const validRows = this.rows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    this.checkAll = validRows.length > 0 && validRows.every((r) => r.checked);
   }
 
   // --------------- helpers ---------------
@@ -540,20 +536,12 @@ export class BulkView {
     return isNaN(d.getTime()) ? null : d;
   }
 
-  private getCreatedBy(): string {
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k) continue;
-        const raw = localStorage.getItem(k);
-        if (!raw) continue;
-        try {
-          const obj = JSON.parse(raw);
-          const roles: string[] = obj?.roles ?? [];
-          if (Array.isArray(roles) && roles.includes('postex-auth-admin')) return 'Admin';
-        } catch { }
-      }
-    } catch { }
-    return 'User';
+  getErrLike(row: BulkCalRow, prefix: string): string | null {
+    return (row.errors ?? []).find((e) => String(e).startsWith(prefix)) ?? null;
+  }
+
+  private isValidBranchId(v: any): boolean {
+    const s = String(v ?? '').trim();
+    return /^[0-9]{1,5}$/.test(s);
   }
 }
