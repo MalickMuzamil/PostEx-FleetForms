@@ -7,7 +7,11 @@ import { GeneralService } from './general-service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private auth = new AuthSDK({ apiKey: environment.POSTEX_PUBLIC_API_KEY });
+
+  private auth = new AuthSDK({
+    apiKey: environment.POSTEX_PUBLIC_API_KEY,
+    appId: 'callcourier'
+  });
 
   private otpEmailKey = 'auth.otpEmail';
   private otpTokenKey = 'auth.otpToken';
