@@ -1,11 +1,11 @@
-export type FilterType = 'text' | 'select' | 'dateRange';
+export type FilterType = 'text' | 'select' | 'date';
 
 export type InputMode = 'any' | 'letters' | 'numbers' | 'alphanumeric';
 
 export interface InputRules {
-  mode?: InputMode; 
-  maxLength?: number; 
-  trim?: boolean; 
+  mode?: InputMode;
+  maxLength?: number;
+  trim?: boolean;
 }
 
 export interface TableColumn {

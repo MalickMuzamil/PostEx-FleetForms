@@ -17,7 +17,7 @@ import { NzNotificationService } from 'ng-zorro-antd/notification';
 })
 export class DeliveryRouteDefinitionComponent implements OnInit {
   formConfig = { ...DELIVERY_ROUTE_DEFINITION_FORM };
-  tableConfig = DELIVERY_ROUTE_DEFINITION_TABLE;
+  tableConfig = structuredClone(DELIVERY_ROUTE_DEFINITION_TABLE);
 
   showModal = false;
 

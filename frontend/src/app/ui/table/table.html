@@ -1,110 +1,183 @@
-<div class="table-responsive">
-    <div class="d-flex gap-2 align-items-center mb-2" *ngIf="config.globalSearch as gs">
-        <input #gsInput class="form-control form-control-sm" style="max-width: 320px" [ngModel]="globalTerm"
-            (input)="onGlobalInput($event)" [attr.maxlength]="gs.rules?.maxLength ?? null"
-            [placeholder]="gs.placeholder || 'Search...'" />
-        <!-- <button class="btn btn-sm btn-light border d-flex align-items-center gap-1" title="Reset search and filters"
-            (click)="resetFilters()">
-            <i class="fa fa-rotate-left text-secondary"></i>
-            <span class="fw-semibold">Reset</span>
-        </button> -->
+<div class="tbl-wrapper">
 
-        <button class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" title="Clear all filters"
-            (click)="resetFilters()">
-            <i class="fa fa-trash-can"></i>
-            Clear Filters
-        </button>
-
+    <!-- ===== CARD HEADER (projected from parent) ===== -->
+    <div class="tbl-card-header-wrap">
+        <ng-content select="[table-header]"></ng-content>
     </div>
 
-    <div class="d-flex flex-wrap gap-2 mb-2" *ngIf="hasFilters">
+    <!-- ===== TOOLBAR ROW: Search LEFT + Filters RIGHT ===== -->
+    <div class="tbl-toolbar" *ngIf="config.globalSearch as gs">
+        <!-- Search -->
+        <div class="tbl-search-wrap">
+            <span class="tbl-search-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+            </span>
+            <input #gsInput class="tbl-search-input" [ngModel]="globalTerm" (input)="onGlobalInput($event)"
+                [attr.maxlength]="gs.rules?.maxLength ?? null" [placeholder]="gs.placeholder || 'Search in table...'" />
+        </div>
+
+        <!-- Column Filter Dropdowns -->
+        <div class="tbl-filters-right">
+            <ng-container *ngFor="let col of config.columns">
+                <ng-container *ngIf="col.filter as f">
+
+                    <input *ngIf="f.type === 'text'" class="tbl-filter-input" [ngModel]="colFilters[col.key]"
+                        (ngModelChange)="onColTextFilterChange(col.key, $event, f.rules)"
+                        [attr.maxlength]="f.rules?.maxLength ?? null" [placeholder]="f.placeholder || col.title" />
+
+                    <div *ngIf="f.type === 'select'" class="tbl-filter-select-wrap">
+                        <select class="tbl-filter-select" [(ngModel)]="colFilters[col.key]"
+                            (ngModelChange)="onColSelectFilterChange(col.key, $event)">
+
+                            <option [ngValue]="null">
+                                {{ f.placeholder || col.title }}
+                            </option>
+
+                            <option *ngFor="let opt of f.options" [ngValue]="opt.value">
+                                {{ opt.label }}
+                            </option>
+
+                        </select>
+
+                        <span class="tbl-select-arrow">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </span>
+                    </div>
+
+                    <!-- DATE FILTER -->
+                    <input *ngIf="f.type === 'date'" type="date" class="tbl-filter-input"
+                        [ngModel]="colFilters[col.key]" (ngModelChange)="onColDateFilterChange(col.key, $event)" />
+
+                </ng-container>
+            </ng-container>
+        </div>
+    </div>
+
+    <!-- Filters-only toolbar -->
+    <div class="tbl-toolbar tbl-toolbar--filters-only" *ngIf="!config.globalSearch && hasFilters">
         <ng-container *ngFor="let col of config.columns">
             <ng-container *ngIf="col.filter as f">
-                <!-- text -->
-                <input *ngIf="f.type === 'text'" class="form-control form-control-sm" style="max-width: 220px"
-                    [ngModel]="colFilters[col.key]" (ngModelChange)="onColTextFilterChange(col.key, $event, f.rules)"
-                    [attr.maxlength]="f.rules?.maxLength ?? null"
-                    [placeholder]="f.placeholder || ('Search ' + col.title)" />
 
-                <!-- select -->
-                <select *ngIf="f.type === 'select'" class="form-select form-select-sm" style="max-width: 220px"
-                    [(ngModel)]="colFilters[col.key]" (ngModelChange)="applyFilters()">
+                <input *ngIf="f.type === 'text'" class="tbl-filter-input" [ngModel]="colFilters[col.key]"
+                    (ngModelChange)="onColTextFilterChange(col.key, $event, f.rules)"
+                    [attr.maxlength]="f.rules?.maxLength ?? null" [placeholder]="f.placeholder || col.title" />
 
-                    <option [ngValue]="null">
-                        {{ f.placeholder || ('All ' + col.title) }}
-                    </option>
+                <div *ngIf="f.type === 'select'" class="tbl-filter-select-wrap">
+                    <select class="tbl-filter-select" [(ngModel)]="colFilters[col.key]"
+                        (ngModelChange)="onColSelectFilterChange(col.key, $event)">
 
-                    <option *ngFor="let opt of col.filter.options" [ngValue]="opt.value">
-                        {{ opt.label }}
-                    </option>
-                </select>
+                        <option [ngValue]="null">
+                            {{ f.placeholder || col.title }}
+                        </option>
+
+                        <option *ngFor="let opt of f.options" [ngValue]="opt.value">
+                            {{ opt.label }}
+                        </option>
+
+                    </select>
+
+                    <span class="tbl-select-arrow">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </span>
+                </div>
+
+                <!-- DATE FILTER -->
+                <input *ngIf="f.type === 'date'" type="date" class="tbl-filter-input" [ngModel]="colFilters[col.key]"
+                    (ngModelChange)="onColDateFilterChange(col.key, $event)"
+                    [placeholder]="f.placeholder || col.title" />
+
             </ng-container>
         </ng-container>
     </div>
 
-    <nz-table #table class="table table-hover table-bordered app-table" [nzData]="filteredData"
-        [nzFrontPagination]="config.pagination !== false">
-        <thead class="table-light">
-            <tr>
-                <th *ngFor="let col of config.columns">{{ col.title }}</th>
-                <th *ngIf="config.actions?.length" class="text-center">Action</th>
-            </tr>
-        </thead>
+    <!-- ===== TABLE ===== -->
+    <div class="tbl-scroll">
+        <nz-table #table class="app-table" [nzData]="filteredData" [nzFrontPagination]="config.pagination !== false"
+            [nzShowPagination]="false">
 
-        <tbody>
-            @for (row of table.data; track row) {
-            <tr>
-                <td *ngFor="let col of config.columns">
-                    <ng-container *ngIf="
-      col.key === 'statusText' ||
-      col.key === 'statusFlag' ||
-      col.key === 'requiredReportsDisplay' ||
-      col.key.toLowerCase().includes('status') ||
-      col.key.toLowerCase().includes('requiredreports') ||
-      col.key.endsWith('Text') ||
-      col.key.endsWith('Flag');
-      else normalCell
-    ">
-                        <span class="badge" [ngClass]="
-        row[col.key] === 1 ||
-        row[col.key] === '1' ||
-        row[col.key] === true ||
-        row[col.key] === 'Active'
-          ? 'bg-success'
-          : 'bg-danger'
-      ">
-                            {{
-                            row[col.key] === 1 ||
-                            row[col.key] === '1' ||
-                            row[col.key] === true ||
-                            row[col.key] === 'Active'
-                            ? 'Active'
-                            : 'Inactive'
-                            }}
-                        </span>
-                    </ng-container>
+            <thead>
+                <tr>
+                    <th *ngFor="let col of config.columns">{{ col.title }}</th>
+                    <th *ngIf="config.actions?.length">Action</th>
+                </tr>
+            </thead>
 
-                    <ng-template #normalCell>
-                        {{ row[col.key] }}
-                    </ng-template>
-                </td>
+            <tbody>
+                @for (row of table.data; track row) {
+                <tr>
+                    <td *ngFor="let col of config.columns">
+                        <ng-container *ngIf="
+                            col.key === 'statusText' ||
+                            col.key === 'statusFlag' ||
+                            col.key === 'requiredReportsDisplay' ||
+                            col.key.toLowerCase().includes('status') ||
+                            col.key.toLowerCase().includes('requiredreports') ||
+                            col.key.endsWith('Text') ||
+                            col.key.endsWith('Flag');
+                            else normalCell">
+                            <span class="tbl-badge" [ngClass]="
+                                row[col.key] === 1 || row[col.key] === '1' ||
+                                row[col.key] === true || row[col.key] === 'Active'
+                                ? 'tbl-badge--active' : 'tbl-badge--inactive'">
+                                {{
+                                row[col.key] === 1 || row[col.key] === '1' ||
+                                row[col.key] === true || row[col.key] === 'Active'
+                                ? 'Active' : 'Inactive'
+                                }}
+                            </span>
+                        </ng-container>
+                        <ng-template #normalCell>{{ row[col.key] }}</ng-template>
+                    </td>
 
+                    <td *ngIf="config.actions?.length" class="tbl-actions-cell">
+                        <ng-container *ngFor="let action of config.actions">
+                            <button *ngIf="action.action === 'edit'" class="tbl-btn tbl-btn--edit"
+                                (click)="onEdit(row)">
+                                {{ action.label }}
+                            </button>
+                            <button *ngIf="action.action === 'delete'" class="tbl-btn tbl-btn--delete"
+                                [disabled]="isDeleteDisabled(row)" (click)="onDelete(row)">
+                                {{ action.label }}
+                            </button>
+                        </ng-container>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </nz-table>
+    </div>
 
-                <td *ngIf="config.actions?.length" class="text-center">
-                    <ng-container *ngFor="let action of config.actions">
-                        <button *ngIf="action.action === 'edit'" class="btn btn-sm btn-outline-primary me-2"
-                            (click)="onEdit(row)">
-                            {{ action.label }}
-                        </button>
+    <!-- ===== PAGINATION ===== -->
+    <div class="tbl-pagination" *ngIf="config.pagination !== false">
+        <span class="tbl-pagination-info">
+            Showing
+            <strong>{{ table.nzPageIndex === 1 ? 1 : (table.nzPageIndex - 1) * table.nzPageSize + 1 }}</strong>
+            to
+            <strong>{{ minVal(table.nzPageIndex * table.nzPageSize, filteredData.length) }}</strong>
+            of
+            <strong>{{ filteredData.length }}</strong>
+            Results
+        </span>
+        <div class="tbl-pagination-btns">
+            <button class="tbl-page-btn" [disabled]="table.nzPageIndex <= 1"
+                (click)="table.nzPageIndex = table.nzPageIndex - 1">
+                Previous
+            </button>
+            <button class="tbl-page-btn" [disabled]="table.nzPageIndex * table.nzPageSize >= filteredData.length"
+                (click)="table.nzPageIndex = table.nzPageIndex + 1">
+                Next
+            </button>
+        </div>
+    </div>
 
-                        <button *ngIf="action.action === 'delete'" class="btn btn-sm btn-outline-danger mx-2"
-                            [disabled]="isDeleteDisabled(row)" (click)="onDelete(row)">
-                            {{ action.label }}
-                        </button>
-                    </ng-container>
-                </td>
-            </tr>
-            }
-        </tbody>
-    </nz-table>
 </div>

@@ -4,17 +4,13 @@ import { AppValidators } from '../../core/services/validators';
 
 export const BRANCH_COORDINATOR_ASSIGNMENT_FORM: FormConfig = {
   title: 'Branch and Branch Coordinator Binding',
-
   fields: [
-    // ================= EMPLOYEE =================
     {
       key: 'employeeId',
       label: 'Employee',
       type: 'select',
       required: true,
       searchable: true,
-
-      // 👇 dropdown columns
       optionColumns: [
         { key: 'id', title: 'ID', width: '70px' },
         { key: 'name', title: 'Name' },
@@ -22,26 +18,19 @@ export const BRANCH_COORDINATOR_ASSIGNMENT_FORM: FormConfig = {
         { key: 'designation', title: 'Designation' },
       ],
     },
-
-    // ================= BRANCH =================
     {
       key: 'branchId',
       label: 'Branch',
       type: 'select',
       required: true,
       searchable: true,
-
-      // 👇 dropdown columns
       optionColumns: [
         { key: 'id', title: 'ID', width: '70px' },
         { key: 'name', title: 'Branch Name' },
         { key: 'desc', title: 'Description' },
         { key: 'phone', title: 'Phone' },
-        // { key: 'address', title: 'Address' },
       ],
     },
-
-    // ================= AUTO FILLED (READONLY) =================
     {
       key: 'branchName',
       label: 'Branch Name',
@@ -72,19 +61,14 @@ export const BRANCH_COORDINATOR_ASSIGNMENT_FORM: FormConfig = {
       type: 'readonly',
       disabled: true,
     },
-
-    // ================= COORDINATOR EMAIL =================
     {
       key: 'email',
       label: 'Coordinator Email Address',
       type: 'text',
       required: true,
       validators: [AppValidators.email(50)],
-      // avoid per-keystroke validation for email input: update on blur
       updateOn: 'change',
     },
-
-    // ================= EFFECTIVE DATE =================
     {
       key: 'effectiveDate',
       label: 'Effective Date',
@@ -95,33 +79,39 @@ export const BRANCH_COORDINATOR_ASSIGNMENT_FORM: FormConfig = {
   ],
 };
 
-// ================= TABLE CONFIG =================
-
 export const BRANCH_COORDINATOR_ASSIGNMENT_TABLE: TableConfig = {
   globalSearch: {
     placeholder: 'Search in table...',
     keys: ['branchName', 'employeeName', 'email'],
     rules: {
-      mode: 'alphanumeric', 
+      mode: 'alphanumeric',
       maxLength: 15,
       trim: true,
     },
   },
 
   columns: [
-    { key: 'branchName', title: 'Branch' },
+    {
+      key: 'branchName',
+      title: 'Branch',
+      filter: {
+        type: 'select',
+        placeholder: 'Branch',
+        options: [],
+      },
+    },
     { key: 'employeeName', title: 'Employee Name' },
     { key: 'email', title: 'Email' },
-    { key: 'effectiveDateDisplay', title: 'Effective Date' },
-    // { key: 'prevOwner', title: 'Prev Owner' },
-    // { key: 'employeeName', title: 'Current Owner' },
-    // { key: 'nextOwner', title: 'Next Owner' },
+    {
+      key: 'effectiveDateDisplay',
+      title: 'Effective Date',
+      filter: {
+        type: 'date',
+        placeholder: 'Effective Date',
+      },
+    },
   ],
 
-  actions: [
-    { label: 'Edit', action: 'edit' },
-    // { label: 'Delete', action: 'delete' },
-  ],
-
+  actions: [{ label: 'Edit', action: 'edit' }],
   pagination: true,
 };

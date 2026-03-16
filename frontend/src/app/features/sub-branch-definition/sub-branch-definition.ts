@@ -26,7 +26,7 @@ import { AppValidators } from '../../core/services/validators';
 })
 export class SubBranchDefinitionComponent implements OnInit {
   formConfig = { ...SUB_BRANCH_DEFINITION_FORM };
-  tableConfig = SUB_BRANCH_DEFINITION_TABLE;
+  tableConfig = structuredClone(SUB_BRANCH_DEFINITION_TABLE);
 
   showModal = false;
   selectedId: number | null = null;
@@ -37,11 +37,16 @@ export class SubBranchDefinitionComponent implements OnInit {
   private branchMap = new Map<number, any>();
   private lastBranchId = 0;
 
+  private allBranchFilterOptions: { label: string; value: string }[] = [];
+  private allSubBranchFilterOptions: { label: string; value: string }[] = [];
+  private subBranchToBranchMap = new Map<string, string>();
+  private branchToSubBranchesMap = new Map<string, string[]>();
+
   constructor(
     private service: SubBranchDefinitionService,
     private notification: NzNotificationService,
     private modal: NzModalService,
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.loadTable();
@@ -54,22 +59,16 @@ export class SubBranchDefinitionComponent implements OnInit {
     this.service.getAll().subscribe((res: any) => {
       const rows = res?.data ?? res ?? [];
 
-      this.tableData = rows.map((r: any) => {
+      const mappedRows = rows.map((r: any) => {
         const entered = r.EnteredOn ? new Date(r.EnteredOn) : null;
         const edited = r.EditedOn ? new Date(r.EditedOn) : null;
 
         const enteredOnDisplay = entered
-          ? `${entered.getFullYear()}-${String(entered.getMonth() + 1).padStart(
-              2,
-              '0',
-            )}-${String(entered.getDate()).padStart(2, '0')}`
+          ? `${entered.getFullYear()}-${String(entered.getMonth() + 1).padStart(2, '0')}-${String(entered.getDate()).padStart(2, '0')}`
           : '';
 
         const editedOnDisplay = edited
-          ? `${edited.getFullYear()}-${String(edited.getMonth() + 1).padStart(
-              2,
-              '0',
-            )}-${String(edited.getDate()).padStart(2, '0')}`
+          ? `${edited.getFullYear()}-${String(edited.getMonth() + 1).padStart(2, '0')}-${String(edited.getDate()).padStart(2, '0')}`
           : '';
 
         return {
@@ -77,11 +76,11 @@ export class SubBranchDefinitionComponent implements OnInit {
           subBranchId: r.SubBranchID,
           branchId: r.BranchID,
 
-          branchName: r.BranchName,
-          branchDesc: r.BranchDesc,
+          branchName: r.BranchName ?? 'NA',
+          branchDesc: r.BranchDesc ?? 'NA',
 
-          subBranchName: r.SubBranchName,
-          subBranchDesc: r.SubBranchDesc,
+          subBranchName: r.SubBranchName ?? 'NA',
+          subBranchDesc: r.SubBranchDesc ?? 'NA',
 
           enteredOn: r.EnteredOn,
           enteredBy: r.EnteredBy,
@@ -92,6 +91,86 @@ export class SubBranchDefinitionComponent implements OnInit {
           editedOnDisplay,
         };
       });
+
+      this.tableData = mappedRows;
+
+      // ===== build master filter options =====
+      const uniqueBranches = [...new Set<string>(
+        mappedRows
+          .map((x: any) => String(x.branchName ?? '').trim())
+          .filter((x: string) => !!x && x !== 'NA')
+      )];
+
+      const uniqueSubBranches = [...new Set<string>(
+        mappedRows
+          .map((x: any) => String(x.subBranchName ?? '').trim())
+          .filter((x: string) => !!x && x !== 'NA')
+      )];
+
+      this.allBranchFilterOptions = uniqueBranches
+        .sort((a, b) => a.localeCompare(b))
+        .map((branch: string) => ({
+          label: branch,
+          value: branch,
+        }));
+
+      this.allSubBranchFilterOptions = uniqueSubBranches
+        .sort((a, b) => a.localeCompare(b))
+        .map((subBranch: string) => ({
+          label: subBranch,
+          value: subBranch,
+        }));
+
+      // ===== build relation maps =====
+      this.subBranchToBranchMap.clear();
+      this.branchToSubBranchesMap.clear();
+
+      mappedRows.forEach((row: any) => {
+        const branch = String(row.branchName ?? '').trim();
+        const subBranch = String(row.subBranchName ?? '').trim();
+
+        if (!branch || !subBranch || branch === 'NA' || subBranch === 'NA') return;
+
+        this.subBranchToBranchMap.set(subBranch, branch);
+
+        const existing = this.branchToSubBranchesMap.get(branch) ?? [];
+        if (!existing.includes(subBranch)) {
+          existing.push(subBranch);
+          existing.sort((a, b) => a.localeCompare(b));
+          this.branchToSubBranchesMap.set(branch, existing);
+        }
+      });
+
+      this.tableConfig = {
+        ...this.tableConfig,
+        columns: this.tableConfig.columns.map((col: any) => {
+          if (col.key === 'branchName') {
+            return {
+              ...col,
+              filter: {
+                ...col.filter,
+                type: 'select',
+                placeholder: 'Branch',
+                options: this.allBranchFilterOptions,
+              },
+            };
+          }
+
+          if (col.key === 'subBranchName') {
+            return {
+              ...col,
+              filter: {
+                ...col.filter,
+                type: 'select',
+                placeholder: 'Sub-Branch Name',
+                options: this.allSubBranchFilterOptions,
+              },
+            };
+          }
+
+          return col;
+        }),
+      };
     });
   }
 

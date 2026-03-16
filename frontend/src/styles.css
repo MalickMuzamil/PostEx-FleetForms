@@ -8,14 +8,14 @@
 ===================================================== */
 :root {
   /* Brand */
-  --primary: #92cf50;
-  --primary-shadow: rgba(57, 111, 49, 0.4);
+  --primary: #56883B;
+  --primary-shadow: rgba(86, 136, 59, 0.4);
 
   /* Sidebar */
   --sidebar-bg: #ffffff;
-  --sidebar-text: #92cf50;
-  --sidebar-muted: #92cf50;
-  --sidebar-hover: rgba(57, 111, 49, 0.4);
+  --sidebar-text: #56883B;
+  --sidebar-muted: #56883B;
+  --sidebar-hover: rgba(86, 136, 59, 0.15);
 
   /* App */
   --app-bg: #eeeeee;
@@ -26,7 +26,7 @@
   --text-secondary: #999999;
 
   /* UI */
-  --border-color: #dddddd;
+  --border-color: #E6E6E6;
   --radius: 10px;
 
   /* Font */
@@ -181,20 +181,7 @@ nz-content {
     0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
-/* =====================================================
-   TABLE
-===================================================== */
-.app-table th {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.app-table td {
-  font-size: var(--fs-sm);
-  vertical-align: middle;
-  white-space: nowrap;
-}
+/* Table styles are handled in ui/table/table.css */
 
 /* =====================================================
    BUTTONS

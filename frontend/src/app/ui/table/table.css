@@ -1,21 +1,462 @@
-.app-table {
+/* =====================================================
+   OUTER WRAPPER
+===================================================== */
+.tbl-wrapper {
   background: var(--content-bg);
-  min-width: 700px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+  width: 100%;
 }
 
-.app-table th {
+/* =====================================================
+   CARD HEADER (PROJECTED CONTENT)
+===================================================== */
+.tbl-card-header-wrap {
+  padding: 14px 16px 10px;
+  background: var(--content-bg);
+  width: 100%;
+}
+
+.tbl-card-header-wrap:empty {
+  display: none;
+}
+
+::ng-deep [table-header].tbl-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+::ng-deep [table-header] .tbl-card-title {
+  margin: 0;
+  font-family: var(--font);
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--text-primary);
-  vertical-align: middle;
+  line-height: 1.2;
 }
 
-.app-table td {
+::ng-deep [table-header] .tbl-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background: var(--primary);
+  color: #ffffff;
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px var(--primary-shadow);
+}
+
+::ng-deep [table-header] .tbl-add-btn:hover {
+  opacity: 0.92;
+}
+
+::ng-deep [table-header] .tbl-add-btn i {
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* =====================================================
+   TOOLBAR ROW
+===================================================== */
+.tbl-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--content-bg);
+}
+
+/* Agar header ho to extra top line avoid ho jaye */
+.tbl-card-header-wrap:not(:empty)+.tbl-toolbar {
+  border-top: 1px solid var(--border-color);
+}
+
+/* Search stretches to fill space */
+.tbl-search-wrap {
+  flex: 1 1 auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.tbl-search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.tbl-search-input {
+  width: 100%;
+  height: 38px;
+  padding: 8px 12px 8px 36px;
+  font-size: var(--fs-sm);
+  font-family: var(--font);
+  color: var(--text-primary);
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tbl-search-input::placeholder {
+  color: #b8b8b8;
+}
+
+.tbl-search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(86, 136, 59, 0.1);
+}
+
+/* Filters on the right */
+.tbl-filters-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Text filter input */
+.tbl-filter-input {
+  height: 38px;
+  padding: 7px 12px;
+  font-size: var(--fs-sm);
+  font-family: var(--font);
+  color: var(--text-primary);
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  outline: none;
+  min-width: 130px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tbl-filter-input::placeholder {
+  color: #b8b8b8;
+}
+
+.tbl-filter-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(86, 136, 59, 0.1);
+}
+
+/* Custom select dropdown */
+.tbl-filter-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tbl-filter-select {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 38px;
+  padding: 7px 34px 7px 12px;
+  font-size: var(--fs-sm);
+  font-family: var(--font);
+  color: var(--text-primary);
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+  min-width: 130px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tbl-filter-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(86, 136, 59, 0.1);
+}
+
+.tbl-select-arrow {
+  position: absolute;
+  right: 10px;
+  color: var(--text-secondary);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+/* Filters-only toolbar (no search bar) */
+.tbl-toolbar--filters-only {
+  justify-content: flex-start;
+}
+
+/* =====================================================
+   TABLE SCROLL WRAPPER (horizontal on mobile)
+===================================================== */
+.tbl-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tbl-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tbl-scroll::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+.tbl-scroll::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+/* =====================================================
+   TABLE
+===================================================== */
+.app-table {
+  min-width: 650px;
+  width: 100%;
+  background: var(--content-bg);
+}
+
+/* Thead */
+.app-table thead th {
+  font-size: var(--fs-xs) !important;
+  font-weight: 600 !important;
+  font-family: var(--font);
+  color: var(--text-primary) !important;
+  background: var(--content-bg) !important;
+  padding: 12px 16px !important;
+  white-space: nowrap;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1px solid var(--border-color) !important;
   vertical-align: middle;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Tbody cells */
+.app-table tbody td {
+  font-size: var(--fs-sm) !important;
+  font-family: var(--font);
+  color: var(--text-primary) !important;
+  padding: 14px 16px !important;
+  vertical-align: middle;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  white-space: nowrap;
+  background: transparent !important;
+}
+
+/* Remove bottom border on last row */
+.app-table tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+/* Row hover */
+.app-table tbody tr:hover td {
+  background-color: rgba(86, 136, 59, 0.04) !important;
+}
+
+/* Actions cell */
+.tbl-actions-cell {
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* =====================================================
+   ACTION BUTTONS
+===================================================== */
+.tbl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  font-size: var(--fs-xs);
+  font-family: var(--font);
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  background: #ffffff;
   color: var(--text-primary);
 }
 
-.table-responsive {
-  width: 100%;
-  overflow-x: auto;
-  border-radius: var(--radius);
+.tbl-btn+.tbl-btn {
+  margin-left: 6px;
+}
+
+.tbl-btn--edit:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(86, 136, 59, 0.05);
+}
+
+.tbl-btn--delete {
+  color: #e53e3e;
+  border-color: #fca5a5;
+}
+
+.tbl-btn--delete:hover {
+  background: #fff5f5;
+  border-color: #e53e3e;
+}
+
+.tbl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* =====================================================
+   STATUS BADGES
+===================================================== */
+.tbl-badge {
+  display: inline-block;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.2px;
+}
+
+.tbl-badge--active {
+  background: rgba(86, 136, 59, 0.12);
+  color: var(--primary);
+}
+
+.tbl-badge--inactive {
+  background: rgba(229, 62, 62, 0.1);
+  color: #c53030;
+}
+
+/* =====================================================
+   PAGINATION FOOTER
+===================================================== */
+.tbl-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-color);
+  background: var(--content-bg);
+  gap: 12px;
+}
+
+.tbl-pagination-info {
+  font-size: var(--fs-sm);
+  font-family: var(--font);
+  color: var(--text-secondary);
+}
+
+.tbl-pagination-info strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.tbl-pagination-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.tbl-page-btn {
+  min-height: 34px;
+  padding: 6px 16px;
+  font-size: var(--fs-sm);
+  font-family: var(--font);
+  font-weight: 500;
+  background: #ffffff;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.tbl-page-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(86, 136, 59, 0.04);
+}
+
+.tbl-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* =====================================================
+   MOBILE RESPONSIVE
+===================================================== */
+@media (max-width: 768px) {
+  .tbl-card-header-wrap {
+    padding: 12px;
+  }
+
+  ::ng-deep [table-header].tbl-card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  ::ng-deep [table-header] .tbl-add-btn {
+    width: 100%;
+  }
+
+  .tbl-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .tbl-search-wrap {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .tbl-filters-right {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .tbl-filter-select-wrap,
+  .tbl-filter-input {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .tbl-filter-select {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .tbl-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .app-table thead th,
+  .app-table tbody td {
+    padding: 10px 12px !important;
+  }
 }

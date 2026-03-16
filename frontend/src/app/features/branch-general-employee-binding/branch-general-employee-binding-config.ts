@@ -6,15 +6,12 @@ export const BRANCH_GENERAL_EMP_BINDING_FORM: FormConfig = {
   title: 'Branch and General Employee Binding',
 
   fields: [
-    // ================= EMPLOYEE =================
     {
       key: 'employeeId',
       label: 'Employee',
       type: 'select',
       required: true,
       searchable: true,
-
-      // 👇 dropdown columns (image jaisa)
       optionColumns: [
         { key: 'id', title: 'ID', width: '70px' },
         { key: 'name', title: 'Name' },
@@ -22,26 +19,19 @@ export const BRANCH_GENERAL_EMP_BINDING_FORM: FormConfig = {
         { key: 'designation', title: 'Designation' },
       ],
     },
-
-    // ================= BRANCH =================
     {
       key: 'branchId',
       label: 'Branch',
       type: 'select',
       required: true,
       searchable: true,
-
-      // 👇 dropdown columns (image jaisa)
       optionColumns: [
         { key: 'id', title: 'ID', width: '70px' },
         { key: 'name', title: 'Branch Name' },
         { key: 'desc', title: 'Description' },
         { key: 'phone', title: 'Phone' },
-        // { key: 'address', title: 'Address' },
       ],
     },
-
-    // ================= AUTO FILLED (READONLY) =================
     {
       key: 'branchName',
       label: 'Branch Name',
@@ -63,19 +53,14 @@ export const BRANCH_GENERAL_EMP_BINDING_FORM: FormConfig = {
       required: false,
       disabled: true,
     },
-
-    // ================= EMAIL =================
     {
       key: 'email',
       label: 'Email Address',
       type: 'text',
       required: true,
       validators: [AppValidators.email(50)],
-      // avoid per-keystroke validation for email input
       updateOn: 'change',
     },
-
-    // ================= EFFECTIVE DATE =================
     {
       key: 'effectiveDate',
       label: 'Effective Date',
@@ -83,8 +68,6 @@ export const BRANCH_GENERAL_EMP_BINDING_FORM: FormConfig = {
       required: true,
       validators: [AppValidators.futureDate()],
     },
-
-    // ================= STATUS FLAG =================
     {
       key: 'statusFlag',
       label: 'Status Flag',
@@ -109,16 +92,39 @@ export const BRANCH_GENERAL_EMP_BINDING_TABLE: TableConfig = {
       trim: true,
     },
   },
+
   columns: [
-    { key: 'branchName', title: 'Branch' },
-    { key: 'employeeName', title: 'Employee Name' },
-    { key: 'email', title: 'Email' },
-    { key: 'effectiveDateDisplay', title: 'Effective Date' },
-    { key: 'statusText', title: 'Status' },
+    {
+      key: 'branchName',
+      title: 'Branch',
+      filter: {
+        type: 'select',
+        placeholder: 'Branch',
+        options: [],
+      },
+    },
+    {
+      key: 'employeeName',
+      title: 'Employee Name',
+    },
+    {
+      key: 'email',
+      title: 'Email',
+    },
+    {
+      key: 'effectiveDateDisplay',
+      title: 'Effective Date',
+      filter: {
+        type: 'date',
+        placeholder: 'Effective Date',
+      },
+    },
   ],
+
   actions: [
     { label: 'Edit', action: 'edit' },
     { label: 'Delete', action: 'delete' },
   ],
+
   pagination: true,
 };

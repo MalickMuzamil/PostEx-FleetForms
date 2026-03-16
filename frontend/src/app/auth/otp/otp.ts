@@ -54,6 +54,7 @@ export class OtpComponent {
       if (!email) throw new Error('Email missing');
 
       await this.auth.verifyOtp(otpCode);
+      await this.auth.savePasskeyEmail(email);
 
       this.auth.setAuthenticated(true);
       this.auth.setOtpVerified();

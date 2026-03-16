@@ -6,7 +6,7 @@ import { map } from 'rxjs';
 export class SubBranchAssignmentDefinitionService {
   private endpoint = '/sub-branch-assignment-definition';
 
-  constructor(private api: GeneralService) {}
+  constructor(private api: GeneralService) { }
 
   create(payload: any) {
     return this.api.post(this.endpoint, payload);
@@ -47,4 +47,11 @@ export class SubBranchAssignmentDefinitionService {
       )
       .pipe(map((res) => res?.data ?? res ?? []));
   }
+
+  // getBranches() {
+  //   return this.api
+  //     .get<any>(`${this.endpoint}/branches`)
+  //     .pipe(map((res) => res?.data ?? res ?? []));
+  // }
+
 }

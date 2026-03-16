@@ -20,7 +20,7 @@ import { NzModalService } from 'ng-zorro-antd/modal';
 })
 export class BranchGeneralEmployeeBinding implements OnInit {
   formConfig = { ...BRANCH_GENERAL_EMP_BINDING_FORM };
-  tableConfig = BRANCH_GENERAL_EMP_BINDING_TABLE;
+  tableConfig = structuredClone(BRANCH_GENERAL_EMP_BINDING_TABLE);
 
   showModal = false;
   selectedId: number | null = null;
@@ -45,7 +45,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
     private service: BranchGeneralEmployeeService,
     private msg: NzMessageService,
     private modal: NzModalService,
-  ) {}
+  ) { }
 
   // ✅ compact: converts "YYYY-MM-DD" into local Date (no timezone issues)
   private asLocalDate(v: any): Date | null {
@@ -123,9 +123,9 @@ export class BranchGeneralEmployeeBinding implements OnInit {
             // ✅ date-only for table
             const effectiveDateDisplay = d
               ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-                  2,
-                  '0',
-                )}-${String(d.getDate()).padStart(2, '0')}`
+                2,
+                '0',
+              )}-${String(d.getDate()).padStart(2, '0')}`
               : '';
 
             const rawStatus = r.Status ?? r.status ?? 1;

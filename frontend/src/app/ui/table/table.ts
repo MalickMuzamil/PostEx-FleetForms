@@ -31,12 +31,14 @@ export class Table implements OnChanges {
   @Output() edit = new EventEmitter<any>();
   @Output() delete = new EventEmitter<any>();
 
+
   filteredData: any[] = [];
 
   globalTerm = '';
   colFilters: Record<string, any> = {};
+  private branchWasCleared = false;
 
-  constructor(private cd: ChangeDetectorRef) {}
+  constructor(private cd: ChangeDetectorRef) { }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['config']) {
@@ -125,99 +127,77 @@ export class Table implements OnChanges {
   private _applyPending = false;
 
   applyFilters() {
-    // coalesce rapid calls (debounce-like)
-    if (this._applyScheduled) {
-      this._applyPending = true;
-      return;
+    this.syncBranchSubBranchEmployeeFilters();
+
+    let data = [...this.data];
+
+    if (this.globalTerm?.trim()) {
+      const term = this.globalTerm.trim().toLowerCase();
+      const keys = this.config.globalSearch?.keys ?? [];
+
+      data = data.filter((row) =>
+        keys.some((key) =>
+          String(row[key] ?? '').toLowerCase().includes(term)
+        )
+      );
     }
 
-    this._applyScheduled = true;
-    setTimeout(() => {
-      const rows = this.data ?? [];
+    for (const col of this.config.columns) {
+      const filter = col.filter;
+      const value = this.colFilters[col.key];
 
-      const LARGE_THRESHOLD = 2000;
-      const runFilter = () => {
-        const searchKeys = this.config?.globalSearch?.keys?.length
-          ? this.config.globalSearch.keys
-          : (this.config?.columns ?? []).map((c) => c.key);
+      if (!filter || value == null || value === '') continue;
 
-        const term = (this.globalTerm || '').trim().toLowerCase();
-
-        this.filteredData = rows.filter((row) => {
-          if (term) {
-            const match = searchKeys.some((k) =>
-              String(row?.[k] ?? '')
-                .toLowerCase()
-                .includes(term),
-            );
-            if (!match) return false;
-          }
-
-          for (const col of this.config?.columns ?? []) {
-            const f = col.filter;
-            if (!f) continue;
-
-            if (f.predicate) {
-              const val = this.colFilters[col.key];
-              if (val != null && val !== '' && !f.predicate(row, val))
-                return false;
-              continue;
-            }
-
-            if (f.type === 'text') {
-              const v = (this.colFilters[col.key] ?? '')
-                .toString()
-                .trim()
-                .toLowerCase();
-              if (
-                v &&
-                !String(row?.[col.key] ?? '')
-                  .toLowerCase()
-                  .includes(v)
-              )
-                return false;
-            }
-
-            if (f.type === 'select') {
-              const v = this.colFilters[col.key];
-              if (
-                v !== undefined &&
-                v !== null &&
-                v !== '' &&
-                row?.[col.key] !== v
-              )
-                return false;
-            }
-          }
-
-          return true;
-        });
-
-        // inform Angular (OnPush) that view changed
-        try {
-          this.cd.markForCheck();
-        } catch (e) {
-          // noop
-        }
-      };
-
-      if (rows.length > LARGE_THRESHOLD) {
-        // large dataset: avoid blocking immediate UI by scheduling filtering
-        console.warn(
-          'Table: large dataset detected, running filter in a scheduled task',
-          rows.length,
+      if (filter.type === 'text') {
+        data = data.filter((row) =>
+          String(row[col.key] ?? '')
+            .toLowerCase()
+            .includes(String(value).toLowerCase())
         );
-        setTimeout(runFilter, 0);
-      } else {
-        runFilter();
       }
 
-      this._applyScheduled = false;
-      if (this._applyPending) {
-        this._applyPending = false;
-        this.applyFilters();
+      if (filter.type === 'select') {
+        data = data.filter(
+          (row) => String(row[col.key] ?? '') === String(value)
+        );
       }
-    }, 150);
+
+      if (filter.type === 'date') {
+        data = data.filter((row) =>
+          this.isSameDate(row[col.key], value)
+        );
+      }
+    }
+
+    this.filteredData = data;
+    this.cd.markForCheck();
+  }
+
+  private isSameDate(rowValue: any, filterValue: string): boolean {
+    if (!rowValue || !filterValue) return false;
+
+    const rowDate = this.normalizeDate(rowValue);
+    if (!rowDate) return false;
+
+    return rowDate === filterValue;
+  }
+
+  private normalizeDate(value: any): string | null {
+    if (!value) return null;
+
+    // already yyyy-mm-dd
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return value;
+    }
+
+    const dt = value instanceof Date ? value : new Date(value);
+    if (isNaN(dt.getTime())) return null;
+
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const d = String(dt.getDate()).padStart(2, '0');
+
+    return `${y}-${m}-${d}`;
   }
 
   onGlobalInput(ev: Event) {
@@ -255,5 +235,169 @@ export class Table implements OnChanges {
     if (row?.isActive === false) return true;
 
     return false;
+  }
+
+  minVal(a: number, b: number): number {
+    return Math.min(a, b);
+  }
+
+  onColDateFilterChange(key: string, value: string | null) {
+    this.colFilters[key] = value;
+    this.applyFilters();
+  }
+
+  onColSelectFilterChange(colKey: string, value: any) {
+    this.colFilters[colKey] = value;
+
+    // ✅ detect manual clear of branch
+    if (colKey === 'branchName') {
+      this.branchWasCleared = value == null || value === '';
+    } else {
+      this.branchWasCleared = false;
+    }
+
+    this.applyFilters();
+  }
+
+  private syncBranchSubBranchEmployeeFilters() {
+    const branchCol = this.config?.columns?.find((c) => c.key === 'branchName');
+    const subBranchCol = this.config?.columns?.find((c) => c.key === 'subBranchName');
+    const employeeCol = this.config?.columns?.find((c) => c.key === 'employeeName');
+
+    if (!branchCol?.filter || !subBranchCol?.filter || !employeeCol?.filter) return;
+    if (
+      branchCol.filter.type !== 'select' ||
+      subBranchCol.filter.type !== 'select' ||
+      employeeCol.filter.type !== 'select'
+    ) return;
+
+    const rows = this.data ?? [];
+
+    const branchToSubs = new Map<string, string[]>();
+    const subToBranch = new Map<string, string>();
+    const comboToEmployees = new Map<string, string[]>();
+    const allEmployeesSet = new Set<string>();
+
+    for (const row of rows) {
+      const branch = String(row?.branchName ?? '').trim();
+      const sub = String(row?.subBranchName ?? '').trim();
+      const emp = String(row?.employeeName ?? '').trim();
+
+      if (emp && emp !== 'NA') {
+        allEmployeesSet.add(emp);
+      }
+
+      if (!branch || !sub || branch === 'NA' || sub === 'NA') continue;
+
+      subToBranch.set(sub, branch);
+
+      const subList = branchToSubs.get(branch) ?? [];
+      if (!subList.includes(sub)) subList.push(sub);
+      branchToSubs.set(branch, subList);
+
+      if (emp && emp !== 'NA') {
+        const comboKey = `${branch}__${sub}`;
+        const empList = comboToEmployees.get(comboKey) ?? [];
+        if (!empList.includes(emp)) empList.push(emp);
+        comboToEmployees.set(comboKey, empList);
+      }
+    }
+
+    for (const [, list] of branchToSubs) {
+      list.sort((a, b) => a.localeCompare(b));
+    }
+
+    for (const [, list] of comboToEmployees) {
+      list.sort((a, b) => a.localeCompare(b));
+    }
+
+    const allSubOptions = [...subToBranch.keys()]
+      .sort((a, b) => a.localeCompare(b))
+      .map((x) => ({ label: x, value: x }));
+
+    const allEmployeeOptions = [...allEmployeesSet]
+      .sort((a, b) => a.localeCompare(b))
+      .map((x) => ({ label: x, value: x }));
+
+    let selectedBranch = this.colFilters['branchName'];
+    let selectedSubBranch = this.colFilters['subBranchName'];
+
+    // ===== branch manually cleared =====
+    if (this.branchWasCleared && !selectedBranch) {
+      this.colFilters['subBranchName'] = null;
+      this.colFilters['employeeName'] = null;
+
+      subBranchCol.filter = {
+        ...subBranchCol.filter,
+        options: allSubOptions,
+      };
+
+      employeeCol.filter = {
+        ...employeeCol.filter,
+        options: allEmployeeOptions,
+      };
+
+      this.branchWasCleared = false;
+      this.cd.markForCheck();
+      return;
+    }
+
+    // ===== sub-branch selected -> optional branch auto-fill =====
+    if (selectedSubBranch) {
+      const parentBranch = subToBranch.get(String(selectedSubBranch));
+      if (parentBranch && !selectedBranch) {
+        selectedBranch = parentBranch;
+        this.colFilters['branchName'] = parentBranch;
+      }
+    }
+
+    // ===== branch selected -> narrow sub-branches =====
+    if (selectedBranch) {
+      const allowedSubs = branchToSubs.get(String(selectedBranch)) ?? [];
+
+      subBranchCol.filter = {
+        ...subBranchCol.filter,
+        options: allowedSubs.map((x) => ({ label: x, value: x })),
+      };
+
+      if (selectedSubBranch) {
+        const parentBranch = subToBranch.get(String(selectedSubBranch));
+        if (parentBranch && parentBranch !== String(selectedBranch)) {
+          this.colFilters['subBranchName'] = null;
+          this.colFilters['employeeName'] = null;
+          selectedSubBranch = null;
+        }
+      }
+    } else {
+      subBranchCol.filter = {
+        ...subBranchCol.filter,
+        options: allSubOptions,
+      };
+    }
+
+    // ===== employee options logic =====
+    // only narrow when BOTH branch + sub-branch selected
+    if (selectedBranch && selectedSubBranch) {
+      const comboKey = `${selectedBranch}__${selectedSubBranch}`;
+      const allowedEmployees = comboToEmployees.get(comboKey) ?? [];
+
+      employeeCol.filter = {
+        ...employeeCol.filter,
+        options: allowedEmployees.map((x) => ({ label: x, value: x })),
+      };
+
+      const selectedEmployee = this.colFilters['employeeName'];
+      if (selectedEmployee && !allowedEmployees.includes(String(selectedEmployee))) {
+        this.colFilters['employeeName'] = null;
+      }
+    } else {
+      employeeCol.filter = {
+        ...employeeCol.filter,
+        options: allEmployeeOptions,
+      };
+    }
+
+    this.branchWasCleared = false;
+    this.cd.markForCheck();
   }
 }

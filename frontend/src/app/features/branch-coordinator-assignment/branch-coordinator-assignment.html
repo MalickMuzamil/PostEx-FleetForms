@@ -1,17 +1,14 @@
-<!-- ================= TABLE VIEW ================= -->
 <div>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Branch & Branch Coordinator Assignments</h5>
+    <app-table [config]="tableConfig" [data]="tableData" (edit)="edit($event)" (delete)="delete($event)">
+        <div table-header class="tbl-card-header">
+            <h5 class="tbl-card-title">Branch Coordinators</h5>
+            <button class="tbl-add-btn" (click)="openAddForm()">
+                <i class="fa fa-plus"></i> Add Assignment
+            </button>
+        </div>
+    </app-table>
 
-        <button nz-button nzType="primary" class="nz-button-primary p-1" (click)="openAddForm()">
-            <i class="fa fa-plus me-2"></i>
-            Add Assignment
-        </button>
-    </div>
-
-    <app-table [config]="tableConfig" [data]="tableData" (edit)="edit($event)" (delete)="delete($event)"></app-table>
+    <app-modal *ngIf="showModal" [visible]="showModal" [title]="formConfig.title" [formConfig]="formConfig"
+        [data]="data" (submit)="onSubmit($event)" (formChange)="onFormChange($any($event))"
+        (cancel)="closeModal()"></app-modal>
 </div>
-
-<!-- ================= MODAL FORM ================= -->
-<app-modal *ngIf="showModal" [visible]="showModal" [title]="formConfig.title" [formConfig]="formConfig" [data]="data"
-    (submit)="onSubmit($event)" (formChange)="onFormChange($any($event))" (cancel)="closeModal()"></app-modal>
