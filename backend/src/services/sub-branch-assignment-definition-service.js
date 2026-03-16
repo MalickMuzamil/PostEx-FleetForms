@@ -25,6 +25,20 @@ class SubBranchAssignmentDefinitionService {
     return result.recordset;
   }
 
+  async listBranches() {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+    SELECT
+      b.BranchID   AS BranchID,
+      b.BranchID   AS ID,
+      b.BranchName AS BranchName
+    FROM HRM.HR.Branches b
+    ORDER BY b.BranchName
+  `);
+
+    return result.recordset;
+  }
+
   async getSubBranchById(subBranchId) {
     const pool = await getPool();
     const request = pool.request();
