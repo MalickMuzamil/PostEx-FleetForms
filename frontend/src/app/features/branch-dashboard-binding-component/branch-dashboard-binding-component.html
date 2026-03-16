@@ -1,15 +1,14 @@
-<div>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Branch & Dashboard Bindings</h5>
+<app-table [config]="tableConfig" [data]="tableData" (edit)="edit($event)" (delete)="delete($event)">
+    <div table-header class="tbl-card-header">
+        <h5 class="tbl-card-title">Branch &amp; Dashboard Bindings</h5>
 
-        <button nz-button nzType="primary" class="nz-button-primary p-1" (click)="openAddForm()">
-            <i class="fa fa-plus me-2"></i>
+        <button class="tbl-add-btn" (click)="openAddForm()">
+            <i class="fa fa-plus"></i>
             Add Binding
         </button>
     </div>
-
-    <app-table [config]="tableConfig" [data]="tableData" (edit)="edit($event)" (delete)="delete($event)"></app-table>
-</div>
+</app-table>
 
 <app-modal [visible]="showModal" [title]="formConfig.title" [formConfig]="formConfig" [data]="data"
-    (submit)="onSubmit($event)" (cancel)="closeModal()"></app-modal>
+    (submit)="onSubmit($event)" (cancel)="closeModal()">
+</app-modal>

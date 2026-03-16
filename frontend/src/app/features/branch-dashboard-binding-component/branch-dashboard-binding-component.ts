@@ -20,7 +20,7 @@ import { NzModalService } from 'ng-zorro-antd/modal';
 })
 export class BranchDashboardBindingComponent {
   formConfig = { ...BRANCH_DASHBOARD_BINDING_FORM };
-  tableConfig = BRANCH_DASHBOARD_BINDING_TABLE;
+  tableConfig = structuredClone(BRANCH_DASHBOARD_BINDING_TABLE);
 
   showModal = false;
   selectedId: number | null = null;
@@ -34,7 +34,7 @@ export class BranchDashboardBindingComponent {
     private service: BranchDashboardBindingService,
     private notification: NzNotificationService,
     private modal: NzModalService,
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.loadDropdowns();
@@ -80,15 +80,12 @@ export class BranchDashboardBindingComponent {
     this.service.getAll().subscribe((res: any) => {
       const rows = res?.data ?? res ?? [];
 
-      this.tableData = rows.map((r: any) => {
+      const mappedRows = rows.map((r: any) => {
         const flag = Number(r.Req_Con_Call ? 1 : 0);
 
         const d = r.EffectiveDate ? new Date(r.EffectiveDate) : null;
         const effectiveDateDisplay = d
-          ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-              2,
-              '0',
-            )}-${String(d.getDate()).padStart(2, '0')}`
+          ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
           : '';
 
         return {
@@ -97,16 +94,45 @@ export class BranchDashboardBindingComponent {
           branchName: r.BranchName ?? 'NA',
           branchDesc: r.BranchDesc ?? 'NA',
 
-          // ✅ numeric (filter/edit stable)
           conferenceCallFlag: flag,
-
-          // ✅ text (table display)
           conferenceCallText: flag === 1 ? 'Active' : 'Inactive',
 
-          effectiveDate: r.EffectiveDate,
+          effectiveDate: effectiveDateDisplay,
           effectiveDateDisplay,
         };
       });
+
+      this.tableData = mappedRows;
+
+      const branchOptions = [...new Set(
+        mappedRows
+          .map((x: any) => x.branchName)
+          .filter((x: any) => !!x && x !== 'NA')
+      )]
+        .sort()
+        .map((branch: any) => ({
+          label: branch,
+          value: branch,
+        }));
+
+      this.tableConfig = {
+        ...this.tableConfig,
+        columns: this.tableConfig.columns.map((col: any) => {
+          if (col.key === 'branchName') {
+            return {
+              ...col,
+              filter: {
+                ...col.filter,
+                type: 'select',
+                placeholder: 'Branch',
+                options: branchOptions,
+              },
+            };
+          }
+
+          return col;
+        }),
+      };
     });
   }
 
@@ -273,7 +299,7 @@ export class BranchDashboardBindingComponent {
           this.notification.error(
             'Duplicate Entry',
             err?.error?.message ||
-              'This branch has already been bound. No new entry allowed.',
+            'This branch has already been bound. No new entry allowed.',
           );
           done();
           return;

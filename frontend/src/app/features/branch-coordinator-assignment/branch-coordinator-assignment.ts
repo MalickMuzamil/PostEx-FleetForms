@@ -28,7 +28,7 @@ type BranchDetails = {
 })
 export class BranchCoordinatorAssignment implements OnInit {
   formConfig = { ...BRANCH_COORDINATOR_ASSIGNMENT_FORM };
-  tableConfig = BRANCH_COORDINATOR_ASSIGNMENT_TABLE;
+  tableConfig = structuredClone(BRANCH_COORDINATOR_ASSIGNMENT_TABLE);
 
   showModal = false;
   selectedId: number | null = null;
@@ -49,7 +49,7 @@ export class BranchCoordinatorAssignment implements OnInit {
     private service: BranchCoordinatorService,
     private notification: NzNotificationService,
     private modal: NzModalService,
-  ) {}
+  ) { }
 
   // ✅ compact: converts "YYYY-MM-DD" into local Date (no timezone issues)
   private asLocalDate(v: any): Date | null {
@@ -88,7 +88,7 @@ export class BranchCoordinatorAssignment implements OnInit {
     forkJoin({
       branches: this.branches$,
       employees: this.employees$,
-      bindingsRes: this.service.getAll(), // should return PrevEmpName/NextEmpName/EndDate if backend changed
+      bindingsRes: this.service.getAll(),
     })
       .pipe(
         map(({ branches, employees, bindingsRes }: any) => {
@@ -110,10 +110,7 @@ export class BranchCoordinatorAssignment implements OnInit {
 
           const fmt = (dt: Date | null) => {
             if (!dt) return '';
-            return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(
-              2,
-              '0',
-            )}-${String(dt.getDate()).padStart(2, '0')}`;
+            return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
           };
 
           return (bindings || []).map((r: any) => {
@@ -123,53 +120,50 @@ export class BranchCoordinatorAssignment implements OnInit {
             const rawStart = r.EffectiveDate ?? r.effectiveDate;
             const startDate = this.asLocalDate(rawStart);
 
-            // ✅ backend should provide EndDate OR NextEffectiveDate (depends on your query)
-            const rawEnd = r.EndDate ?? r.endDate;
-            const endDate = this.asLocalDate(rawEnd);
-
-            // ✅ prev/next owner names (prefer backend-provided names)
-            const prevOwner =
-              (r.PrevEmpName ?? '').trim() ||
-              (r.PrevEmpId != null ? empMap.get(+r.PrevEmpId) : '') ||
-              '-';
-
-            const nextOwner =
-              (r.NextEmpName ?? '').trim() ||
-              (r.NextEmpId != null ? empMap.get(+r.NextEmpId) : '') ||
-              '-';
-
-            const effectiveDateDisplay = fmt(startDate);
-            const endDateDisplay = endDate ? fmt(endDate) : 'Present'; // nice UX
-
             return {
               id: r.ID ?? r.id,
-
               branchId,
               branchName: branchMap.get(branchId) ?? 'NA',
-
               employeeId: empId,
               employeeName: empMap.get(empId) ?? r.EmployeeName ?? 'NA',
-
               email: r.BC_Email ?? r.email,
-
-              // edit
               effectiveDate: startDate,
-
-              // table
-              effectiveDateDisplay,
-              endDateDisplay,
-
-              // 🔥 new timeline fields
-              prevOwner,
-              nextOwner,
-
-              // optional label if backend sends ChangeType
-              changeType: r.ChangeType ?? '',
+              effectiveDateDisplay: fmt(startDate),
             };
           });
         }),
       )
-      .subscribe((rows) => (this.tableData = rows));
+      .subscribe((rows) => {
+        this.tableData = rows;
+
+        const branchOptions = [...new Set(
+          rows
+            .map((x: any) => x.branchName)
+            .filter((x: any) => !!x && x !== 'NA')
+        )]
+          .sort()
+          .map((branch: any) => ({
+            label: branch,
+            value: branch,
+          }));
+
+        this.tableConfig = {
+          ...this.tableConfig,
+          columns: this.tableConfig.columns.map((col: any) =>
+            col.key === 'branchName'
+              ? {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'Branch',
+                  options: branchOptions,
+                },
+              }
+              : col
+          ),
+        };
+      });
   }
 
   // ================= DROPDOWNS =================

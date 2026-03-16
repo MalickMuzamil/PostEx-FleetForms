@@ -12,16 +12,13 @@ export const BRANCH_DASHBOARD_BINDING_FORM: FormConfig = {
       type: 'select',
       required: true,
       searchable: true,
-
       optionColumns: [
         { key: 'id', title: 'ID', width: '70px' },
         { key: 'name', title: 'Branch Name' },
         { key: 'desc', title: 'Description' },
         { key: 'phone', title: 'Phone' },
-        // { key: 'address', title: 'Address' },
       ],
     },
-
     {
       key: 'conferenceCallFlag',
       label: 'Conference Call Flag',
@@ -32,7 +29,6 @@ export const BRANCH_DASHBOARD_BINDING_FORM: FormConfig = {
         { label: 'Inactive (0)', value: 0 },
       ],
     },
-
     {
       key: 'effectiveDate',
       label: 'Effective Date',
@@ -58,6 +54,11 @@ export const BRANCH_DASHBOARD_BINDING_TABLE: TableConfig = {
     {
       key: 'branchName',
       title: 'Branch',
+      filter: {
+        type: 'select',
+        placeholder: 'Branch',
+        options: [],
+      },
     },
     {
       key: 'branchDesc',
@@ -68,15 +69,20 @@ export const BRANCH_DASHBOARD_BINDING_TABLE: TableConfig = {
       title: 'Conference Call Flag',
       filter: {
         type: 'select',
+        placeholder: 'Conference Call Flag',
         options: [
-          { label: 'Active (1)', value: 'Active' },
-          { label: 'Inactive (0)', value: 'Inactive' },
+          { label: 'Active', value: 'Active' },
+          { label: 'Inactive', value: 'Inactive' },
         ],
       },
     },
     {
       key: 'effectiveDateDisplay',
       title: 'Effective Date',
+      filter: {
+        type: 'date',
+        placeholder: 'Effective Date',
+      },
     },
   ],
 

@@ -4,7 +4,6 @@ import { FormConfig } from '../../shared/form-model/dynamic-form-model';
 
 export const DELIVERY_ROUTE_BINDING_FORM: FormConfig = {
   title: 'Delivery Route Bulk Import',
-
   fields: [
     {
       key: 'bulkImport',
@@ -24,32 +23,29 @@ export const DELIVERY_ROUTE_BINDING_EDIT_FORM: FormConfig = {
       label: 'Delivery Route',
       type: 'select',
       required: true,
-      options: [], // patched in component
+      options: [],
     },
     {
       key: 'branchId',
       label: 'Branch',
       type: 'select',
       required: true,
-      options: [], // patched in component
+      options: [],
     },
     {
       key: 'subBranchId',
       label: 'Sub Branch',
       type: 'select',
       required: true,
-      options: [], // patched in component
+      options: [],
     },
-
-    // ✅ NEW FIELD (editable description)
     {
       key: 'correctDescriptionForReports',
       label: 'Correct Description for Reports',
       type: 'select',
       required: true,
-      options: [], // ✅ patched in component (from DeliveryRouteDefinitionService.getAll())
+      options: [],
     },
-
     {
       key: 'effectiveDate',
       label: 'Effective Date',
@@ -73,7 +69,12 @@ export const DELIVERY_ROUTE_BINDING_EDIT_FORM: FormConfig = {
 export const DELIVERY_ROUTE_BINDING_TABLE: TableConfig = {
   globalSearch: {
     placeholder: 'Search Branch, Sub Branch, Route, Desc',
-    keys: ['deliveryRouteDescription', 'subBranchName', 'branchName', 'deliveryRouteNo',],
+    keys: [
+      'deliveryRouteDescription',
+      'subBranchName',
+      'branchName',
+      'deliveryRouteNo',
+    ],
     rules: {
       mode: 'alphanumeric',
       maxLength: 20,
@@ -83,18 +84,57 @@ export const DELIVERY_ROUTE_BINDING_TABLE: TableConfig = {
 
   columns: [
     { key: 'deliveryRouteId', title: 'Delivery Route ID' },
-    { key: 'deliveryRouteNo', title: 'Delivery Route' },
-    { key: 'branchName', title: 'Branch' },
-    { key: 'subBranchName', title: 'Sub Branch' },
+
+    {
+      key: 'deliveryRouteNo',
+      title: 'Delivery Route',
+      filter: {
+        type: 'select',
+        placeholder: 'Delivery Route',
+        options: [],
+      },
+    },
+    {
+      key: 'branchName',
+      title: 'Branch',
+      filter: {
+        type: 'select',
+        placeholder: 'Branch',
+        options: [],
+      },
+    },
+    {
+      key: 'subBranchName',
+      title: 'Sub Branch',
+      filter: {
+        type: 'select',
+        placeholder: 'Sub Branch',
+        options: [],
+      },
+    },
     { key: 'deliveryRouteDescription', title: 'Delivery Route Description' },
-    { key: 'effectiveDateDisplay', title: 'Effective Date' },
-    { key: 'requiredReportsDisplay', title: 'Required Reports' },
+    {
+      key: 'effectiveDateDisplay',
+      title: 'Effective Date',
+      filter: {
+        type: 'date',
+        placeholder: 'Effective Date',
+      },
+    },
+    {
+      key: 'requiredReportsDisplay',
+      title: 'Required Reports',
+      filter: {
+        type: 'select',
+        placeholder: 'Required in Reports',
+        options: [
+          { label: 'Active', value: 'Active' },
+          { label: 'Inactive', value: 'Inactive' },
+        ],
+      },
+    },
   ],
 
-  actions: [
-    // { label: 'Delete', action: 'delete' },
-    { label: 'Edit', action: 'edit' },
-  ],
-
+  actions: [{ label: 'Edit', action: 'edit' }],
   pagination: true,
 };

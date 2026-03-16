@@ -13,7 +13,6 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_FORM: FormConfig = {
       required: true,
       searchable: true,
       options: [],
-
       optionColumns: [
         { key: 'id', title: 'ID', width: '80px' },
         { key: 'name', title: 'Sub-Branch Name' },
@@ -21,7 +20,6 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_FORM: FormConfig = {
         { key: 'branchName', title: 'Branch Name' },
       ],
     },
-
     {
       key: 'subBranchName',
       label: 'Sub-Branch Name',
@@ -35,7 +33,6 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_FORM: FormConfig = {
       type: 'readonly',
       disabled: true,
     },
-
     {
       key: 'employeeId',
       label: 'Employee (In-Charge)',
@@ -43,7 +40,6 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_FORM: FormConfig = {
       required: true,
       searchable: true,
       options: [],
-
       optionColumns: [
         { key: 'id', title: 'ID', width: '80px' },
         { key: 'name', title: 'Name' },
@@ -51,7 +47,6 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_FORM: FormConfig = {
         { key: 'designationName', title: 'Designation' },
       ],
     },
-
     {
       key: 'email',
       label: 'Email Address',
@@ -60,7 +55,6 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_FORM: FormConfig = {
       validators: [AppValidators.email(50)],
       updateOn: 'change',
     },
-
     {
       key: 'effectiveDate',
       label: 'Effective Date',
@@ -68,18 +62,6 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_FORM: FormConfig = {
       required: true,
       validators: [AppValidators.futureDate()],
     },
-
-    // {
-    //   key: 'statusFlag',
-    //   label: 'Status Flag',
-    //   type: 'select',
-    //   required: true,
-    //   options: [
-    //     { label: 'Active (1)', value: 1 },
-    //     { label: 'Inactive (0)', value: 0 },
-    //   ],
-    //   defaultValue: 1,
-    // },
   ],
 };
 
@@ -97,17 +79,46 @@ export const SUB_BRANCH_ASSIGNMENT_DEFINITION_TABLE: TableConfig = {
 
   columns: [
     { key: 'subBranchId', title: 'Sub-Branch ID' },
-    { key: 'subBranchName', title: 'Sub-Branch' },
-    { key: 'branchName', title: 'Branch' },
-    { key: 'employeeName', title: 'Employee' },
+    {
+      key: 'subBranchName',
+      title: 'Sub-Branch',
+      filter: {
+        type: 'select',
+        placeholder: 'Sub-Branch',
+        options: [],
+      },
+    },
+    {
+      key: 'branchName',
+      title: 'Branch',
+      filter: {
+        type: 'select',
+        placeholder: 'Branch',
+        options: [],
+      },
+    },
+    {
+      key: 'employeeName',
+      title: 'Employee',
+      filter: {
+        type: 'select',
+        placeholder: 'Employee',
+        options: [],
+      },
+    },
     { key: 'email', title: 'Email' },
-    { key: 'effectiveDate', title: 'Effective Date' },
-    // { key: 'statusText', title: 'Status' },
+    {
+      key: 'effectiveDate',
+      title: 'Effective Date',
+      filter: {
+        type: 'date',
+        placeholder: 'Effective Date',
+      },
+    },
   ],
 
   actions: [
     { label: 'Edit', action: 'edit' },
-    // { label: 'Delete', action: 'delete' },
   ],
 
   pagination: true,

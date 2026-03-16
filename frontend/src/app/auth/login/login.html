@@ -31,11 +31,15 @@
               </div>
             </div>
 
-            <!-- Button -->
             <button type="submit" class="btn btn-primary w-100 rounded-3 py-2" [disabled]="loading || form.invalid">
-              <span *ngIf="loading" class="spinner-border spinner-border-sm me-2" role="status"
-                aria-hidden="true"></span>
+              <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
               {{ loading ? 'Sending...' : 'Send OTP' }}
+            </button>
+
+            <!-- Continue with Passkey -->
+            <button *ngIf="passkeyAvailable" type="button" class="btn btn-outline-secondary w-100 rounded-3 py-2 mt-2"
+              (click)="continueWithPasskey()">
+              Continue with Passkey
             </button>
 
             <div class="text-center mt-3 small text-muted">

@@ -1,22 +1,19 @@
-<!-- delivery-route-binding-component.html ✅ UPDATED -->
+<app-table [config]="tableConfig" [data]="tableData" (delete)="delete($event)" (edit)="openEditForm($event)">
+    <div table-header class="tbl-card-header">
+        <h5 class="tbl-card-title">Delivery Route Sub-Branch Binding</h5>
 
-<div>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Delivery Route Sub-Branch Binding</h5>
-
-        <div class="d-flex gap-2">
-            <button nz-button nzType="primary" class="nz-button-primary p-1" (click)="openAddForm()">
-                <i class="fa fa-upload me-2"></i>
-                Bulk Import
-            </button>
-        </div>
+        <button class="tbl-add-btn" (click)="openAddForm()">
+            <i class="fa fa-upload"></i>
+            Bulk Import
+        </button>
     </div>
+</app-table>
 
-    <!-- ✅ add edit output -->
-    <app-table [config]="tableConfig" [data]="tableData" (delete)="delete($event)" (edit)="openEditForm($event)">
-    </app-table>
-</div>
-
-<app-modal [visible]="showModal" [title]="formConfig.title" [formConfig]="formConfig" [data]="data"
-    (formChange)="onFormChange($any($event))" (submit)="saveEdit($event)" (cancel)="closeModal()">
+<app-modal [visible]="showModal"
+    [title]="formConfig.title"
+    [formConfig]="formConfig"
+    [data]="data"
+    (formChange)="onFormChange($any($event))"
+    (submit)="saveEdit($event)"
+    (cancel)="closeModal()">
 </app-modal>

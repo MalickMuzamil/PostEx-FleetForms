@@ -30,8 +30,7 @@ export class DeliveryRouteBindingComponent implements OnInit {
   bulkFormConfig = { ...DELIVERY_ROUTE_BINDING_FORM };
   editFormConfig = { ...DELIVERY_ROUTE_BINDING_EDIT_FORM };
   formConfig: any = { ...DELIVERY_ROUTE_BINDING_FORM };
-
-  tableConfig = DELIVERY_ROUTE_BINDING_TABLE;
+  tableConfig = structuredClone(DELIVERY_ROUTE_BINDING_TABLE);
 
   // ===== STATE =====
   showModal = false;
@@ -78,7 +77,7 @@ export class DeliveryRouteBindingComponent implements OnInit {
     private router: Router,
     private notification: NzNotificationService,
     private modal: NzModalService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadTable();
@@ -107,43 +106,113 @@ export class DeliveryRouteBindingComponent implements OnInit {
     this.bindingService.getAll().subscribe((res: any) => {
       const rows = res?.data ?? res ?? [];
 
-      this.tableData = rows.map((r: any) => {
+      const mappedRows = rows.map((r: any) => {
         const isActive =
           r.RequiredReportsFlag === 1 || r.RequiredReportsFlag === true;
 
-        // ✅ date only: YYYY-MM-DD
         const d = r.EffectiveDate ? new Date(r.EffectiveDate) : null;
         const effectiveDateOnly = d
-          ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-              2,
-              '0'
-            )}-${String(d.getDate()).padStart(2, '0')}`
+          ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
           : '';
 
         return {
           id: r.ID ?? r.Id,
 
           branchId: r.BranchID,
-          branchName: r.BranchName,
+          branchName: r.BranchName ?? 'NA',
 
           subBranchId: r.SubBranchID,
-          subBranchName: r.SubBranchName,
+          subBranchName: r.SubBranchName ?? 'NA',
 
           deliveryRouteId: r.DeliveryRouteID,
-          deliveryRouteNo: r.DeliveryRouteNo,
-          deliveryRouteDescription: r.DeliveryRouteDescription,
+          deliveryRouteNo: r.DeliveryRouteNo ?? 'NA',
+          deliveryRouteDescription: r.DeliveryRouteDescription ?? 'NA',
 
-          // ✅ keep real date for edit logic if needed
-          effectiveDate: d,
-
-          // ✅ keep flag for edit payloads
+          effectiveDate: effectiveDateOnly,
           requiredReportsFlag: isActive ? 1 : 0,
 
-          // ✅ NEW display fields for table
           effectiveDateDisplay: effectiveDateOnly,
           requiredReportsDisplay: isActive ? 'Active' : 'Inactive',
         };
       });
+
+      this.tableData = mappedRows;
+
+      const routeOptions = [...new Set(
+        mappedRows
+          .map((x:any) => x.deliveryRouteNo)
+          .filter((x:any) => !!x && x !== 'NA')
+      )]
+        .sort()
+        .map((x) => ({
+          label: x,
+          value: x,
+        }));
+
+      const branchOptions = [...new Set(
+        mappedRows
+          .map((x:any) => x.branchName)
+          .filter((x:any) => !!x && x !== 'NA')
+      )]
+        .sort()
+        .map((x) => ({
+          label: x,
+          value: x,
+        }));
+
+      const subBranchOptions = [...new Set(
+        mappedRows
+          .map((x: any) => x.subBranchName)
+          .filter((x: any) => !!x && x !== 'NA')
+      )]
+        .sort()
+        .map((x) => ({
+          label: x,
+          value: x,
+        }));
+
+      this.tableConfig = {
+        ...this.tableConfig,
+        columns: this.tableConfig.columns.map((col: any) => {
+          if (col.key === 'deliveryRouteNo') {
+            return {
+              ...col,
+              filter: {
+                ...col.filter,
+                type: 'select',
+                placeholder: 'Delivery Route',
+                options: routeOptions,
+              },
+            };
+          }
+
+          if (col.key === 'branchName') {
+            return {
+              ...col,
+              filter: {
+                ...col.filter,
+                type: 'select',
+                placeholder: 'Branch',
+                options: branchOptions,
+              },
+            };
+          }
+
+          if (col.key === 'subBranchName') {
+            return {
+              ...col,
+              filter: {
+                ...col.filter,
+                type: 'select',
+                placeholder: 'Sub Branch',
+                options: subBranchOptions,
+              },
+            };
+          }
+
+          return col;
+        }),
+      };
     });
   }
 
@@ -179,8 +248,7 @@ export class DeliveryRouteBindingComponent implements OnInit {
             map.set(rid, {
               value: rid,
               label: beforeDash(
-                `${x.DeliveryRouteNo ?? rid} - ${
-                  x.DeliveryRouteDescription ?? ''
+                `${x.DeliveryRouteNo ?? rid} - ${x.DeliveryRouteDescription ?? ''
                 }`
               ),
               BranchID: Number(x.BranchID) || null,
@@ -205,9 +273,9 @@ export class DeliveryRouteBindingComponent implements OnInit {
           .map((r: any) => {
             const text = String(
               r.CorrectionDescriptionforReports ||
-                r.routeDescription ||
-                r.RouteDescription ||
-                ''
+              r.routeDescription ||
+              r.RouteDescription ||
+              ''
             ).trim();
             return { value: text, label: text };
           })
@@ -332,10 +400,10 @@ export class DeliveryRouteBindingComponent implements OnInit {
           const opts = this.isEditMode
             ? this.routeBranches ?? []
             : (this.branches ?? []).map((b: any) => ({
-                value: Number(b.BranchID ?? b.BranchId),
-                label: b.BranchName ?? b.BranchID ?? b.BranchId,
-                ...b,
-              }));
+              value: Number(b.BranchID ?? b.BranchId),
+              label: b.BranchName ?? b.BranchID ?? b.BranchId,
+              ...b,
+            }));
 
           return { ...f, options: opts, disabled: this.isEditMode };
         }

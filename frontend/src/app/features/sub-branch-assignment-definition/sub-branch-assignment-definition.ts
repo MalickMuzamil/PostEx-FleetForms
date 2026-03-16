@@ -23,7 +23,7 @@ import { SubBranchAssignmentDefinitionService } from '../../core/services/sub-br
 export class SubBranchAssignmentDefinition implements OnInit {
   // ===== CONFIGS =====
   formConfig: any = { ...SUB_BRANCH_ASSIGNMENT_DEFINITION_FORM };
-  tableConfig = SUB_BRANCH_ASSIGNMENT_DEFINITION_TABLE;
+  tableConfig = structuredClone(SUB_BRANCH_ASSIGNMENT_DEFINITION_TABLE);
 
   // ===== STATE =====
   showModal = false;
@@ -31,8 +31,10 @@ export class SubBranchAssignmentDefinition implements OnInit {
   tableData: any[] = [];
 
   // ===== DROPDOWNS =====
+  branches: any[] = [];
   subBranches: any[] = [];
-  employees: any[] = []; // depends on selected sub-branch => branch
+  employees: any[] = [];
+  allSubBranches: any[] = [];
 
   // ===== EDIT MODE =====
   isEditMode = false;
@@ -43,7 +45,7 @@ export class SubBranchAssignmentDefinition implements OnInit {
     private router: Router,
     private notification: NzNotificationService,
     private modal: NzModalService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadTable();
@@ -57,7 +59,7 @@ export class SubBranchAssignmentDefinition implements OnInit {
       next: (res: any) => {
         const rows = res?.data ?? res ?? [];
 
-        this.tableData = rows.map((r: any) => {
+        const mappedRows = rows.map((r: any) => {
           const statusFlag =
             Number(
               r.StatusFlag ?? r.statusFlag ?? r.APP_ACTIVE ?? r.ActiveFlag,
@@ -65,30 +67,110 @@ export class SubBranchAssignmentDefinition implements OnInit {
               ? 0
               : 1;
 
+          const effectiveDate = r.EffectiveDate
+            ? new Date(r.EffectiveDate).toISOString().split('T')[0]
+            : null;
+
           return {
             id: r.ID ?? r.Id,
 
             subBranchId: r.SubBranchID ?? r.Sub_Branch_ID ?? r.SubBranchId,
             subBranchName:
-              r.SubBranchName ?? r.Sub_Branch_Name ?? r.SubBranchName,
+              r.SubBranchName ?? r.Sub_Branch_Name ?? r.SubBranchName ?? 'NA',
 
             branchId: r.BranchID ?? r.BranchId,
-            branchName: r.BranchName ?? r.Branch_Name ?? r.BranchName,
+            branchName: r.BranchName ?? r.Branch_Name ?? r.BranchName ?? 'NA',
 
             employeeId: r.EMP_ID ?? r.EmployeeID ?? r.EmployeeId,
             employeeName:
-              r.EmployeeName ?? r.APP_Name ?? r.EmpName ?? r.EmployeeName,
+              r.EmployeeName ?? r.APP_Name ?? r.EmpName ?? r.EmployeeName ?? 'NA',
 
-            email: r.Email ?? r.EmailAddress ?? r.email,
+            email: r.Email ?? r.EmailAddress ?? r.email ?? '',
 
-            effectiveDate: r.EffectiveDate
-              ? new Date(r.EffectiveDate).toISOString().split('T')[0]
-              : null,
+            effectiveDate,
 
             statusFlag,
             statusText: statusFlag === 1 ? 'ACTIVE' : 'INACTIVE',
           };
         });
+
+        this.tableData = mappedRows;
+
+        const subBranchOptions = [...new Set(
+          mappedRows
+            .map((x: any) => x.subBranchName)
+            .filter((x: any) => !!x && x !== 'NA')
+        )]
+          .sort()
+          .map((x) => ({
+            label: x,
+            value: x,
+          }));
+
+        const branchOptions = [...new Set(
+          mappedRows
+            .map((x: any) => x.branchName)
+            .filter((x: any) => !!x && x !== 'NA')
+        )]
+          .sort()
+          .map((x) => ({
+            label: x,
+            value: x,
+          }));
+
+        const employeeOptions = [...new Set(
+          mappedRows
+            .map((x: any) => x.employeeName)
+            .filter((x: any) => !!x && x !== 'NA')
+        )]
+          .sort()
+          .map((x) => ({
+            label: x,
+            value: x,
+          }));
+
+        this.tableConfig = {
+          ...this.tableConfig,
+          columns: this.tableConfig.columns.map((col: any) => {
+            if (col.key === 'subBranchName') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'Sub-Branch',
+                  options: subBranchOptions,
+                },
+              };
+            }
+
+            if (col.key === 'branchName') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'Branch',
+                  options: branchOptions,
+                },
+              };
+            }
+
+            if (col.key === 'employeeName') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'Employee',
+                  options: employeeOptions,
+                },
+              };
+            }
+
+            return col;
+          }),
+        };
       },
       error: () =>
         this.notification.error('Error', 'Failed to load assignments'),
@@ -101,12 +183,11 @@ export class SubBranchAssignmentDefinition implements OnInit {
       next: (res: any) => {
         const rows = res?.data ?? res ?? [];
 
-        this.subBranches = (rows || [])
+        this.allSubBranches = (rows || [])
           .map((x: any) => {
             const id = Number(x.SubBranchID) || null;
             const name = String(x.SubBranchName ?? '').trim();
 
-            // ✅ EXACT backend keys
             const branchId =
               x.BranchID !== undefined && x.BranchID !== null
                 ? Number(x.BranchID)
@@ -127,13 +208,14 @@ export class SubBranchAssignmentDefinition implements OnInit {
               branchId,
               branchName,
               meta: { id, name, branchId, branchName },
-              searchText: `${id} ${name} ${
-                branchId ?? ''
-              } ${branchName}`.trim(),
+              searchText: `${id} ${name} ${branchId ?? ''} ${branchName}`.trim(),
               raw: x,
             };
           })
           .filter(Boolean);
+
+        // initial full list
+        this.subBranches = [...this.allSubBranches];
 
         this.patchFormOptions();
         this.formConfig = { ...this.formConfig };
@@ -142,7 +224,7 @@ export class SubBranchAssignmentDefinition implements OnInit {
         this.notification.error('Error', 'Failed to load sub-branches'),
     });
   }
-
+  
   loadEmployeesByBranch(branchId: number | null, keepSelected = false) {
     const bid = Number(branchId) || null;
 
@@ -277,13 +359,13 @@ export class SubBranchAssignmentDefinition implements OnInit {
     // ✅ seed employee option so dropdown blank na ho
     this.employees = employeeId
       ? [
-          {
-            value: employeeId,
-            label: `${employeeId} - ${row.employeeName ?? ''}`.trim(),
-            id: employeeId,
-            name: row.employeeName ?? '',
-          },
-        ]
+        {
+          value: employeeId,
+          label: `${employeeId} - ${row.employeeName ?? ''}`.trim(),
+          id: employeeId,
+          name: row.employeeName ?? '',
+        },
+      ]
       : [];
 
     this.showModal = true;
@@ -437,5 +519,35 @@ export class SubBranchAssignmentDefinition implements OnInit {
     const conflict = body?.conflict || body?.error?.conflict;
 
     return { message, status, code, conflict };
+  }
+
+  filterSubBranchesByBranch(branchId: number | null, keepSelected = false) {
+    const bid = Number(branchId) || null;
+
+    if (!bid) {
+      this.subBranches = [];
+      this.patchFormOptions();
+      return;
+    }
+
+    this.subBranches = this.allSubBranches.filter(
+      (x: any) => Number(x.branchId) === bid
+    );
+
+    this.patchFormOptions();
+
+    if (keepSelected && this.data?.subBranchId) {
+      const ok = this.subBranches.some(
+        (x: any) => Number(x.value) === Number(this.data.subBranchId)
+      );
+      if (!ok) {
+        this.data = {
+          ...this.data,
+          subBranchId: null,
+          subBranchName: '',
+          employeeId: null,
+        };
+      }
+    }
   }
 }

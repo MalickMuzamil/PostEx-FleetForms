@@ -1,7 +1,13 @@
 import { Injectable } from '@angular/core';
-import { AuthSDK, AuthSDKFetchError } from 'postex-auth-sdk-stage';
+
+// STAGE / LOCAL
+import { AuthSDK, AuthSDKFetchError, setPasskeyEmail, getPasskeyEmail } from 'postex-auth-sdk-stage'
+
+// PRODUCTION
+// import { AuthSDK, AuthSDKFetchError, setPasskeyEmail, getPasskeyEmail } from 'postex-auth-sdk-live'
+
 import { environment } from '../../../environment/environment';
-import { BehaviorSubject, tap } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { Router } from '@angular/router';
 import { GeneralService } from './general-service';
 
@@ -16,17 +22,50 @@ export class AuthService {
   private otpEmailKey = 'auth.otpEmail';
   private otpTokenKey = 'auth.otpToken';
   private passkeyEnabledKey = 'auth.passkeyEnabled';
+  private postexAccessKey = 'postex.access_token';
+  private postexRefreshKey = 'postex.refresh_token';
+  private postexUserKey = 'postex.user';
 
   private authed$ = new BehaviorSubject<boolean>(false);
   private endpoint = '/auth';
 
-  constructor(private api: GeneralService, private router: Router) { }
+  constructor(private api: GeneralService, private router: Router) {
+
+    // 🔧 override SDK base URL
+    (this.auth as any).getBaseUrl = () => `${environment.POSTEX_BASE_URL}/public/v1`;
+
+  }
+
+  // 🔐 SAVE PASSKEY EMAIL (stage + prod both)
+  async savePasskeyEmail(email: string) {
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!normalized) return;
+
+    try {
+      await setPasskeyEmail(normalized);
+      localStorage.setItem('auth.email', normalized);
+    } catch (err) {
+      console.error('Failed to save passkey email', err);
+    }
+  }
+
+  // 🔐 GET SAVED PASSKEY EMAIL
+  async getSavedPasskeyEmail(): Promise<string | null> {
+    try {
+      const sdkEmail = await getPasskeyEmail();
+      const fallback = localStorage.getItem('auth.email');
+      return sdkEmail || fallback;
+    } catch {
+      return localStorage.getItem('auth.email');
+    }
+  }
 
   async startOtp(email: string) {
     email = String(email || '').trim().toLowerCase();
     if (!email) throw new Error('Email required');
 
     const status: any = await this.auth.getStatus(email);
+
     const notFound =
       status?.status === 'not_found' ||
       status?.status === 'user_not_found' ||
@@ -57,6 +96,7 @@ export class AuthService {
   }
 
   async verifyOtp(otpCode: any) {
+
     const otp = String(otpCode ?? '').replace(/\D/g, '').trim();
 
     if (!/^\d{6}$/.test(otp)) {
@@ -67,24 +107,32 @@ export class AuthService {
     if (!email) throw new Error('Email missing, please initiate OTP again');
 
     try {
+
       const resp = await (this.auth as any).verifyOTP(otp);
 
       this.storePostexSession(resp);
 
       return resp;
+
     } catch (e: any) {
+
       if (e instanceof AuthSDKFetchError) {
         throw new Error(e?.response?.data?.message || 'OTP verification failed');
       }
+
       throw e;
+
     }
+
   }
 
   async resendOtp() {
+
     const email = localStorage.getItem(this.otpEmailKey) || '';
     if (!email) throw new Error('Email missing, go back to login');
 
     return this.auth.resendOTP();
+
   }
 
   getOtpEmail() {
@@ -101,16 +149,20 @@ export class AuthService {
   }
 
   logout() {
+
     localStorage.removeItem('postex-auth-token');
     localStorage.removeItem('postex.access_token');
     localStorage.removeItem('postex.refresh_token');
     localStorage.removeItem('postex.user');
     localStorage.removeItem('UserData');
+
     sessionStorage.removeItem('auth.loginDone');
     sessionStorage.removeItem('auth.otpVerified');
 
     this.router.navigateByUrl('/auth/login', { replaceUrl: true });
+
     this.setAuthenticated(false);
+
   }
 
   hasToken(): boolean {
@@ -134,11 +186,17 @@ export class AuthService {
     rp: { name: string; host: string };
     credentialIds: string[];
   }) {
+
     return await (this.auth as any).authenticateWithPasskey(params);
+
   }
 
   async registerPasskey(email: string) {
+
+    await this.savePasskeyEmail(email);
+
     return await this.auth.registerPasskey(email);
+
   }
 
   setPasskeyEnabled(val: boolean) {
@@ -150,9 +208,9 @@ export class AuthService {
   }
 
   async hasPasskeyRegistered(email: string): Promise<boolean> {
+
     const status: any = await this.auth.getStatus(String(email || '').trim().toLowerCase());
 
-    // ✅ ONLY consider "registered" if credentials actually exist
     const credentialIds =
       status?.credentialIds ??
       status?.webauthn?.credentialIds ??
@@ -165,14 +223,11 @@ export class AuthService {
       [];
 
     return Array.isArray(credentialIds) && credentialIds.length > 0;
+
   }
 
-  private postexAccessKey = 'postex.access_token';
-  private postexRefreshKey = 'postex.refresh_token';
-  private postexUserKey = 'postex.user';
-
-
   storePostexSession(resp: any) {
+
     const data = resp?.data ?? resp;
 
     const access = data?.access_token;
@@ -191,7 +246,9 @@ export class AuthService {
       apps: data?.apps || [],
       auth_method: data?.auth_method,
     };
+
     localStorage.setItem(this.postexUserKey, JSON.stringify(user));
+
   }
 
   getPostexAccessToken() {
@@ -201,4 +258,5 @@ export class AuthService {
   verifyTokenFromBackend() {
     return this.api.get('/auth/verify-token').toPromise();
   }
+
 }

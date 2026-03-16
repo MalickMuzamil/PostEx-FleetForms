@@ -18,6 +18,8 @@ import { CommonModule } from '@angular/common';
 export class LoginComponent {
   form!: FormGroup;
   loading = false;
+  savedEmail: string | null = null;
+  passkeyAvailable = false;
 
   constructor(
     private fb: FormBuilder,
@@ -32,6 +34,8 @@ export class LoginComponent {
         validators: [Validators.required, Validators.email, Validators.maxLength(80)],
       }),
     });
+
+    this.loadSavedEmail();
   }
 
   async submit() {
@@ -108,12 +112,71 @@ export class LoginComponent {
       this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
 
     } catch (err: any) {
-      this.msg.error(err?.message || 'Failed to login');
+
+      const message =
+        err?.error?.error?.message ||
+        err?.error?.message ||
+        err?.error?.statusText ||
+        'Failed to login';
+
+      this.msg.error(message);
+
     } finally {
       this.loading = false;
     }
   }
 
+  async loadSavedEmail() {
 
+    try {
+
+      const email = await this.auth.getSavedPasskeyEmail();
+
+      if (!email) return;
+
+      this.savedEmail = email;
+
+      this.form.patchValue({ email });
+
+      this.passkeyAvailable = await this.auth.hasPasskeyRegistered(email);
+
+    } catch (err) {
+
+      console.error(err);
+
+    }
+
+  }
+
+  async continueWithPasskey() {
+
+    if (!this.savedEmail) return;
+
+    try {
+
+      const result: any = await this.auth.startOtp(this.savedEmail);
+
+      if (result?.status !== 'webauthn_challenge') return;
+
+      const res: any = await this.auth.authenticateWithPasskey({
+        challenge: result.challenge,
+        rp: result.rp,
+        credentialIds: result.credentialIds
+      });
+
+      const data = res?.data ?? res;
+
+      localStorage.setItem('postex.access_token', data.access_token);
+      localStorage.setItem('postex.refresh_token', data.refresh_token);
+
+      this.router.navigateByUrl('/');
+
+    } catch (err) {
+
+      console.error(err);
+
+    }
+
+  }
 
 }
