@@ -79,7 +79,7 @@
   padding: 12px 16px;
   border-top: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
-  background: var(--content-bg);
+  background: var(--toolbar-bg);
 }
 
 /* Agar header ho to extra top line avoid ho jaye */

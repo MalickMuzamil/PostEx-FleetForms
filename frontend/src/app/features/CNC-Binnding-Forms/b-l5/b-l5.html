@@ -1,17 +1,19 @@
-<div>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">CnC L4 - CnC L5 Mapping</h5>
+<app-table [config]="tableConfig" [data]="rows" (edit)="openEdit($event)">
+    <div table-header class="tbl-card-header">
+        <h5 class="tbl-card-title">CnC L4 - CnC L5 Mapping</h5>
 
-        <button nz-button nzType="primary" class="nz-button-primary p-1" (click)="openAdd()" [disabled]="addLoading">
-            <i class="fa fa-plus me-2"></i>
+        <button class="tbl-add-btn" (click)="openAdd()" [disabled]="addLoading">
+            <i class="fa fa-plus"></i>
             Add New
         </button>
     </div>
+</app-table>
 
-    <app-table [config]="tableConfig" [data]="rows" (edit)="openEdit($event)">
-    </app-table>
-</div>
-
-<app-modal [visible]="showForm" [title]="formConfig.title" [formConfig]="formConfig" [data]="formData"
-    (submit)="onSubmit($event)" (cancel)="closeForm()">
+<app-modal
+    [visible]="showForm"
+    [title]="formConfig.title"
+    [formConfig]="formConfig"
+    [data]="formData"
+    (submit)="onSubmit($event)"
+    (cancel)="closeForm()">
 </app-modal>

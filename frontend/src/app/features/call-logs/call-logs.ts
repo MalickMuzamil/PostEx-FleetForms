@@ -24,7 +24,7 @@ export class CallLogs implements OnInit {
   editFormConfig = { ...CALL_LOGS_EDIT_FORM };
   formConfig: any = { ...CALL_LOGS_FORM };
 
-  tableConfig = CALL_LOGS_TABLE;
+  tableConfig = structuredClone(CALL_LOGS_TABLE);
 
   showModal = false;
   data: any = {};
@@ -100,6 +100,68 @@ export class CallLogs implements OnInit {
 
           };
         });
+
+        const customerValues = this.tableData
+          .map((x: any) => x.customerNumber)
+          .filter((x: any): x is string => typeof x === 'string' && !!x);
+
+        const masterValues = this.tableData
+          .map((x: any) => x.masterNo)
+          .filter((x: any): x is string => typeof x === 'string' && !!x);
+
+        const responseValues = this.tableData
+          .map((x: any) => x.callResponse)
+          .filter((x: any): x is string => typeof x === 'string' && !!x);
+
+        const customerOptions = [...new Set<string>(customerValues)]
+          .sort((a, b) => a.localeCompare(b))
+          .map((x) => ({ label: x, value: x }));
+
+        const masterOptions = [...new Set<string>(masterValues)]
+          .sort((a, b) => a.localeCompare(b))
+          .map((x) => ({ label: x, value: x }));
+
+        const responseOptions = [...new Set<string>(responseValues)]
+          .sort((a, b) => a.localeCompare(b))
+          .map((x) => ({ label: x, value: x }));
+
+        this.tableConfig = {
+          ...this.tableConfig,
+          columns: this.tableConfig.columns.map((col: any) => {
+
+            if (col.key === 'customerNumber') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  options: customerOptions,
+                },
+              };
+            }
+
+            if (col.key === 'masterNo') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  options: masterOptions,
+                },
+              };
+            }
+
+            if (col.key === 'callResponse') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  options: responseOptions,
+                },
+              };
+            }
+
+            return col;
+          }),
+        };
       },
       error: () => this.notification.error('Error', 'Failed to load call logs list'),
     });

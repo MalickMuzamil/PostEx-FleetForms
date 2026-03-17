@@ -29,7 +29,7 @@ export class AttendanceReport implements OnInit {
   editFormConfig = { ...ATTENDANCE_EDIT_FORM };
   formConfig: any = { ...ATTENDANCE_FORM };
 
-  tableConfig = ATTENDANCE_TABLE;
+  tableConfig = structuredClone(ATTENDANCE_TABLE);
 
   // ===== STATE =====
   showModal = false;
@@ -67,13 +67,12 @@ export class AttendanceReport implements OnInit {
       next: (res: any) => {
         const rows = res?.data ?? res ?? [];
 
-        this.tableData = (rows || []).map((r: any) => {
-          // ✅ Support both API shapes (old + new)
+        const mappedRows = (rows || []).map((r: any) => {
           const empId =
             r.EMP_ID ?? r.EmployeeId ?? r.EmployeeID ?? r.employeeId ?? '';
 
           const empName =
-            r.EMP_NAME ?? r.EmployeeName ?? r.employeeName ?? '';
+            r.EMP_NAME ?? r.EmployeeName ?? r.employeeName ?? 'NA';
 
           const dateStr =
             this.isoDateOnly(r.DATE ?? r.AttendanceDate ?? r.attendanceDate);
@@ -87,35 +86,161 @@ export class AttendanceReport implements OnInit {
           const remarks =
             r.TIMETRAX_REMARKS ?? r.Remarks ?? r.remarks ?? '';
 
-          // ✅ status: backend has IsArchived (true/false)
           const isArchived = r.IsArchived ?? r.isArchived;
-          const status = typeof isArchived === 'boolean'
-            ? (isArchived ? 'Inactive' : 'Active')
-            : (String(r.Status ?? r.status ?? '').trim() || '');
+          const status =
+            typeof isArchived === 'boolean'
+              ? (isArchived ? 'Inactive' : 'Active')
+              : (String(r.Status ?? r.status ?? '').trim() || '');
 
           return {
             id: r.ID ?? r.Id ?? r.SR_NO,
 
             employeeId: String(empId ?? ''),
-            employeeName: String(empName ?? ''),
+            employeeName: String(empName ?? 'NA') || 'NA',
 
             attendanceDate: dateStr ? new Date(dateStr) : null,
-            attendanceDateDisplay: dateStr || '-',
+            attendanceDateDisplay: dateStr || '',
 
             status: status,
             statusDisplay: status || '-',
 
             inTime: inTimeStr || '-',
             outTime: outTimeStr || '-',
+            remarks: String(remarks ?? ''),
 
-            division: String(r.DIVISION ?? r.Division ?? '-') || '-',
-            department: String(r.DEPARTMENT ?? r.Department ?? '-') || '-',
-            zone: String(r.ZONE ?? r.Zone ?? '-') || '-',
-            branch: String(r.BRANCH ?? r.Branch ?? '-') || '-',
+            division: String(r.DIVISION ?? r.Division ?? 'NA') || 'NA',
+            department: String(r.DEPARTMENT ?? r.Department ?? 'NA') || 'NA',
+            zone: String(r.ZONE ?? r.Zone ?? 'NA') || 'NA',
+            branch: String(r.BRANCH ?? r.Branch ?? 'NA') || 'NA',
           };
         });
+
+        this.tableData = mappedRows;
+
+        const employeeValues = mappedRows
+          .map((x: any) => x.employeeName)
+          .filter((x: any): x is string => typeof x === 'string' && !!x && x !== 'NA');
+
+        const divisionValues = mappedRows
+          .map((x: any) => x.division)
+          .filter((x: any): x is string => typeof x === 'string' && !!x && x !== 'NA');
+
+        const departmentValues = mappedRows
+          .map((x: any) => x.department)
+          .filter((x: any): x is string => typeof x === 'string' && !!x && x !== 'NA');
+
+        const zoneValues = mappedRows
+          .map((x: any) => x.zone)
+          .filter((x: any): x is string => typeof x === 'string' && !!x && x !== 'NA');
+
+        const branchValues = mappedRows
+          .map((x: any) => x.branch)
+          .filter((x: any): x is string => typeof x === 'string' && !!x && x !== 'NA');
+
+        const employeeOptions = [...new Set<string>(employeeValues)]
+          .sort((a, b) => a.localeCompare(b))
+          .map((x) => ({
+            label: x,
+            value: x,
+          }));
+
+        const divisionOptions = [...new Set<string>(divisionValues)]
+          .sort((a, b) => a.localeCompare(b))
+          .map((x) => ({
+            label: x,
+            value: x,
+          }));
+
+        const departmentOptions = [...new Set<string>(departmentValues)]
+          .sort((a, b) => a.localeCompare(b))
+          .map((x) => ({
+            label: x,
+            value: x,
+          }));
+
+        const zoneOptions = [...new Set<string>(zoneValues)]
+          .sort((a, b) => a.localeCompare(b))
+          .map((x) => ({
+            label: x,
+            value: x,
+          }));
+
+        const branchOptions = [...new Set<string>(branchValues)]
+          .sort((a, b) => a.localeCompare(b))
+          .map((x) => ({
+            label: x,
+            value: x,
+          }));
+
+        this.tableConfig = {
+          ...this.tableConfig,
+          columns: this.tableConfig.columns.map((col: any) => {
+            if (col.key === 'employeeName') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'Employee Name',
+                  options: employeeOptions,
+                },
+              };
+            }
+
+            if (col.key === 'division') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'Division',
+                  options: divisionOptions,
+                },
+              };
+            }
+
+            if (col.key === 'department') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'Department',
+                  options: departmentOptions,
+                },
+              };
+            }
+
+            if (col.key === 'zone') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'Zone',
+                  options: zoneOptions,
+                },
+              };
+            }
+
+            if (col.key === 'branch') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'Branch',
+                  options: branchOptions,
+                },
+              };
+            }
+
+            return col;
+          }),
+        };
       },
-      error: () => this.notification.error('Error', 'Failed to load attendance list'),
+      error: () =>
+        this.notification.error('Error', 'Failed to load attendance list'),
     });
   }
 
