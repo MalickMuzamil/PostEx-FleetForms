@@ -32,7 +32,7 @@ export class AuthService {
   constructor(private api: GeneralService, private router: Router) {
 
     // 🔧 override SDK base URL
-    (this.auth as any).getBaseUrl = () => `${environment.POSTEX_BASE_URL}/public/v1`;
+    // (this.auth as any).getBaseUrl = () => `${environment.POSTEX_BASE_URL}/public/v1`;
 
   }
 
