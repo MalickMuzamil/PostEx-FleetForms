@@ -1,142 +1,207 @@
-<div class="logo px-3 mb-4 d-flex align-items-center justify-content-center justify-content-lg-start">
-    <i class="fas fa-cube text-primary fs-4"></i>
+<div class="sidebar-shell d-flex flex-column h-100">
 
-    <span *ngIf="!collapsed" class="fw-bold ms-2 d-none d-lg-inline">
-        Logistic Fleet Forms
-    </span>
+  <!-- Brand -->
+  <div class="sidebar-brand d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center min-w-0">
+      <img
+        src="assets/images/PostEx-logo.png"
+        alt="PostEx"
+        class="sidebar-logo" />
+    </div>
+
+    <button
+      type="button"
+      class="btn p-0 border-0 bg-transparent sidebar-toggle-btn"
+      (click)="closeSidebar.emit()"
+      aria-label="Close sidebar">
+      <i class="fas fa-arrow-left-long d-lg-none"></i>
+      <i class="fas fa-arrow-left-long d-none d-lg-inline" *ngIf="!collapsed"></i>
+      <i class="fas fa-arrow-right-long d-none d-lg-inline" *ngIf="collapsed"></i>
+    </button>
+  </div>
+
+  <!-- Menu -->
+  <div class="sidebar-scroll flex-grow-1">
+    <ul nz-menu nzMode="inline" class="app-menu border-0">
+
+      <li
+        nz-menu-item
+        routerLink="/"
+        routerLinkActive="menu-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="app-menu-item">
+        <i class="fas fa-house menu-icon"></i>
+        <span *ngIf="!collapsed || mobileOpen">Welcome</span>
+      </li>
+
+      <li
+        nz-menu-item
+        routerLink="/branch-coordinator-assignment"
+        routerLinkActive="menu-active"
+        class="app-menu-item">
+        <i class="fas fa-map-pin menu-icon"></i>
+        <span *ngIf="!collapsed || mobileOpen">Branch Coordinators</span>
+      </li>
+
+      <li
+        nz-menu-item
+        routerLink="/branch-general-employee-binding"
+        routerLinkActive="menu-active"
+        class="app-menu-item">
+        <i class="fas fa-users menu-icon"></i>
+        <span *ngIf="!collapsed || mobileOpen">Employee Binding</span>
+      </li>
+
+      <li
+        nz-menu-item
+        routerLink="/branch-dashboard-binding"
+        routerLinkActive="menu-active"
+        class="app-menu-item">
+        <i class="fas fa-diagram-project menu-icon"></i>
+        <span *ngIf="!collapsed || mobileOpen">Dashboard Binding</span>
+      </li>
+
+      <li
+        nz-menu-item
+        routerLink="/sub-branch-binding"
+        routerLinkActive="menu-active"
+        class="app-menu-item">
+        <i class="fas fa-building menu-icon"></i>
+        <span *ngIf="!collapsed || mobileOpen">Sub-Branch Definition</span>
+      </li>
+
+      <li
+        nz-menu-item
+        routerLink="/delivery-route-definition"
+        routerLinkActive="menu-active"
+        class="app-menu-item">
+        <i class="fas fa-route menu-icon"></i>
+        <span *ngIf="!collapsed || mobileOpen">Delivery Route Definition</span>
+      </li>
+
+      <li
+        nz-menu-item
+        routerLink="/delivery-route-binding"
+        routerLinkActive="menu-active"
+        class="app-menu-item">
+        <i class="fas fa-location-dot menu-icon"></i>
+        <span *ngIf="!collapsed || mobileOpen">Route Binding</span>
+      </li>
+
+      <li
+        nz-menu-item
+        routerLink="/sub-branch-assignment-definition"
+        routerLinkActive="menu-active"
+        class="app-menu-item">
+        <i class="fas fa-code-branch menu-icon"></i>
+        <span *ngIf="!collapsed || mobileOpen">Sub-Branch Assignment</span>
+      </li>
+
+      <!-- CNC Forms -->
+      <li
+        nz-submenu
+        class="app-submenu"
+        [nzOpen]="true"
+        [nzTitle]="cncTitleTpl">
+        <ng-template #cncTitleTpl>
+          <span class="d-flex align-items-center w-100">
+            <i class="fas fa-layer-group menu-icon"></i>
+            <span *ngIf="!collapsed || mobileOpen">CNC Levels</span>
+          </span>
+        </ng-template>
+
+        <ul>
+          <li nz-menu-item routerLink="/cnc-Level1" routerLinkActive="menu-active" class="submenu-item">
+            <span *ngIf="!collapsed || mobileOpen">Level 1</span>
+          </li>
+          <li nz-menu-item routerLink="/cnc-Level2" routerLinkActive="menu-active" class="submenu-item">
+            <span *ngIf="!collapsed || mobileOpen">Level 2</span>
+          </li>
+          <li nz-menu-item routerLink="/cnc-Level3" routerLinkActive="menu-active" class="submenu-item">
+            <span *ngIf="!collapsed || mobileOpen">Level 3</span>
+          </li>
+          <li nz-menu-item routerLink="/cnc-Level4" routerLinkActive="menu-active" class="submenu-item">
+            <span *ngIf="!collapsed || mobileOpen">Level 4</span>
+          </li>
+          <li nz-menu-item routerLink="/cnc-Level5" routerLinkActive="menu-active" class="submenu-item">
+            <span *ngIf="!collapsed || mobileOpen">Level 5</span>
+          </li>
+          <li nz-menu-item routerLink="/cnc-Level6" routerLinkActive="menu-active" class="submenu-item">
+            <span *ngIf="!collapsed || mobileOpen">Level 6</span>
+          </li>
+        </ul>
+      </li>
+
+      <!-- CNC Binding Forms -->
+      <li
+        nz-submenu
+        class="app-submenu"
+        [nzTitle]="bindingTitleTpl">
+        <ng-template #bindingTitleTpl>
+          <span class="d-flex align-items-center w-100">
+            <i class="fas fa-layer-group menu-icon"></i>
+            <span *ngIf="!collapsed || mobileOpen">CNC Hierarchy Mapping</span>
+          </span>
+        </ng-template>
+
+        <ul>
+          <li nz-menu-item routerLink="/branch-to-L1" routerLinkActive="menu-active" class="submenu-item">
+            <span *ngIf="!collapsed || mobileOpen">Branch - L1</span>
+          </li>
+          <li nz-menu-item routerLink="/L1-to-L2" routerLinkActive="menu-active" class="submenu-item">
+            <span *ngIf="!collapsed || mobileOpen">L1 - L2</span>
+          </li>
+          <li nz-menu-item routerLink="/L2-to-L3" routerLinkActive="menu-active" class="submenu-item">
+            <span *ngIf="!collapsed || mobileOpen">L2 - L3</span>
+          </li>
+          <li nz-menu-item routerLink="/L3-to-L4" routerLinkActive="menu-active" class="submenu-item">
+            <span *ngIf="!collapsed || mobileOpen">L3 - L4</span>
+          </li>
+          <li nz-menu-item routerLink="/L4-to-L5" routerLinkActive="menu-active" class="submenu-item">
+            <span *ngIf="!collapsed || mobileOpen">L4 - L5</span>
+          </li>
+          <li nz-menu-item routerLink="/L5-to-L6" routerLinkActive="menu-active" class="submenu-item">
+            <span *ngIf="!collapsed || mobileOpen">L5 - L6</span>
+          </li>
+        </ul>
+      </li>
+
+      <li
+        nz-menu-item
+        routerLink="/attendance"
+        routerLinkActive="menu-active"
+        class="app-menu-item">
+        <i class="fas fa-calendar-check menu-icon"></i>
+        <span *ngIf="!collapsed || mobileOpen">Attendance Report</span>
+      </li>
+
+      <li
+        nz-menu-item
+        routerLink="/courier-fake-attempts"
+        routerLinkActive="menu-active"
+        class="app-menu-item">
+        <i class="fas fa-truck menu-icon"></i>
+        <span *ngIf="!collapsed || mobileOpen">Courier Fake Attempts</span>
+      </li>
+
+      <li
+        nz-menu-item
+        routerLink="/call-logs"
+        routerLinkActive="menu-active"
+        class="app-menu-item">
+        <i class="fas fa-phone menu-icon"></i>
+        <span *ngIf="!collapsed || mobileOpen">Call Logs</span>
+      </li>
+
+      <li
+        nz-menu-item
+        routerLink="/branch-calender"
+        routerLinkActive="menu-active"
+        class="app-menu-item">
+        <i class="fas fa-calendar menu-icon"></i>
+        <span *ngIf="!collapsed || mobileOpen">Branch Calendar</span>
+      </li>
+
+    </ul>
+  </div>
 </div>
-
-<ul nz-menu nzMode="inline">
-
-    <li nz-menu-item routerLink="/" routerLinkActive="nz-menu-item-selected"
-        [routerLinkActiveOptions]="{ exact: true }">
-        <i class="fas fa-gauge-high me-2"></i>
-        <span *ngIf="!collapsed">Dashboard</span>
-    </li>
-
-    <li nz-menu-item routerLink="/branch-coordinator-assignment" routerLinkActive="nz-menu-item-selected">
-        <i class="fas fa-user-check me-2"></i>
-        <span *ngIf="!collapsed">Branch Coordinator</span>
-    </li>
-
-    <li nz-menu-item routerLink="/branch-general-employee-binding" routerLinkActive="nz-menu-item-selected">
-        <i class="fas fa-users-gear me-2"></i>
-        <span *ngIf="!collapsed">Employee Binding</span>
-    </li>
-
-    <li nz-menu-item routerLink="/branch-dashboard-binding" routerLinkActive="nz-menu-item-selected">
-        <i class="fas fa-project-diagram me-2"></i>
-        <span *ngIf="!collapsed">DashBoard Binding</span>
-    </li>
-
-    <li nz-menu-item routerLink="/sub-branch-binding" routerLinkActive="nz-menu-item-selected">
-        <i class="fas fa-code-branch me-2"></i>
-        <span *ngIf="!collapsed">Sub-Branch Definition</span>
-    </li>
-
-    <li nz-menu-item routerLink="/delivery-route-definition" routerLinkActive="nz-menu-item-selected">
-        <i class="fas fa-map-marked-alt me-2"></i>
-        <span *ngIf="!collapsed">Delivery Route Description</span>
-    </li>
-
-    <li nz-menu-item routerLink="/delivery-route-binding" routerLinkActive="nz-menu-item-selected">
-        <i class="fas fa-link me-2"></i>
-        <span *ngIf="!collapsed">Route Binding</span>
-    </li>
-
-    <li nz-menu-item routerLink="/sub-branch-assignment-definition" routerLinkActive="nz-menu-item-selected">
-        <i class="fas fa-sitemap me-2"></i>
-        <span *ngIf="!collapsed">Sub Branch Assignment Definition</span>
-    </li>
-
-
-    <li nz-submenu nzTitle="CNC Forms" nzIcon="cluster">
-        <ul>
-            <li nz-menu-item routerLink="/cnc-Level1" routerLinkActive="nz-menu-item-selected">
-                <i class="fas fa-layer-group me-2"></i>
-                <span *ngIf="!collapsed">CNC L1 Definition</span>
-            </li>
-
-            <li nz-menu-item routerLink="/cnc-Level2" routerLinkActive="nz-menu-item-selected">
-                <i class="fas fa-layer-group me-2"></i>
-                <span *ngIf="!collapsed">CNC L2 Definition</span>
-            </li>
-
-            <li nz-menu-item routerLink="/cnc-Level3" routerLinkActive="nz-menu-item-selected">
-                <i class="fas fa-layer-group me-2"></i>
-                <span *ngIf="!collapsed">CNC L3 Definition</span>
-            </li>
-
-            <li nz-menu-item routerLink="/cnc-Level4" routerLinkActive="nz-menu-item-selected">
-                <i class="fas fa-layer-group me-2"></i>
-                <span *ngIf="!collapsed">CNC L4 Definition</span>
-            </li>
-
-            <li nz-menu-item routerLink="/cnc-Level5" routerLinkActive="nz-menu-item-selected">
-                <i class="fas fa-layer-group me-2"></i>
-                <span *ngIf="!collapsed">CNC L5 Definition</span>
-            </li>
-
-             <li nz-menu-item routerLink="/cnc-Level6" routerLinkActive="nz-menu-item-selected">
-                <i class="fas fa-layer-group me-2"></i>
-                <span *ngIf="!collapsed">CNC L6 Definition</span>
-            </li>
-        </ul>
-    </li>
-
-
-    <li nz-submenu nzTitle="CNC Binding Forms" nzIcon="cluster">
-        <ul>
-            <li nz-menu-item routerLink="/branch-to-L1" routerLinkActive="nz-menu-item-selected">
-                <i class="fas fa-layer-group me-2"></i>
-                <span *ngIf="!collapsed">Branch-L1</span>
-            </li>
-
-            <li nz-menu-item routerLink="/L1-to-L2" routerLinkActive="nz-menu-item-selected">
-                <i class="fas fa-layer-group me-2"></i>
-                <span *ngIf="!collapsed">L1-L2</span>
-            </li>
-
-            <li nz-menu-item routerLink="/L2-to-L3" routerLinkActive="nz-menu-item-selected">
-                <i class="fas fa-layer-group me-2"></i>
-                <span *ngIf="!collapsed">L2-L3</span>
-            </li>
-
-            <li nz-menu-item routerLink="/L3-to-L4" routerLinkActive="nz-menu-item-selected">
-                <i class="fas fa-layer-group me-2"></i>
-                <span *ngIf="!collapsed">L3-L4</span>
-            </li>
-
-            <li nz-menu-item routerLink="/L4-to-L5" routerLinkActive="nz-menu-item-selected">
-                <i class="fas fa-layer-group me-2"></i>
-                <span *ngIf="!collapsed">L4-L5</span>
-            </li>
-
-            <li nz-menu-item routerLink="/L5-to-L6" routerLinkActive="nz-menu-item-selected">
-                <i class="fas fa-layer-group me-2"></i>
-                <span *ngIf="!collapsed">L5-L6</span>
-            </li>
-        </ul>
-    </li>
-
-    <li nz-menu-item routerLink="/attendance" routerLinkActive="nz-menu-item-selected">
-        <i class="fas fa-calendar-check me-2"></i>
-        <span *ngIf="!collapsed">Attendance Report</span>
-    </li>
-
-    <li nz-menu-item routerLink="/courier-fake-attempts" routerLinkActive="nz-menu-item-selected">
-        <i class="fas fa-truck me-2"></i>
-        <span *ngIf="!collapsed">Courier Fake Attempts</span>
-    </li>
-
-    <li nz-menu-item routerLink="/call-logs" routerLinkActive="nz-menu-item-selected">
-        <i class="fas fa-phone-alt me-2"></i>
-        <span *ngIf="!collapsed">Call Logs</span>
-    </li>
-
-    <li nz-menu-item routerLink="/branch-calender" routerLinkActive="nz-menu-item-selected">
-        <i class="fas fa-calendar me-2"></i>
-        <span *ngIf="!collapsed">Branch Calender</span>
-    </li>
-
-</ul>

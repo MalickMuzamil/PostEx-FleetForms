@@ -22,10 +22,35 @@ export const BRANCH_WISE_CALENDER_TABLE: TableConfig = {
   },
 
   columns: [
-    { key: 'branchDisplay', title: 'BRANCH' },            // BranchId or BranchName
-    { key: 'calenderDateDisplay', title: 'CALENDER_DATE' },
-    { key: 'isNotWorkingDayDisplay', title: 'ISNOTWORKINGDAY' },
-    { key: 'notWorkingDayDesc', title: 'NOTWORKINGDAYDESC' },
+    { key: 'branchDisplay', title: 'BRANCH' },
+
+    {
+      key: 'calenderDateDisplay',
+      title: 'CALENDER_DATE',
+      filter: {
+        type: 'date',
+        placeholder: 'CALENDER_DATE',
+      },
+    },
+    {
+      key: 'isNotWorkingDayDisplay',
+      title: 'ISNOTWORKINGDAY',
+      filter: {
+        type: 'select',
+        placeholder: 'ISNOTWORKINGDAY',
+        options: [],
+      },
+    },
+    {
+      key: 'notWorkingDayDesc',
+      title: 'NOTWORKINGDAYDESC',
+      filter: {
+        type: 'select',
+        placeholder: 'NOTWORKINGDAYDESC',
+        options: [],
+      },
+    },
+
     { key: 'isArchivedDisplay', title: 'IsArchived' },
     { key: 'createdBy', title: 'CreatedBy' },
     { key: 'createdOnDisplay', title: 'CreatedOn' },

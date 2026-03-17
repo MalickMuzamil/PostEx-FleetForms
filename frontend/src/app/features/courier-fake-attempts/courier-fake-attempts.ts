@@ -29,7 +29,7 @@ export class CourierFakeAttempts implements OnInit {
   editFormConfig = { ...COURIER_FAKE_ATTEMPTS_EDIT_FORM };
   formConfig: any = { ...COURIER_FAKE_ATTEMPTS_FORM };
 
-  tableConfig = COURIER_FAKE_ATTEMPTS_TABLE;
+  tableConfig = structuredClone(COURIER_FAKE_ATTEMPTS_TABLE);
 
   // ===== STATE =====
   showModal = false;
@@ -74,7 +74,7 @@ export class CourierFakeAttempts implements OnInit {
       next: (res: any) => {
         const rows = res?.data ?? res ?? [];
 
-        this.tableData = (rows || []).map((r: any) => {
+        const mappedRows = (rows || []).map((r: any) => {
           const cnNo = r.CNNo ?? r.CNNO ?? r.cnNo ?? '';
 
           const dateStr = this.isoDateOnly(r.Date ?? r.DATE ?? r.date);
@@ -86,14 +86,14 @@ export class CourierFakeAttempts implements OnInit {
             id: r.ID ?? r.Id ?? cnNo,
 
             cnNo: String(cnNo ?? ''),
-            branchName: String(r.BranchName ?? r.branchName ?? ''),
+            branchName: String(r.BranchName ?? r.branchName ?? 'NA') || 'NA',
             attempts: r.Attempts ?? r.attempts ?? '',
             courierId: String(r.CourierID ?? r.courierId ?? ''),
-            rider: String(r.Rider ?? r.rider ?? ''),
+            rider: String(r.Rider ?? r.rider ?? 'NA') || 'NA',
             fakeAttempts: r.Fake_Attempts ?? r.fakeAttempts ?? '',
 
             date: dateStr ? new Date(dateStr) : null,
-            dateDisplay: dateStr || '-',
+            dateDisplay: dateStr || '',
 
             isArchived: isArchivedVal,
             isArchivedDisplay:
@@ -107,8 +107,64 @@ export class CourierFakeAttempts implements OnInit {
             createdOnDisplay: createdOnStr || '-',
           };
         });
+
+        this.tableData = mappedRows;
+
+        const branchValues = mappedRows
+          .map((x: any) => x.branchName)
+          .filter((x: any): x is string => typeof x === 'string' && !!x && x !== 'NA');
+
+        const riderValues = mappedRows
+          .map((x: any) => x.rider)
+          .filter((x: any): x is string => typeof x === 'string' && !!x && x !== 'NA');
+
+        const branchOptions = [...new Set<string>(branchValues)]
+          .sort((a, b) => a.localeCompare(b))
+          .map((x) => ({
+            label: x,
+            value: x,
+          }));
+
+        const riderOptions = [...new Set<string>(riderValues)]
+          .sort((a, b) => a.localeCompare(b))
+          .map((x) => ({
+            label: x,
+            value: x,
+          }));
+
+        this.tableConfig = {
+          ...this.tableConfig,
+          columns: this.tableConfig.columns.map((col: any) => {
+            if (col.key === 'branchName') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'BranchName',
+                  options: branchOptions,
+                },
+              };
+            }
+
+            if (col.key === 'rider') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'Rider',
+                  options: riderOptions,
+                },
+              };
+            }
+
+            return col;
+          }),
+        };
       },
-      error: () => this.notification.error('Error', 'Failed to load fake attempts list'),
+      error: () =>
+        this.notification.error('Error', 'Failed to load fake attempts list'),
     });
   }
 

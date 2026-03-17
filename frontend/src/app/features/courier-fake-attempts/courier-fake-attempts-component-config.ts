@@ -57,12 +57,41 @@ export const COURIER_FAKE_ATTEMPTS_TABLE: TableConfig = {
 
   columns: [
     { key: 'cnNo', title: 'CNNo' },
-    { key: 'branchName', title: 'BranchName' },
+
+    {
+      key: 'branchName',
+      title: 'BranchName',
+      filter: {
+        type: 'select',
+        placeholder: 'BranchName',
+        options: [],
+      },
+    },
+
     { key: 'attempts', title: 'Attempts' },
     { key: 'courierId', title: 'CourierID' },
-    { key: 'rider', title: 'Rider' },
+
+    {
+      key: 'rider',
+      title: 'Rider',
+      filter: {
+        type: 'select',
+        placeholder: 'Rider',
+        options: [],
+      },
+    },
+
     { key: 'fakeAttempts', title: 'Fake_Attempts' },
-    { key: 'dateDisplay', title: 'Date' },
+
+    {
+      key: 'dateDisplay',
+      title: 'Date',
+      filter: {
+        type: 'date',
+        placeholder: 'Date',
+      },
+    },
+
     { key: 'isArchivedDisplay', title: 'IsArchived' },
     { key: 'createdBy', title: 'CreatedBy' },
     { key: 'createdOnDisplay', title: 'CreatedOn' },

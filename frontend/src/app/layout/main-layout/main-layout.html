@@ -1,12 +1,21 @@
-<nz-layout>
+<div class="sidebar-backdrop d-lg-none" *ngIf="mobileSidebarOpen" (click)="closeMobileSidebar()">
+</div>
 
-    <nz-sider nzCollapsible [nzCollapsed]="isCollapsed" [nzTrigger]="null">
-        <app-sidebar [collapsed]="isCollapsed"></app-sidebar>
+<nz-layout class="main-layout">
+
+    <nz-sider class="app-sider" [class.mobile-open]="mobileSidebarOpen"
+        [class.desktop-collapsed]="isCollapsed && !mobileSidebarOpen" [nzCollapsed]="false" [nzTrigger]="null"
+        [nzWidth]="236">
+
+        <app-sidebar [collapsed]="isCollapsed && !mobileSidebarOpen" [mobileOpen]="mobileSidebarOpen"
+            (closeSidebar)="handleSidebarClose()">
+        </app-sidebar>
+
     </nz-sider>
 
-    <nz-layout>
+    <nz-layout class="main-right-layout">
         <nz-header>
-            <app-header (toggle)="isCollapsed = !isCollapsed"></app-header>
+            <app-header (toggle)="toggleSidebar()"></app-header>
         </nz-header>
 
         <nz-content class="content">

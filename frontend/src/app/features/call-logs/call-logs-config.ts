@@ -43,24 +43,61 @@ export const CALL_LOGS_EDIT_FORM: FormConfig = {
 };
 
 export const CALL_LOGS_TABLE: TableConfig = {
-    globalSearch: {
-        placeholder: 'Search Customer, Master, Extension, Response',
-        keys: ['customerNumber', 'masterNo', 'extension', 'callResponse', 'timeDisplay'],
-        rules: { mode: 'alphanumeric', maxLength: 30, trim: true },
+  globalSearch: {
+    placeholder: 'Search Customer, Master, Extension, Response',
+    keys: ['customerNumber', 'masterNo', 'extension', 'callResponse', 'timeDisplay'],
+    rules: { mode: 'alphanumeric', maxLength: 30, trim: true },
+  },
+
+  columns: [
+    {
+      key: 'customerNumber',
+      title: 'Customer_Number',
+      filter: {
+        type: 'select',
+        placeholder: 'Customer_Number',
+        options: [],
+      },
     },
 
-    columns: [
-        { key: 'customerNumber', title: 'Customer_Number' },
-        { key: 'consigneeCellLength', title: 'Consignee_Cell_Length' },
-        { key: 'masterNo', title: 'Master_No' },
-        { key: 'agentDurationDisplay', title: 'Agent Duration' },
-        { key: 'totalDurationDisplay', title: 'Total Duration' },
-        { key: 'extension', title: 'Extension' },
-        { key: 'callResponse', title: 'Call_Response' },
-        { key: 'timeDisplay', title: 'Time' },
-        { key: 'recording', title: 'Recording' },
-        { key: 'isArchivedDisplay', title: 'IsArchived' }
-    ],
+    { key: 'consigneeCellLength', title: 'Consignee_Cell_Length' },
 
-    pagination: true,
+    {
+      key: 'masterNo',
+      title: 'Master_No',
+      filter: {
+        type: 'select',
+        placeholder: 'Master_No',
+        options: [],
+      },
+    },
+
+    { key: 'agentDurationDisplay', title: 'Agent Duration' },
+    { key: 'totalDurationDisplay', title: 'Total Duration' },
+    { key: 'extension', title: 'Extension' },
+
+    {
+      key: 'callResponse',
+      title: 'Call_Response',
+      filter: {
+        type: 'select',
+        placeholder: 'Call_Response',
+        options: [],
+      },
+    },
+
+    {
+      key: 'timeDisplay',
+      title: 'Time',
+      filter: {
+        type: 'date',
+        placeholder: 'Date',
+      },
+    },
+
+    { key: 'recording', title: 'Recording' },
+    { key: 'isArchivedDisplay', title: 'IsArchived' }
+  ],
+
+  pagination: true,
 };

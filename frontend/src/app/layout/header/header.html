@@ -1,36 +1,75 @@
-<div class="app-header">
-  <i class="fas fa-bars trigger" (click)="toggle.emit()"></i>
+<div class="app-header container-fluid">
+  <div class="header-inner w-100 d-flex align-items-center justify-content-between">
 
-  <div class="header-right">
-    <div nz-dropdown nzTrigger="click" [nzDropdownMenu]="menu" class="user-box">
-      <nz-avatar [nzSrc]="avatarUrl" nzSize="default">
-      </nz-avatar>
+    <div class="header-left d-flex align-items-center">
+      <button
+        type="button"
+        class="btn p-0 border-0 bg-transparent mobile-menu-btn d-lg-none"
+        (click)="toggle.emit()"
+        aria-label="Open sidebar">
+        <i class="fas fa-bars"></i>
+      </button>
 
-      <!-- <i nz-icon nzType="down"></i> -->
+      <div class="search-area">
+        <div class="search-wrap">
+          <i class="fas fa-search search-icon"></i>
+
+          <input
+            type="text"
+            class="form-control search-input"
+            placeholder="Search"
+          />
+
+          <button
+            type="button"
+            class="btn p-0 border-0 bg-transparent search-clear-btn"
+            aria-label="Clear search">
+            <i class="fas fa-times-circle"></i>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <nz-dropdown-menu #menu="nzDropdownMenu">
-      <ul nz-menu>
-        <!-- Username inside dropdown -->
-        <li nz-menu-item disabled class="user-info">
-          {{ user.name || user.email }}
-        </li>
-        <li nz-menu-item disabled class="user-info">
-          Roles : {{ rolesText }}
-        </li>
+    <div class="d-flex align-items-center header-actions">
+      <button
+        type="button"
+        class="btn p-0 border-0 bg-transparent notification-btn"
+        aria-label="Notifications">
+        <i class="far fa-bell"></i>
+      </button>
 
-        <li nz-menu-item (click)="goToUsers()">
-          <i nz-icon nzType="team"></i>
-          User Management
-        </li>
+      <div
+        nz-dropdown
+        nzTrigger="click"
+        [nzDropdownMenu]="menu"
+        class="user-box ms-3">
+        <nz-avatar [nzSrc]="avatarUrl" [nzSize]="36"></nz-avatar>
+      </div>
 
-        <li nz-menu-divider></li>
+      <nz-dropdown-menu #menu="nzDropdownMenu">
+        <ul nz-menu class="header-dropdown-menu">
+          <li nz-menu-item disabled class="user-info user-info-name">
+            {{ user.name || user.email }}
+          </li>
 
-        <li nz-menu-item (click)="logout()">
-          <i nz-icon nzType="logout"></i>
-          Logout
-        </li>
-      </ul>
-    </nz-dropdown-menu>
+          <li nz-menu-item disabled class="user-info user-info-role">
+            Role : {{ rolesText }}
+          </li>
+
+          <li nz-menu-item (click)="goToUsers()">
+            <i nz-icon nzType="team"></i>
+            User Management
+          </li>
+
+          <li nz-menu-divider></li>
+
+          <li nz-menu-item (click)="logout()">
+            <i nz-icon nzType="logout"></i>
+            Logout
+          </li>
+        </ul>
+      </nz-dropdown-menu>
+    </div>
+
   </div>
 </div>

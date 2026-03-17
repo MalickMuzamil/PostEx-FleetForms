@@ -36,7 +36,7 @@ export class BranchCalender implements OnInit {
     private router: Router,
     private notification: NzNotificationService,
     private modal: NzModalService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadTable();
@@ -48,8 +48,10 @@ export class BranchCalender implements OnInit {
       next: (res: any) => {
         const rows = res?.data ?? res ?? [];
 
-        this.tableData = (rows || []).map((r: any) => {
-          const calDate = this.isoDateOnly(r.CALENDER_DATE ?? r.calenderDate ?? r.CalendarDate);
+        const mappedRows = (rows || []).map((r: any) => {
+          const calDate = this.isoDateOnly(
+            r.CALENDER_DATE ?? r.calenderDate ?? r.CalendarDate
+          );
 
           const isNotWorking = r.ISNOTWORKINGDAY ?? r.isNotWorkingDay;
           const isArchived = r.IsArchived ?? r.isArchived;
@@ -57,18 +59,17 @@ export class BranchCalender implements OnInit {
           const branchId = r.BRANCHID ?? r.branchId;
           const branchName = r.BranchName ?? r.branchName;
 
-          // NOTE: Tran fields may exist in older data, but not required for import
           const tranId = r.TRAN_ID ?? r.TRANID ?? r.tranId;
           const tranName = r.TranName ?? r.tranName;
 
           return {
             id: r.ID ?? `${branchId ?? branchName}-${calDate ?? ''}`,
 
-            tranDisplay: tranId ?? tranName ?? '-', // display only
+            tranDisplay: tranId ?? tranName ?? '-',
             branchDisplay: branchId ?? branchName ?? '-',
 
             calenderDate: calDate ? new Date(calDate) : null,
-            calenderDateDisplay: calDate || '-',
+            calenderDateDisplay: calDate || '',
 
             isNotWorkingDay: isNotWorking,
             isNotWorkingDayDisplay:
@@ -76,18 +77,78 @@ export class BranchCalender implements OnInit {
                 ? (isNotWorking ? '1' : '0')
                 : String(isNotWorking ?? '-'),
 
-            notWorkingDayDesc: String(r.NOTWORKINGDAYDESC ?? r.notWorkingDayDesc ?? '-'),
+            notWorkingDayDesc: String(
+              r.NOTWORKINGDAYDESC ?? r.notWorkingDayDesc ?? 'NA'
+            ) || 'NA',
 
             isArchived: isArchived,
             isArchivedDisplay:
-              typeof isArchived === 'boolean' ? (isArchived ? '1' : '0') : String(isArchived ?? '-'),
+              typeof isArchived === 'boolean'
+                ? (isArchived ? '1' : '0')
+                : String(isArchived ?? '-'),
 
             createdBy: String(r.CreatedBy ?? r.createdBy ?? '-'),
             createdOnDisplay: this.isoDateTime(r.CreatedOn ?? r.createdOn) || '-',
           };
         });
+
+        this.tableData = mappedRows;
+
+        const workingDayValues = mappedRows
+          .map((x: any) => x.isNotWorkingDayDisplay)
+          .filter((x: any): x is string => typeof x === 'string' && !!x && x !== '-');
+
+        const descValues = mappedRows
+          .map((x: any) => x.notWorkingDayDesc)
+          .filter((x: any): x is string => typeof x === 'string' && !!x && x !== 'NA');
+
+        const workingDayOptions = [...new Set<string>(workingDayValues)]
+          .sort((a, b) => a.localeCompare(b))
+          .map((x) => ({
+            label: x,
+            value: x,
+          }));
+
+        const descOptions = [...new Set<string>(descValues)]
+          .sort((a, b) => a.localeCompare(b))
+          .map((x) => ({
+            label: x,
+            value: x,
+          }));
+
+        this.tableConfig = {
+          ...this.tableConfig,
+          columns: this.tableConfig.columns.map((col: any) => {
+            if (col.key === 'isNotWorkingDayDisplay') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'ISNOTWORKINGDAY',
+                  options: workingDayOptions,
+                },
+              };
+            }
+
+            if (col.key === 'notWorkingDayDesc') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'NOTWORKINGDAYDESC',
+                  options: descOptions,
+                },
+              };
+            }
+
+            return col;
+          }),
+        };
       },
-      error: () => this.notification.error('Error', 'Failed to load Branch Wise Calender list'),
+      error: () =>
+        this.notification.error('Error', 'Failed to load Branch Wise Calender list'),
     });
   }
 

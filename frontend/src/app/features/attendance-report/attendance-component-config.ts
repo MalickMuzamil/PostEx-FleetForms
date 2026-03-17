@@ -78,13 +78,61 @@ export const ATTENDANCE_TABLE: TableConfig = {
 
   columns: [
     { key: 'employeeId', title: 'Employee ID' },
-    { key: 'employeeName', title: 'Employee Name' },
-    { key: 'attendanceDateDisplay', title: 'Attendance Date' },
 
-    { key: 'division', title: 'Division' },
-    { key: 'department', title: 'Department' },
-    { key: 'zone', title: 'Zone' },
-    { key: 'branch', title: 'Branch' },
+    {
+      key: 'employeeName',
+      title: 'Employee Name',
+      filter: {
+        type: 'select',
+        placeholder: 'Employee Name',
+        options: [],
+      },
+    },
+    {
+      key: 'attendanceDateDisplay',
+      title: 'Attendance Date',
+      filter: {
+        type: 'date',
+        placeholder: 'Attendance Date',
+      },
+    },
+    {
+      key: 'division',
+      title: 'Division',
+      filter: {
+        type: 'select',
+        placeholder: 'Division',
+        options: [],
+      },
+    },
+    {
+      key: 'department',
+      title: 'Department',
+      filter: {
+        type: 'select',
+        placeholder: 'Department',
+        options: [],
+      },
+    },
+    {
+      key: 'zone',
+      title: 'Zone',
+      filter: {
+        type: 'select',
+        placeholder: 'Zone',
+        options: [],
+      },
+    },
+    {
+      key: 'branch',
+      title: 'Branch',
+      filter: {
+        type: 'select',
+        placeholder: 'Branch',
+        options: [],
+      },
+    },
+
     { key: 'inTime', title: 'In Time' },
     { key: 'outTime', title: 'Out Time' },
   ],

@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
@@ -12,5 +12,7 @@ import { CommonModule } from '@angular/common';
   styleUrl: './sidebar.css',
 })
 export class SidebarComponent {
-  @Input() collapsed: boolean = false;
+  @Input() collapsed = false;
+  @Input() mobileOpen = false;
+  @Output() closeSidebar = new EventEmitter<void>();
 }
