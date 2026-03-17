@@ -13,6 +13,23 @@ class SubBranchAssignmentDefinitionController {
         }
     };
 
+    // ---------- BRANCHES ----------
+    getBranches = async (req, res, next) => {
+    console.log("✅ getBranches HIT");
+    console.log("URL:", req.originalUrl);
+    console.log("Params:", req.params);
+    console.log("Query:", req.query);
+
+    try {
+        const data = await subBranchAssignmentDefinitionService.listBranches();
+        res.json({ data });
+    } catch (err) {
+        console.error("❌ getBranches ERROR:", err);
+        next(err);
+    }
+};
+
+
     // ---------- SUB-BRANCH BY ID ----------
     getSubBranchById = async (req, res, next) => {
         try {

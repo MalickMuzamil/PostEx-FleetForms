@@ -5,6 +5,12 @@ import { subBranchAssignmentDefinitionController } from "../controllers/sub-bran
 const router = Router();
 
 // dropdowns
+
+router.get(
+    "/branches",
+    subBranchAssignmentDefinitionController.getBranches
+);
+
 router.get(
     "/sub-branches",
     subBranchAssignmentDefinitionController.getSubBranches
