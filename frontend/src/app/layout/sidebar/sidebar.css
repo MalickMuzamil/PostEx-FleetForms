@@ -1,0 +1,375 @@
+:host {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* ===============================
+   SIDER WRAPPER
+================================= */
+.app-sider {
+    background: #f7f7f5 !important;
+    flex: 0 0 236px !important;
+    max-width: 236px !important;
+    min-width: 236px !important;
+    width: 236px !important;
+    position: relative;
+    z-index: 1001;
+    transition: transform 0.25s ease, width 0.25s ease, min-width 0.25s ease,
+        max-width 0.25s ease;
+    overflow: hidden;
+    border-right: 1px solid #ece9e4;
+}
+
+.app-sider.desktop-collapsed {
+    flex: 0 0 88px !important;
+    max-width: 88px !important;
+    min-width: 88px !important;
+    width: 88px !important;
+}
+
+.app-sider ::ng-deep .ant-layout-sider-children {
+    height: 100%;
+    background: #f7f7f5 !important;
+}
+
+/* ===============================
+   BACKDROP
+================================= */
+.sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.45);
+    z-index: 1000;
+}
+
+/* ===============================
+   SIDEBAR SHELL
+================================= */
+.sidebar-shell {
+    width: 100%;
+    height: 100%;
+    background: #f7f7f5;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===============================
+   BRAND / TOP
+================================= */
+.sidebar-brand {
+    height: 78px;
+    padding: 0 18px;
+    border-bottom: 1px solid #ece9e4;
+    background: #f7f7f5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sidebar-logo {
+    height: 30px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.sidebar-toggle-btn {
+    width: 28px;
+    height: 28px;
+    color: #3f4b5b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+/* ===============================
+   SCROLL AREA
+================================= */
+.sidebar-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px 12px;
+    height: calc(100vh - 78px);
+}
+
+.app-sider ::ng-deep .ant-layout-sider-children {
+    height: 100vh;
+    overflow: hidden;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+    background: #d6d3ce;
+    border-radius: 10px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ===============================
+   MENU BASE
+================================= */
+.app-menu {
+    background: transparent !important;
+    border-inline-end: 0 !important;
+}
+
+.app-menu ::ng-deep .ant-menu {
+    background: transparent !important;
+}
+
+.app-menu-item,
+.app-submenu ::ng-deep .ant-menu-submenu-title,
+.submenu-item {
+    border-radius: 8px;
+    margin: 6px 0;
+    min-height: 42px;
+    line-height: 42px !important;
+    font-size: 13px;
+    color: #5f6368 !important;
+    transition: all 0.2s ease;
+}
+
+.app-menu-item {
+    display: flex;
+    align-items: center;
+}
+
+.app-menu-item:hover,
+.app-submenu ::ng-deep .ant-menu-submenu-title:hover,
+.submenu-item:hover {
+    background: #efeee9 !important;
+    color: #3f4650 !important;
+}
+
+/* ===============================
+   ICONS
+================================= */
+.menu-icon {
+    width: 18px;
+    min-width: 18px;
+    margin-right: 10px;
+    font-size: 14px;
+    color: #4b4f55;
+    text-align: center;
+}
+
+/* ===============================
+   ACTIVE ITEM
+================================= */
+.app-menu ::ng-deep .ant-menu-item-selected,
+.app-menu ::ng-deep .ant-menu-submenu-selected > .ant-menu-submenu-title,
+.app-menu .menu-active {
+    background: #78a645 !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    box-shadow: 0 8px 18px rgba(120, 166, 69, 0.28);
+}
+
+.app-menu ::ng-deep .ant-menu-item-selected .menu-icon,
+.app-menu ::ng-deep .ant-menu-submenu-selected > .ant-menu-submenu-title .menu-icon,
+.app-menu .menu-active .menu-icon {
+    color: #ffffff !important;
+}
+
+/* ===============================
+   SUBMENUS
+================================= */
+.app-submenu ::ng-deep .ant-menu-submenu-title {
+    color: #5f6368 !important;
+    background: transparent !important;
+}
+
+.app-menu ::ng-deep .ant-menu-submenu-arrow {
+    color: #5f6368 !important;
+}
+
+.app-menu ::ng-deep .ant-menu-sub.ant-menu-inline {
+    background: transparent !important;
+}
+
+.submenu-item {
+    padding-left: 42px !important;
+    font-size: 12px;
+    color: #767b82 !important;
+}
+
+.submenu-item::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    background: #7b7f85;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.app-menu ::ng-deep .ant-menu-inline .ant-menu-item::after,
+.app-menu ::ng-deep .ant-menu-inline .ant-menu-submenu-title::after {
+    border-right: 0 !important;
+}
+
+/* ===============================
+   COLLAPSED DESKTOP
+   Only arrow show, logo hidden
+================================= */
+.app-sider.desktop-collapsed .sidebar-brand {
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0 !important;
+}
+
+.app-sider.desktop-collapsed .sidebar-logo {
+    display: none !important;
+}
+
+.app-sider.desktop-collapsed .sidebar-toggle-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    margin: 0 auto;
+}
+
+:host-context(.desktop-collapsed) .sidebar-brand {
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0 !important;
+}
+
+:host-context(.desktop-collapsed) .sidebar-logo {
+    display: none !important;
+}
+
+:host-context(.desktop-collapsed) .sidebar-toggle-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    margin: 0 auto;
+}
+
+:host-context(.desktop-collapsed) .menu-icon {
+    margin-right: 0;
+}
+
+:host-context(.desktop-collapsed) .app-menu-item,
+:host-context(.desktop-collapsed) .app-submenu ::ng-deep .ant-menu-submenu-title {
+    justify-content: center;
+    padding-inline: calc(50% - 9px) !important;
+}
+
+:host-context(.desktop-collapsed) .submenu-item {
+    padding-left: 24px !important;
+}
+
+/* Optional: collapsed me text hide ho jaye */
+:host-context(.desktop-collapsed) .app-menu-item span:not(.menu-icon),
+:host-context(.desktop-collapsed) .app-submenu ::ng-deep .ant-menu-submenu-title span:not(.menu-icon) {
+    display: none !important;
+}
+
+/* ===============================
+   MOBILE
+================================= */
+@media (max-width: 991.98px) {
+    .app-sider {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important;
+        flex: none !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-width: 100vw !important;
+        transform: translateX(-100%);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+        border-right: 0 !important;
+    }
+
+    .app-sider.mobile-open {
+        transform: translateX(0) !important;
+    }
+
+    .app-sider ::ng-deep .ant-layout-sider-children {
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-width: 100vw !important;
+        overflow-y: auto;
+    }
+
+    .sidebar-shell {
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-width: 100vw !important;
+    }
+
+    .sidebar-brand {
+        height: 78px;
+        padding: 0 16px;
+    }
+
+    .sidebar-logo {
+        height: 28px;
+        display: block !important;
+    }
+
+    .sidebar-toggle-btn {
+        width: 28px;
+        height: 28px;
+        margin: 0;
+    }
+
+    .sidebar-scroll {
+        padding: 14px 14px 24px;
+    }
+
+    .app-menu-item,
+    .app-submenu ::ng-deep .ant-menu-submenu-title,
+    .submenu-item {
+        min-height: 44px;
+        line-height: 44px !important;
+    }
+}
+
+/* ===============================
+   SMALL MOBILE
+================================= */
+@media (max-width: 575.98px) {
+    .sidebar-brand {
+        height: 74px;
+    }
+
+    .sidebar-logo {
+        height: 26px;
+    }
+
+    .sidebar-toggle-btn {
+        font-size: 17px;
+    }
+
+    .menu-icon {
+        font-size: 13px;
+    }
+
+    .app-menu-item,
+    .app-submenu ::ng-deep .ant-menu-submenu-title {
+        font-size: 13px;
+    }
+
+    .submenu-item {
+        font-size: 12px;
+    }
+}   
