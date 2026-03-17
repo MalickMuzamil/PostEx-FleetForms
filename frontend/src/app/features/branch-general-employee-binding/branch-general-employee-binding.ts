@@ -116,16 +116,10 @@ export class BranchGeneralEmployeeBinding implements OnInit {
               ) || null;
 
             const rawDate = r.EffectiveDate ?? r.effectiveDate;
-
-            // ✅ keep Date object (edit picker)
             const d = this.asLocalDate(rawDate);
 
-            // ✅ date-only for table
             const effectiveDateDisplay = d
-              ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-                2,
-                '0',
-              )}-${String(d.getDate()).padStart(2, '0')}`
+              ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
               : '';
 
             const rawStatus = r.Status ?? r.status ?? 1;
@@ -152,10 +146,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
 
               email: r.Email ?? r.email,
 
-              // ✅ for edit/date-picker
               effectiveDate: d,
-
-              // ✅ for table view
               effectiveDateDisplay,
 
               statusFlag,
@@ -164,7 +155,39 @@ export class BranchGeneralEmployeeBinding implements OnInit {
           });
         }),
       )
-      .subscribe((rows) => (this.tableData = rows));
+      .subscribe((rows) => {
+        this.tableData = rows;
+
+        const branchValues = rows
+          .map((x: any) => x.branchName)
+          .filter((x: any): x is string => typeof x === 'string' && !!x && x !== 'NA');
+
+        const branchOptions = [...new Set(branchValues)]
+          .sort()
+          .map((branch) => ({
+            label: branch,
+            value: branch,
+          }));
+
+        this.tableConfig = {
+          ...this.tableConfig,
+          columns: this.tableConfig.columns.map((col: any) => {
+            if (col.key === 'branchName') {
+              return {
+                ...col,
+                filter: {
+                  ...col.filter,
+                  type: 'select',
+                  placeholder: 'Branch',
+                  options: branchOptions,
+                },
+              };
+            }
+
+            return col;
+          }),
+        };
+      });
   }
 
   // ================= DROPDOWNS =================

@@ -264,12 +264,16 @@ export class Table implements OnChanges {
     const subBranchCol = this.config?.columns?.find((c) => c.key === 'subBranchName');
     const employeeCol = this.config?.columns?.find((c) => c.key === 'employeeName');
 
-    if (!branchCol?.filter || !subBranchCol?.filter || !employeeCol?.filter) return;
+    // branch + sub-branch required
+    if (!branchCol?.filter || !subBranchCol?.filter) return;
     if (
       branchCol.filter.type !== 'select' ||
-      subBranchCol.filter.type !== 'select' ||
-      employeeCol.filter.type !== 'select'
+      subBranchCol.filter.type !== 'select'
     ) return;
+
+    // employee optional
+    const hasEmployeeFilter =
+      !!employeeCol?.filter && employeeCol.filter.type === 'select';
 
     const rows = this.data ?? [];
 
@@ -325,17 +329,22 @@ export class Table implements OnChanges {
     // ===== branch manually cleared =====
     if (this.branchWasCleared && !selectedBranch) {
       this.colFilters['subBranchName'] = null;
-      this.colFilters['employeeName'] = null;
+
+      if (hasEmployeeFilter) {
+        this.colFilters['employeeName'] = null;
+      }
 
       subBranchCol.filter = {
         ...subBranchCol.filter,
         options: allSubOptions,
       };
 
-      employeeCol.filter = {
-        ...employeeCol.filter,
-        options: allEmployeeOptions,
-      };
+      if (hasEmployeeFilter && employeeCol?.filter) {
+        employeeCol.filter = {
+          ...employeeCol.filter,
+          options: allEmployeeOptions,
+        };
+      }
 
       this.branchWasCleared = false;
       this.cd.markForCheck();
@@ -364,7 +373,11 @@ export class Table implements OnChanges {
         const parentBranch = subToBranch.get(String(selectedSubBranch));
         if (parentBranch && parentBranch !== String(selectedBranch)) {
           this.colFilters['subBranchName'] = null;
-          this.colFilters['employeeName'] = null;
+
+          if (hasEmployeeFilter) {
+            this.colFilters['employeeName'] = null;
+          }
+
           selectedSubBranch = null;
         }
       }
@@ -375,26 +388,30 @@ export class Table implements OnChanges {
       };
     }
 
-    // ===== employee options logic =====
-    // only narrow when BOTH branch + sub-branch selected
-    if (selectedBranch && selectedSubBranch) {
-      const comboKey = `${selectedBranch}__${selectedSubBranch}`;
-      const allowedEmployees = comboToEmployees.get(comboKey) ?? [];
+    // ===== employee options logic (optional) =====
+    if (hasEmployeeFilter && employeeCol?.filter) {
+      if (selectedBranch && selectedSubBranch) {
+        const comboKey = `${selectedBranch}__${selectedSubBranch}`;
+        const allowedEmployees = comboToEmployees.get(comboKey) ?? [];
 
-      employeeCol.filter = {
-        ...employeeCol.filter,
-        options: allowedEmployees.map((x) => ({ label: x, value: x })),
-      };
+        employeeCol.filter = {
+          ...employeeCol.filter,
+          options: allowedEmployees.map((x) => ({ label: x, value: x })),
+        };
 
-      const selectedEmployee = this.colFilters['employeeName'];
-      if (selectedEmployee && !allowedEmployees.includes(String(selectedEmployee))) {
-        this.colFilters['employeeName'] = null;
+        const selectedEmployee = this.colFilters['employeeName'];
+        if (
+          selectedEmployee &&
+          !allowedEmployees.includes(String(selectedEmployee))
+        ) {
+          this.colFilters['employeeName'] = null;
+        }
+      } else {
+        employeeCol.filter = {
+          ...employeeCol.filter,
+          options: allEmployeeOptions,
+        };
       }
-    } else {
-      employeeCol.filter = {
-        ...employeeCol.filter,
-        options: allEmployeeOptions,
-      };
     }
 
     this.branchWasCleared = false;

@@ -139,7 +139,7 @@
                         <ng-template #normalCell>{{ row[col.key] }}</ng-template>
                     </td>
 
-                    <td *ngIf="config.actions?.length" class="tbl-actions-cell">
+                    <td *ngIf="config.actions?.length" class="tbl-actions-cell text-start">
                         <ng-container *ngFor="let action of config.actions">
                             <button *ngIf="action.action === 'edit'" class="tbl-btn tbl-btn--edit"
                                 (click)="onEdit(row)">
