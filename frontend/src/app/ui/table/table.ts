@@ -15,11 +15,13 @@ import {
   TableConfig,
   InputRules,
 } from '../../shared/form-model/data-table-model';
+import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 
 @Component({
   selector: 'app-table',
   standalone: true,
-  imports: [CommonModule, NzTableModule, FormsModule],
+  imports: [CommonModule, NzTableModule, FormsModule, NzSelectModule, NzDatePickerModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './table.html',
   styleUrl: './table.css',
@@ -173,13 +175,15 @@ export class Table implements OnChanges {
     this.cd.markForCheck();
   }
 
-  private isSameDate(rowValue: any, filterValue: string): boolean {
+  private isSameDate(rowValue: any, filterValue: any): boolean {
     if (!rowValue || !filterValue) return false;
 
     const rowDate = this.normalizeDate(rowValue);
-    if (!rowDate) return false;
+    const selectedDate = this.normalizeDate(filterValue);
 
-    return rowDate === filterValue;
+    if (!rowDate || !selectedDate) return false;
+
+    return rowDate === selectedDate;
   }
 
   private normalizeDate(value: any): string | null {
@@ -241,8 +245,8 @@ export class Table implements OnChanges {
     return Math.min(a, b);
   }
 
-  onColDateFilterChange(key: string, value: string | null) {
-    this.colFilters[key] = value;
+  onColDateFilterChange(key: string, value: Date | null) {
+    this.colFilters[key] = value ? this.normalizeDate(value) : null;
     this.applyFilters();
   }
 

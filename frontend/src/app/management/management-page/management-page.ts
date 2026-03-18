@@ -203,10 +203,10 @@ export class ManagementPage implements OnInit {
           this.users = this.users.map(x =>
             x.id === userId
               ? {
-                  ...x,
-                  name: `${firstName} ${lastName}`.trim(),
-                  role: uiRole
-                }
+                ...x,
+                name: `${firstName} ${lastName}`.trim(),
+                role: uiRole
+              }
               : x
           );
 
@@ -372,5 +372,9 @@ export class ManagementPage implements OnInit {
     }
 
     return data;
+  }
+
+  minVal(a: number, b: number): number {
+    return Math.min(a, b);
   }
 }

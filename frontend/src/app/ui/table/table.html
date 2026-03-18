@@ -30,30 +30,19 @@
                         [attr.maxlength]="f.rules?.maxLength ?? null" [placeholder]="f.placeholder || col.title" />
 
                     <div *ngIf="f.type === 'select'" class="tbl-filter-select-wrap">
-                        <select class="tbl-filter-select" [(ngModel)]="colFilters[col.key]"
-                            (ngModelChange)="onColSelectFilterChange(col.key, $event)">
-
-                            <option [ngValue]="null">
-                                {{ f.placeholder || col.title }}
-                            </option>
-
-                            <option *ngFor="let opt of f.options" [ngValue]="opt.value">
-                                {{ opt.label }}
-                            </option>
-
-                        </select>
-
-                        <span class="tbl-select-arrow">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="6 9 12 15 18 9" />
-                            </svg>
-                        </span>
+                        <nz-select class="tbl-nz-select" [(ngModel)]="colFilters[col.key]"
+                            (ngModelChange)="onColSelectFilterChange(col.key, $event)"
+                            [nzPlaceHolder]="f.placeholder || col.title" nzAllowClear nzShowSearch>
+                            <nz-option *ngFor="let opt of f.options" [nzValue]="opt.value" [nzLabel]="opt.label">
+                            </nz-option>
+                        </nz-select>
                     </div>
 
                     <!-- DATE FILTER -->
-                    <input *ngIf="f.type === 'date'" type="date" class="tbl-filter-input"
-                        [ngModel]="colFilters[col.key]" (ngModelChange)="onColDateFilterChange(col.key, $event)" />
+                    <nz-date-picker *ngIf="f.type === 'date'" class="tbl-nz-date" [ngModel]="colFilters[col.key]"
+                        (ngModelChange)="onColDateFilterChange(col.key, $event)"
+                        [nzPlaceHolder]="f.placeholder || col.title" nzFormat="dd-MM-yyyy">
+                    </nz-date-picker>
 
                 </ng-container>
             </ng-container>
@@ -70,31 +59,19 @@
                     [attr.maxlength]="f.rules?.maxLength ?? null" [placeholder]="f.placeholder || col.title" />
 
                 <div *ngIf="f.type === 'select'" class="tbl-filter-select-wrap">
-                    <select class="tbl-filter-select" [(ngModel)]="colFilters[col.key]"
-                        (ngModelChange)="onColSelectFilterChange(col.key, $event)">
-
-                        <option [ngValue]="null">
-                            {{ f.placeholder || col.title }}
-                        </option>
-
-                        <option *ngFor="let opt of f.options" [ngValue]="opt.value">
-                            {{ opt.label }}
-                        </option>
-
-                    </select>
-
-                    <span class="tbl-select-arrow">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                    </span>
+                    <nz-select class="tbl-nz-select" [(ngModel)]="colFilters[col.key]"
+                        (ngModelChange)="onColSelectFilterChange(col.key, $event)"
+                        [nzPlaceHolder]="f.placeholder || col.title" nzAllowClear nzShowSearch>
+                        <nz-option *ngFor="let opt of f.options" [nzValue]="opt.value" [nzLabel]="opt.label">
+                        </nz-option>
+                    </nz-select>
                 </div>
 
                 <!-- DATE FILTER -->
-                <input *ngIf="f.type === 'date'" type="date" class="tbl-filter-input" [ngModel]="colFilters[col.key]"
+                <nz-date-picker *ngIf="f.type === 'date'" class="tbl-nz-date" [ngModel]="colFilters[col.key]"
                     (ngModelChange)="onColDateFilterChange(col.key, $event)"
-                    [placeholder]="f.placeholder || col.title" />
+                    [nzPlaceHolder]="f.placeholder || col.title" nzFormat="dd-MM-yyyy">
+                </nz-date-picker>
 
             </ng-container>
         </ng-container>

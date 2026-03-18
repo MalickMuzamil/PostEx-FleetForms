@@ -31,7 +31,7 @@
         [routerLinkActiveOptions]="{ exact: true }"
         class="app-menu-item">
         <i class="fas fa-house menu-icon"></i>
-        <span *ngIf="!collapsed || mobileOpen">Welcome</span>
+        <span class="menu-label" *ngIf="!collapsed || mobileOpen">Welcome</span>
       </li>
 
       <li
@@ -39,8 +39,8 @@
         routerLink="/branch-coordinator-assignment"
         routerLinkActive="menu-active"
         class="app-menu-item">
-        <i class="fas fa-map-pin menu-icon"></i>
-        <span *ngIf="!collapsed || mobileOpen">Branch Coordinators</span>
+        <i class="fas fa-user-tie menu-icon"></i>
+        <span class="menu-label" *ngIf="!collapsed || mobileOpen">Branch Coordinators</span>
       </li>
 
       <li
@@ -49,7 +49,7 @@
         routerLinkActive="menu-active"
         class="app-menu-item">
         <i class="fas fa-users menu-icon"></i>
-        <span *ngIf="!collapsed || mobileOpen">Employee Binding</span>
+        <span class="menu-label" *ngIf="!collapsed || mobileOpen">Employee Binding</span>
       </li>
 
       <li
@@ -57,8 +57,8 @@
         routerLink="/branch-dashboard-binding"
         routerLinkActive="menu-active"
         class="app-menu-item">
-        <i class="fas fa-diagram-project menu-icon"></i>
-        <span *ngIf="!collapsed || mobileOpen">Dashboard Binding</span>
+        <i class="fas fa-shield-halved menu-icon"></i>
+        <span class="menu-label" *ngIf="!collapsed || mobileOpen">Dashboard Binding</span>
       </li>
 
       <li
@@ -66,8 +66,8 @@
         routerLink="/sub-branch-binding"
         routerLinkActive="menu-active"
         class="app-menu-item">
-        <i class="fas fa-building menu-icon"></i>
-        <span *ngIf="!collapsed || mobileOpen">Sub-Branch Definition</span>
+        <i class="fas fa-building-circle-check menu-icon"></i>
+        <span class="menu-label" *ngIf="!collapsed || mobileOpen">Sub-Branch Definition</span>
       </li>
 
       <li
@@ -76,7 +76,7 @@
         routerLinkActive="menu-active"
         class="app-menu-item">
         <i class="fas fa-route menu-icon"></i>
-        <span *ngIf="!collapsed || mobileOpen">Delivery Route Definition</span>
+        <span class="menu-label" *ngIf="!collapsed || mobileOpen">Delivery Route Definition</span>
       </li>
 
       <li
@@ -85,7 +85,7 @@
         routerLinkActive="menu-active"
         class="app-menu-item">
         <i class="fas fa-location-dot menu-icon"></i>
-        <span *ngIf="!collapsed || mobileOpen">Route Binding</span>
+        <span class="menu-label" *ngIf="!collapsed || mobileOpen">Route Binding</span>
       </li>
 
       <li
@@ -94,19 +94,19 @@
         routerLinkActive="menu-active"
         class="app-menu-item">
         <i class="fas fa-code-branch menu-icon"></i>
-        <span *ngIf="!collapsed || mobileOpen">Sub-Branch Assignment</span>
+        <span class="menu-label" *ngIf="!collapsed || mobileOpen">Sub-Branch Assignment</span>
       </li>
 
       <!-- CNC Forms -->
       <li
         nz-submenu
         class="app-submenu"
-        [nzOpen]="true"
+        [(nzOpen)]="cncOpen"
         [nzTitle]="cncTitleTpl">
         <ng-template #cncTitleTpl>
-          <span class="d-flex align-items-center w-100">
+          <span class="submenu-title-wrap">
             <i class="fas fa-layer-group menu-icon"></i>
-            <span *ngIf="!collapsed || mobileOpen">CNC Levels</span>
+            <span class="menu-label" *ngIf="!collapsed || mobileOpen">CNC Levels</span>
           </span>
         </ng-template>
 
@@ -136,11 +136,12 @@
       <li
         nz-submenu
         class="app-submenu"
+        [(nzOpen)]="bindingOpen"
         [nzTitle]="bindingTitleTpl">
         <ng-template #bindingTitleTpl>
-          <span class="d-flex align-items-center w-100">
-            <i class="fas fa-layer-group menu-icon"></i>
-            <span *ngIf="!collapsed || mobileOpen">CNC Hierarchy Mapping</span>
+          <span class="submenu-title-wrap">
+            <i class="fas fa-sitemap menu-icon"></i>
+            <span class="menu-label" *ngIf="!collapsed || mobileOpen">CNC Hierarchy Mapping</span>
           </span>
         </ng-template>
 
@@ -172,7 +173,7 @@
         routerLinkActive="menu-active"
         class="app-menu-item">
         <i class="fas fa-calendar-check menu-icon"></i>
-        <span *ngIf="!collapsed || mobileOpen">Attendance Report</span>
+        <span class="menu-label" *ngIf="!collapsed || mobileOpen">Attendance Report</span>
       </li>
 
       <li
@@ -181,7 +182,7 @@
         routerLinkActive="menu-active"
         class="app-menu-item">
         <i class="fas fa-truck menu-icon"></i>
-        <span *ngIf="!collapsed || mobileOpen">Courier Fake Attempts</span>
+        <span class="menu-label" *ngIf="!collapsed || mobileOpen">Courier Fake Attempts</span>
       </li>
 
       <li
@@ -190,7 +191,7 @@
         routerLinkActive="menu-active"
         class="app-menu-item">
         <i class="fas fa-phone menu-icon"></i>
-        <span *ngIf="!collapsed || mobileOpen">Call Logs</span>
+        <span class="menu-label" *ngIf="!collapsed || mobileOpen">Call Logs</span>
       </li>
 
       <li
@@ -198,8 +199,8 @@
         routerLink="/branch-calender"
         routerLinkActive="menu-active"
         class="app-menu-item">
-        <i class="fas fa-calendar menu-icon"></i>
-        <span *ngIf="!collapsed || mobileOpen">Branch Calendar</span>
+        <i class="fas fa-calendar-days menu-icon"></i>
+        <span class="menu-label" *ngIf="!collapsed || mobileOpen">Branch Calendar</span>
       </li>
 
     </ul>
