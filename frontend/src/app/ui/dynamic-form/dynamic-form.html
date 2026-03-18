@@ -1,244 +1,305 @@
-<nz-card [nzTitle]="config.title">
+<nz-card class="figma-form-card" [nzTitle]="config.title">
   <form [formGroup]="form" (ngSubmit)="submit()">
-    <div class="form-grid">
+    <div class="row g-3">
       <ng-container *ngFor="let field of config.fields">
 
         <!-- TEXT -->
-        <nz-form-item *ngIf="field.type === 'text'">
-          <nz-form-label [nzRequired]="field.required">
-            {{ field.label }}
-          </nz-form-label>
+        <div class="col-12" *ngIf="field.type === 'text'">
+          <div class="figma-field">
+            <label class="figma-label">
+              {{ field.label }}
+              <span *ngIf="field.required" class="text-danger">*</span>
+            </label>
 
-          <nz-form-control>
-            <!-- Default input (all existing forms) -->
             <ng-container *ngIf="field.mask !== 'SHORT_CODE_3_2'
-        && field.mask !== 'ALPHA5_ROMAN'
-        && field.mask !== 'AAA_AAA'
-        && field.mask !== 'AAA_AAA_AAA';
-        else maskedInput">
-              <input nz-input [type]="field.key === 'email' ? 'email' : 'text'" [formControlName]="field.key"
-                [disabled]="!!field.disabled" [attr.maxlength]="field.key === 'email' ? 50 : null" autocomplete="off"
-                spellcheck="false" />
+              && field.mask !== 'ALPHA5_ROMAN'
+              && field.mask !== 'AAA_AAA'
+              && field.mask !== 'AAA_AAA_AAA';
+              else maskedInput">
+              <input nz-input class="figma-input" [type]="field.key === 'email' ? 'email' : 'text'"
+                [formControlName]="field.key" [disabled]="!!field.disabled"
+                [attr.maxlength]="field.key === 'email' ? 50 : null" [attr.placeholder]="'Enter ' + field.label"
+                autocomplete="off" spellcheck="false" />
             </ng-container>
 
-            <!-- Masked input -->
             <ng-template #maskedInput>
-              <!-- SHORT_CODE_3_2 -->
               <ng-container *ngIf="field.mask === 'SHORT_CODE_3_2'; else alpha5RomanInput">
-                <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="6"
+                <input nz-input class="figma-input" type="text" [formControlName]="field.key"
+                  [disabled]="!!field.disabled" maxlength="6" [attr.placeholder]="'Enter ' + field.label"
                   autocomplete="off" spellcheck="false" [appShortCodeMask]="'SHORT_CODE_3_2'" />
               </ng-container>
 
-              <!-- ALPHA5_ROMAN -->
               <ng-template #alpha5RomanInput>
                 <ng-container *ngIf="field.mask === 'ALPHA5_ROMAN'; else aaaAaaInput">
-                  <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="10"
-                    autocomplete="off" spellcheck="false" [appShortCodeMask]="'ALPHA5_ROMAN'" [attr.placeholder]="field.mask === 'ALPHA5_ROMAN'
-    ? 'Example: SOUTH or SOUTH-I'
-    : null" />
+                  <input nz-input class="figma-input" type="text" [formControlName]="field.key"
+                    [disabled]="!!field.disabled" maxlength="10" autocomplete="off" spellcheck="false"
+                    [appShortCodeMask]="'ALPHA5_ROMAN'"
+                    [attr.placeholder]="field.mask === 'ALPHA5_ROMAN' ? 'Example: SOUTH or SOUTH-I' : null" />
                 </ng-container>
               </ng-template>
 
-              <!-- AAA_AAA / AAA_AAA_AAA -->
               <ng-template #aaaAaaInput>
-                <!-- ✅ AAA_AAA_AAA (prefix-lock enabled) -->
                 <ng-container *ngIf="field.mask === 'AAA_AAA_AAA'; else aaaAaa6Input">
-                  <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="20"
-                    autocomplete="off" spellcheck="false" [appShortCodeMask]="'AAA_AAA_AAA'"
+                  <input nz-input class="figma-input" type="text" [formControlName]="field.key"
+                    [disabled]="!!field.disabled" maxlength="20" autocomplete="off" spellcheck="false"
+                    [appShortCodeMask]="'AAA_AAA_AAA'"
                     [prefix]="((form.get(field.key)?.value || '').toString().split('-')[0] || '').trim()" />
                 </ng-container>
 
-                <!-- AAA_AAA -->
                 <ng-template #aaaAaa6Input>
-                  <input nz-input type="text" [formControlName]="field.key" [disabled]="!!field.disabled" maxlength="7"
-                    autocomplete="off" spellcheck="false" [appShortCodeMask]="'AAA_AAA'" />
+                  <input nz-input class="figma-input" type="text" [formControlName]="field.key"
+                    [disabled]="!!field.disabled" maxlength="7" autocomplete="off" spellcheck="false"
+                    [appShortCodeMask]="'AAA_AAA'" />
                 </ng-template>
               </ng-template>
             </ng-template>
 
-            <!-- REQUIRED -->
-            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'required')">
+            <div class="figma-error" *ngIf="hasError(field.key, 'required')">
               {{ field.label }} is required
             </div>
 
-            <!-- SHORT_CODE_3_2 FORMAT -->
-            <div class="text-danger mt-1" *ngIf="field.mask === 'SHORT_CODE_3_2' && hasError(field.key, 'invalidName')">
+            <div class="figma-error" *ngIf="field.mask === 'SHORT_CODE_3_2' && hasError(field.key, 'invalidName')">
               Name must be in format <b>HHH-HH</b> (letters only)
             </div>
 
-            <!-- ALPHA5_ROMAN FORMAT -->
-            <div class="text-danger mt-1" *ngIf="field.mask === 'ALPHA5_ROMAN' && hasError(field.key, 'invalidName')">
+            <div class="figma-error" *ngIf="field.mask === 'ALPHA5_ROMAN' && hasError(field.key, 'invalidName')">
               Name can be <b>SOUTH</b> or <b>SOUTH-I</b> (Roman optional: I–X)
             </div>
 
-            <div class="text-danger mt-1" *ngIf="field.mask === 'ALPHA5_ROMAN' && hasError(field.key, 'minLength')">
+            <div class="figma-error" *ngIf="field.mask === 'ALPHA5_ROMAN' && hasError(field.key, 'minLength')">
               Minimum <b>4 characters</b> required
             </div>
 
-            <!-- AAA_AAA FORMAT -->
-            <div class="text-danger mt-1" *ngIf="field.mask === 'AAA_AAA' && hasError(field.key, 'invalidName')">
+            <div class="figma-error" *ngIf="field.mask === 'AAA_AAA' && hasError(field.key, 'invalidName')">
               Name must be in format <b>AAA-AAA</b> (letters only)
             </div>
 
-            <!-- AAA_AAA_AAA FORMAT -->
-            <div class="text-danger mt-1"
+            <div class="figma-error"
               *ngIf="field.key === 'subBranchName' && (hasError(field.key,'invalidName') || hasError(field.key,'prefixMismatch') || hasError(field.key,'branchRequiredForSubBranch'))">
               Name must be in format <b>CODE-AAA</b> or <b>CODE-AAA-AAA</b>
             </div>
 
-            <!-- EMAIL FORMAT (Angular built-in key) -->
-            <div class="text-danger mt-1" *ngIf="field.key === 'email' && hasError(field.key, 'email')">
+            <div class="figma-error" *ngIf="field.key === 'email' && hasError(field.key, 'email')">
               Please enter a valid email address
             </div>
 
-            <!-- EMAIL FORMAT (common custom key fallback) -->
-            <div class="text-danger mt-1" *ngIf="field.key === 'email' && hasError(field.key, 'invalidEmail')">
+            <div class="figma-error" *ngIf="field.key === 'email' && hasError(field.key, 'invalidEmail')">
               Please enter a valid email address
             </div>
 
-            <!-- MAX LENGTH -->
-            <div class="text-danger mt-1" *ngIf="field.key === 'email' && hasError(field.key, 'maxlength')">
+            <div class="figma-error" *ngIf="field.key === 'email' && hasError(field.key, 'maxlength')">
               Maximum 50 characters allowed
             </div>
-          </nz-form-control>
-        </nz-form-item>
+          </div>
+        </div>
 
         <!-- NUMBER -->
-        <nz-form-item *ngIf="field.type === 'number'">
-          <nz-form-label [nzRequired]="field.required">
-            {{ field.label }}
-          </nz-form-label>
+        <div class="col-12" *ngIf="field.type === 'number'">
+          <div class="figma-field">
+            <label class="figma-label">
+              {{ field.label }}
+              <span *ngIf="field.required" class="text-danger">*</span>
+            </label>
 
-          <nz-form-control>
-            <input nz-input type="number" [formControlName]="field.key" [disabled]="!!field.disabled" />
-          </nz-form-control>
-        </nz-form-item>
+            <input nz-input class="figma-input" type="number" [formControlName]="field.key"
+              [disabled]="!!field.disabled" [attr.placeholder]="'Enter ' + field.label" />
 
-        <!-- TEXTAREA -->
-        <nz-form-item *ngIf="field.type === 'textarea'">
-          <nz-form-label [nzRequired]="field.required">
-            {{ field.label }}
-          </nz-form-label>
-
-          <nz-form-control>
-            <textarea nz-input rows="3" [formControlName]="field.key" [disabled]="!!field.disabled" autocomplete="off"
-              spellcheck="false"></textarea>
-          </nz-form-control>
-        </nz-form-item>
-
-        <!-- SELECT -->
-        <nz-form-item *ngIf="field.type === 'select'">
-          <nz-form-label [nzRequired]="field.required">
-            {{ field.label }}
-          </nz-form-label>
-
-          <nz-form-control>
-            <nz-select nzAllowClear [nzShowSearch]="!!field.searchable" [nzFilterOption]="filterOption"
-              [formControlName]="field.key" [nzDisabled]="!!field.disabled" [nzLoading]="!!field.loading"
-              nzNotFoundContent="No data" nzDropdownClassName="opt-dropdown"
-              (nzValueChange)="onSelectChange(field.key, $event)"
-              (nzSearchValueChange)="onSelectSearch(field.key, $any($event))">
-              <!-- HEADER (optional column header) -->
-              <nz-option *ngIf="field.optionColumns?.length" [nzDisabled]="true" [nzCustomContent]="true"
-                [nzLabel]="'__header__'" [nzValue]="null">
-                <div class="opt-row opt-header" [style.gridTemplateColumns]="getGridTemplate(field.optionColumns)">
-                  <div class="opt-cell" *ngFor="let c of field.optionColumns">
-                    {{ c.title }}
-                  </div>
-                </div>
-              </nz-option>
-
-              <!-- ASYNC OPTIONS -->
-              <ng-container *ngIf="field.options$ | async as asyncOpts; else staticOptions">
-                <nz-option *ngFor="let opt of asyncOpts" [nzLabel]="opt.label" [nzValue]="opt.value"
-                  [nzTitle]="opt.searchText || opt.label" [nzCustomContent]="true">
-                  <ng-container *ngIf="field.optionColumns?.length; else simpleOpt">
-                    <div class="opt-row" [style.gridTemplateColumns]="getGridTemplate(field.optionColumns)">
-                      <div class="opt-cell" *ngFor="let c of field.optionColumns">
-                        {{ opt.meta?.[c.key] ?? '' }}
-                      </div>
-                    </div>
-                  </ng-container>
-
-                  <ng-template #simpleOpt>{{ opt.label }}</ng-template>
-                </nz-option>
-              </ng-container>
-
-              <!-- STATIC OPTIONS -->
-              <ng-template #staticOptions>
-                <nz-option *ngFor="let opt of field.options || []" [nzLabel]="opt.label" [nzValue]="opt.value"
-                  [nzTitle]="opt.searchText || opt.label">
-                  {{ opt.label }}
-                </nz-option>
-              </ng-template>
-            </nz-select>
-
-            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'required')">
+            <div class="figma-error" *ngIf="hasError(field.key, 'required')">
               {{ field.label }} is required
             </div>
-          </nz-form-control>
-        </nz-form-item>
+          </div>
+        </div>
+
+        <!-- TEXTAREA -->
+        <div class="col-12" *ngIf="field.type === 'textarea'">
+          <div class="figma-field">
+            <label class="figma-label">
+              {{ field.label }}
+              <span *ngIf="field.required" class="text-danger">*</span>
+            </label>
+
+            <textarea nz-input class="figma-textarea" rows="3" [formControlName]="field.key"
+              [disabled]="!!field.disabled" [attr.placeholder]="'Enter ' + field.label" autocomplete="off"
+              spellcheck="false"></textarea>
+
+            <div class="figma-error" *ngIf="hasError(field.key, 'required')">
+              {{ field.label }} is required
+            </div>
+          </div>
+        </div>
+
+        <!-- SELECT -->
+        <div class="col-12" *ngIf="field.type === 'select'">
+          <div class="figma-field">
+            <label class="figma-label">
+              {{ field.label }}
+              <span *ngIf="field.required" class="text-danger">*</span>
+            </label>
+
+            <!-- STATUS FLAG AS SEGMENT -->
+            <ng-container *ngIf="
+                    field.key === 'statusFlag' ||
+                    field.key === 'conferenceCallFlag' ||
+                    field.key === 'activeFlag'
+                    ; else normalSelect">
+              <div class="figma-segment">
+                <label class="figma-segment-item" *ngFor="let opt of field.options || []"
+                  [class.active]="form.get(field.key)?.value === opt.value">
+                  <input type="radio" [value]="opt.value" [formControlName]="field.key" />
+                  <span>{{ opt.label }}</span>
+                </label>
+              </div>
+            </ng-container>
+
+            <!-- NORMAL SELECT -->
+            <ng-template #normalSelect>
+              <nz-select class="figma-select figma-person-select" nzAllowClear [nzShowSearch]="!!field.searchable"
+                [nzFilterOption]="filterOption" [formControlName]="field.key" [nzDisabled]="!!field.disabled"
+                [nzLoading]="!!field.loading" nzNotFoundContent="No data" nzDropdownClassName="figma-person-dropdown"
+                [nzPlaceHolder]="'Select ' + field.label" (nzValueChange)="onSelectChange(field.key, $event)"
+                (nzSearchValueChange)="onSelectSearch(field.key, $any($event))">
+
+                <ng-container *ngIf="field.options$ | async as asyncOpts; else staticOptions">
+                  <nz-option *ngFor="let opt of asyncOpts" [nzLabel]="opt.label" [nzValue]="opt.value"
+                    [nzTitle]="opt.searchText || opt.label" [nzCustomContent]="true">
+
+                    <div class="person-opt-card"
+                      [class.person-opt-card--selected]="form.get(field.key)?.value === opt.value">
+
+                      <div class="person-opt-top">
+                        <div class="person-opt-name">
+                          {{ opt.meta?.['name'] ?? opt.label }}
+                        </div>
+
+                        <div class="person-opt-id" *ngIf="opt.meta?.['id']">
+                          ID: {{ opt.meta?.['id'] }}
+                        </div>
+                      </div>
+
+                      <div class="person-opt-meta">
+                        <span *ngIf="opt.meta?.['department']">
+                          Department: {{ opt.meta?.['department'] }}
+                        </span>
+
+                        <span class="person-opt-sep" *ngIf="opt.meta?.['department'] && opt.meta?.['designation']">
+                        </span>
+
+                        <span *ngIf="opt.meta?.['designation']">
+                          Designation: {{ opt.meta?.['designation'] }}
+                        </span>
+                      </div>
+                    </div>
+                  </nz-option>
+                </ng-container>
+
+                <ng-template #staticOptions>
+                  <nz-option *ngFor="let opt of field.options || []" [nzLabel]="opt.label" [nzValue]="opt.value"
+                    [nzTitle]="opt.searchText || opt.label" [nzCustomContent]="true">
+
+                    <div class="person-opt-card"
+                      [class.person-opt-card--selected]="form.get(field.key)?.value === opt.value">
+
+                      <div class="person-opt-top">
+                        <div class="person-opt-name">
+                          {{ opt.meta?.['name'] ?? opt.label }}
+                        </div>
+
+                        <div class="person-opt-id" *ngIf="opt.meta?.['id']">
+                          ID: {{ opt.meta?.['id'] }}
+                        </div>
+                      </div>
+
+                      <div class="person-opt-meta">
+                        <span *ngIf="opt.meta?.['department']">
+                          Department: {{ opt.meta?.['department'] }}
+                        </span>
+
+                        <span class="person-opt-sep" *ngIf="opt.meta?.['department'] && opt.meta?.['designation']">
+                        </span>
+
+                        <span *ngIf="opt.meta?.['designation']">
+                          Designation: {{ opt.meta?.['designation'] }}
+                        </span>
+                      </div>
+                    </div>
+                  </nz-option>
+                </ng-template>
+              </nz-select>
+            </ng-template>
+
+            <div class="figma-error" *ngIf="hasError(field.key, 'required')">
+              {{ field.label }} is required
+            </div>
+          </div>
+        </div>
 
         <!-- DATE -->
-        <nz-form-item *ngIf="field.type === 'date'">
-          <nz-form-label [nzRequired]="field.required">
-            {{ field.label }}
-          </nz-form-label>
+        <div class="col-12" *ngIf="field.type === 'date'">
+          <div class="figma-field">
+            <label class="figma-label">
+              {{ field.label }}
+              <span *ngIf="field.required" class="text-danger">*</span>
+            </label>
 
-          <nz-form-control>
-            <nz-date-picker style="width: 100%" [formControlName]="field.key" [nzDisabled]="!!field.disabled"
-              [nzDisabledDate]="getDisabledDateFn(field.key)" [nzInputReadOnly]="true"></nz-date-picker>
+            <nz-date-picker class="figma-date" style="width: 100%" [formControlName]="field.key"
+              [nzDisabled]="!!field.disabled" [nzDisabledDate]="getDisabledDateFn(field.key)" [nzInputReadOnly]="true"
+              [nzPlaceHolder]="'Select Date'">
+            </nz-date-picker>
 
-            <div class="text-danger mt-1" *ngIf="hasError(field.key, 'pastDateNotAllowed')">
+            <div class="figma-error" *ngIf="hasError(field.key, 'required')">
+              {{ field.label }} is required
+            </div>
+
+            <div class="figma-error" *ngIf="hasError(field.key, 'pastDateNotAllowed')">
               Effective Date must be in the future
             </div>
-          </nz-form-control>
-        </nz-form-item>
+          </div>
+        </div>
 
         <!-- CHECKBOX -->
-        <nz-form-item *ngIf="field.type === 'checkbox'">
-          <nz-form-label [nzRequired]="field.required">
-            {{ field.label }}
-          </nz-form-label>
-
-          <nz-form-control>
-            <label nz-checkbox [formControlName]="field.key">
+        <div class="col-12" *ngIf="field.type === 'checkbox'">
+          <div class="figma-field">
+            <label nz-checkbox [formControlName]="field.key" class="figma-checkbox">
               {{ field.label }}
             </label>
-          </nz-form-control>
-        </nz-form-item>
+          </div>
+        </div>
 
         <!-- FILE -->
-        <nz-form-item *ngIf="field.type === 'file'">
-          <nz-form-label>{{ field.label }}</nz-form-label>
+        <div class="col-12" *ngIf="field.type === 'file'">
+          <div class="figma-field">
+            <label class="figma-label">{{ field.label }}</label>
 
-          <nz-form-control>
-            <button nz-button nzType="default" type="button"
-              [disabled]="isFileDisabled(field) || uploadingMap[field.key]" (click)="fileInput.click()">
-              <i class="fa fa-upload me-1"></i>
-              Bulk Import
-            </button>
+            <div class="d-flex flex-column gap-2">
+              <button nz-button nzType="default" type="button" class="figma-upload-btn"
+                [disabled]="isFileDisabled(field) || uploadingMap[field.key]" (click)="fileInput.click()">
+                <i class="fa fa-upload me-1"></i>
+                Bulk Import
+              </button>
 
-            <input #fileInput type="file" hidden [accept]="field.accept" (change)="onFileSelected(field.key, $event)" />
+              <input #fileInput type="file" hidden [accept]="field.accept"
+                (change)="onFileSelected(field.key, $event)" />
 
-            <div *ngIf="uploadingMap[field.key]" class="mt-2">
-              <nz-progress [nzPercent]="uploadProgressMap[field.key]" nzStatus="active" nzSize="small"></nz-progress>
+              <div *ngIf="uploadingMap[field.key]">
+                <nz-progress [nzPercent]="uploadProgressMap[field.key]" nzStatus="active" nzSize="small"></nz-progress>
+                <small class="text-muted">Uploading... {{ uploadProgressMap[field.key] }}%</small>
+              </div>
 
-              <small class="text-muted">
-                Uploading... {{ uploadProgressMap[field.key] }}%
+              <small class="figma-help" *ngIf="!uploadingMap[field.key]">
+                Only CSV / Excel files allowed
               </small>
             </div>
+          </div>
+        </div>
 
-            <div class="text-muted mt-1" *ngIf="!uploadingMap[field.key]">
-              Only CSV / Excel files allowed
-            </div>
-          </nz-form-control>
-        </nz-form-item>
       </ng-container>
     </div>
 
-    <div class="form-actions mt-3">
-      <button nz-button nzType="primary" [disabled]="form.invalid">
+    <div class="d-flex gap-2 justify-content-end mt-4 form-actions">
+      <button nz-button type="button" class="figma-cancel-btn" (click)="onCancel()">
+        Cancel
+      </button>
+      <button nz-button nzType="primary" class="figma-save-btn" [disabled]="form.invalid">
         Save
       </button>
     </div>

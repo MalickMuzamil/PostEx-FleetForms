@@ -67,6 +67,7 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
     formValue: any;
   }>();
 
+  @Output() cancelForm = new EventEmitter<void>();
   form!: FormGroup;
   private valueSub?: Subscription;
 
@@ -74,7 +75,7 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
   uploadProgressMap: Record<string, number> = {};
   uploadingMap: Record<string, boolean> = {};
 
-  constructor(private zone: NgZone, private cdr: ChangeDetectorRef) {}
+  constructor(private zone: NgZone, private cdr: ChangeDetectorRef) { }
 
   ngOnInit() {
     this.createForm();
@@ -95,8 +96,8 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
         const active = document?.activeElement as HTMLElement | null;
         focusedControl = active?.closest
           ? (
-              active.closest('[formcontrolname]') as HTMLElement | null
-            )?.getAttribute('formcontrolname') ?? null
+            active.closest('[formcontrolname]') as HTMLElement | null
+          )?.getAttribute('formcontrolname') ?? null
           : active?.getAttribute('formcontrolname') ?? null;
       } catch {
         focusedControl = null;
@@ -307,5 +308,9 @@ export class DynamicForm implements OnInit, OnChanges, OnDestroy {
   getGridTemplate(cols: any[] = []): string {
     if (!cols.length) return '1fr';
     return cols.map((c) => (c.width ? c.width : '1fr')).join(' ');
+  }
+
+  onCancel(): void {
+    this.cancelForm.emit();
   }
 }

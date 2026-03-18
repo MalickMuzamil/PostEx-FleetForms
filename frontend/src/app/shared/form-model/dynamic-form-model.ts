@@ -8,12 +8,13 @@ export type FieldType =
   | 'textarea'
   | 'checkbox'
   | 'readonly'
-  | 'file';
+  | 'file'
+  | 'status';
 
 export interface SelectColumn {
-  key: string; // meta object key
-  title: string; // header title
-  width?: string; // optional
+  key: string;
+  title: string;
+  width?: string;
 }
 
 export interface SelectOption {
@@ -42,15 +43,20 @@ export interface FormField {
   dependsOn?: string;
   validators?: any[];
 
-  // control update strategy: 'change' (per keystroke), 'blur' (on blur), or 'submit'
   updateOn?: 'change' | 'blur' | 'submit';
 
   loading?: boolean;
-  accept?: string; // ".csv,.xls,.xlsx"
+  accept?: string;
   enabledWhen?: string[];
   disabledWhen?: string[];
   mask?: 'SHORT_CODE_3_2' | 'ALPHA5_ROMAN' | 'AAA_AAA' | 'AAA_AAA_AAA';
-  maskPrefixKey?: string; 
+  maskPrefixKey?: string;
+
+  /* reusable layout / UI helpers */
+  fullWidth?: boolean;
+
+  /* for status field */
+  statusOptions?: { label: string; value: any }[];
 }
 
 export interface FormConfig {
