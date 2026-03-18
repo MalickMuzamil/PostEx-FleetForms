@@ -2,60 +2,96 @@
 </nz-result>
 
 <ng-container *ngIf="isAdmin">
-    <nz-card nzTitle="User Management" [nzExtra]="extraTpl">
+    <nz-card class="user-mgmt-card" nzTitle="User Management" [nzExtra]="extraTpl">
         <ng-template #extraTpl>
-            <button nz-button nzType="primary" (click)="openCreate()">Add User</button>
+            <button nz-button nzType="primary" class="theme-primary-btn" (click)="openCreate()">
+                Add User
+            </button>
         </ng-template>
 
         <div class="filters">
             <input nz-input class="filters__search" placeholder="Search by name/email" [(ngModel)]="search"
                 (ngModelChange)="applyFilter()" />
 
-            <button nz-button (click)="resetFilters()">Reset</button>
+            <button nz-button class="theme-secondary-btn" (click)="resetFilters()">
+                Reset
+            </button>
         </div>
 
-        <nz-alert *ngIf="toast" nzType="success" [nzMessage]="toast" nzShowIcon class="msg"></nz-alert>
-        <nz-alert *ngIf="error" nzType="error" [nzMessage]="error" nzShowIcon class="msg"></nz-alert>
+        <nz-alert *ngIf="toast" nzType="success" [nzMessage]="toast" nzShowIcon class="msg">
+        </nz-alert>
 
-        <nz-table [nzData]="filteredUsers" [nzLoading]="loading">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th class="col-actions">Actions</th>
-                </tr>
-            </thead>
+        <nz-alert *ngIf="error" nzType="error" [nzMessage]="error" nzShowIcon class="msg">
+        </nz-alert>
 
-            <tbody>
-                <tr *ngFor="let u of filteredUsers">
-                    <td>{{ u.name }}</td>
-                    <td>{{ u.email }}</td>
+        <div class="user-table-wrap">
+            <nz-table #table class="theme-table" [nzData]="filteredUsers" [nzLoading]="loading"
+                [nzFrontPagination]="true" [nzShowPagination]="false" [nzBordered]="false">
 
-                    <td>
-                        <nz-tag [nzColor]="u.role === 'ADMIN' ? 'red' : 'blue'">
-                            {{ u.role }}
-                        </nz-tag>
-                    </td>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th class="col-actions">Actions</th>
+                    </tr>
+                </thead>
 
-                    <td class="actions">
-                        <button nz-button nzType="default" (click)="openEdit(u)" [disabled]="saving">
-                            Edit
-                        </button>
-                    
-                        <button nz-button nzType="default" nzDanger nz-popconfirm nzPopconfirmTitle="Delete this user?" nzOkText="Yes"
-                            nzCancelText="No" (nzOnConfirm)="deleteUser(u)" [disabled]="saving">
-                            Delete
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </nz-table>
+                <tbody>
+                    <tr *ngFor="let u of table.data">
+                        <td>{{ u.name }}</td>
+                        <td>{{ u.email }}</td>
+                        <td>
+                            <nz-tag [class.role-tag-admin]="u.role === 'ADMIN'"
+                                [class.role-tag-user]="u.role === 'USER'">
+                                {{ u.role }}
+                            </nz-tag>
+                        </td>
+                        <td class="actions">
+                            <button nz-button class="theme-edit-btn" (click)="openEdit(u)" [disabled]="saving">
+                                Edit
+                            </button>
+
+                            <button nz-button class="theme-delete-btn" nz-popconfirm
+                                nzPopconfirmTitle="Delete this user?" nzOkText="Yes" nzCancelText="No"
+                                (nzOnConfirm)="deleteUser(u)" [disabled]="saving">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </nz-table>
+        </div>
+
+        <!-- custom pagination -->
+        <div class="tbl-pagination">
+            <span class="tbl-pagination-info">
+                Showing
+                <strong>{{ table.nzPageIndex === 1 ? 1 : (table.nzPageIndex - 1) * table.nzPageSize + 1 }}</strong>
+                to
+                <strong>{{ minVal(table.nzPageIndex * table.nzPageSize, filteredUsers.length) }}</strong>
+                of
+                <strong>{{ filteredUsers.length }}</strong>
+                Results
+            </span>
+
+            <div class="tbl-pagination-btns">
+                <button class="tbl-page-btn" [disabled]="table.nzPageIndex <= 1"
+                    (click)="table.nzPageIndex = table.nzPageIndex - 1">
+                    Previous
+                </button>
+
+                <button class="tbl-page-btn" [disabled]="table.nzPageIndex * table.nzPageSize >= filteredUsers.length"
+                    (click)="table.nzPageIndex = table.nzPageIndex + 1">
+                    Next
+                </button>
+            </div>
+        </div>
     </nz-card>
 
-    <nz-modal [(nzVisible)]="modalVisible" [nzTitle]="editing ? 'Edit User' : 'Add User'"
-        [nzOkText]="editing ? 'Update' : 'Create'" (nzOnCancel)="closeModal()" (nzOnOk)="save()" [nzOkLoading]="saving"
-        [nzBodyStyle]="{ padding: '24px' }">
+    <nz-modal class="theme-modal" [(nzVisible)]="modalVisible" [nzTitle]="editing ? 'Edit User' : 'Add User'"
+        [nzOkText]="editing ? 'Update' : 'Create'" [nzCancelText]="'Cancel'" (nzOnCancel)="closeModal()"
+        (nzOnOk)="save()" [nzOkLoading]="saving" [nzBodyStyle]="{ padding: '24px' }">
         <ng-container *nzModalContent>
             <div class="modal-grid">
 
@@ -70,16 +106,16 @@
                     <small>If empty, we will send <b>Postex</b></small>
                 </div>
 
-                <div class="field">
+                <div class="field field--full">
                     <label>Email</label>
                     <input nz-input [(ngModel)]="form.email" [disabled]="!!editing"
                         placeholder="name@postexglobal.com" />
                     <small>Only @postexglobal.com emails allowed</small>
                 </div>
 
-                <div class="field">
+                <div class="field field--full">
                     <label>Role</label>
-                    <nz-select [(ngModel)]="form.role">
+                    <nz-select [(ngModel)]="form.role" class="theme-role-select">
                         <nz-option nzValue="USER" nzLabel="USER"></nz-option>
                         <nz-option nzValue="ADMIN" nzLabel="ADMIN"></nz-option>
                     </nz-select>
@@ -87,6 +123,7 @@
                     <small *ngIf="form.role === 'ADMIN'">
                         Backend role will be sent as <b>postex-auth-admin</b>
                     </small>
+
                     <small *ngIf="form.role === 'USER'">
                         Backend role will be sent as <b>postex</b>
                     </small>

@@ -15,8 +15,7 @@
     width: 236px !important;
     position: relative;
     z-index: 1001;
-    transition: transform 0.25s ease, width 0.25s ease, min-width 0.25s ease,
-        max-width 0.25s ease;
+    transition: transform 0.25s ease, width 0.25s ease, min-width 0.25s ease, max-width 0.25s ease;
     overflow: hidden;
     border-right: 1px solid #ece9e4;
 }
@@ -65,6 +64,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
 }
 
 .sidebar-logo {
@@ -83,6 +83,13 @@
     justify-content: center;
     font-size: 18px;
     flex-shrink: 0;
+    border-radius: 8px;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-toggle-btn:hover {
+    background: #eef3e7 !important;
+    color: #5d8f2f !important;
 }
 
 /* ===============================
@@ -92,7 +99,7 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 10px 12px;
+    padding: 10px 12px 18px;
     height: calc(100vh - 78px);
 }
 
@@ -129,25 +136,61 @@
 .app-menu-item,
 .app-submenu ::ng-deep .ant-menu-submenu-title,
 .submenu-item {
-    border-radius: 8px;
+    border-radius: 10px;
     margin: 6px 0;
-    min-height: 42px;
-    line-height: 42px !important;
+    min-height: 44px;
+    line-height: 44px !important;
     font-size: 13px;
     color: #5f6368 !important;
     transition: all 0.2s ease;
 }
 
+/* top-level items */
 .app-menu-item {
     display: flex;
     align-items: center;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
 }
 
+/* submenu title */
+.app-submenu ::ng-deep .ant-menu-submenu-title {
+    color: #5f6368 !important;
+    background: transparent !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+}
+
+/* hover */
 .app-menu-item:hover,
 .app-submenu ::ng-deep .ant-menu-submenu-title:hover,
 .submenu-item:hover {
-    background: #efeee9 !important;
-    color: #3f4650 !important;
+    background: #eef3e7 !important;
+    color: #5d8f2f !important;
+}
+
+.app-menu-item:hover .menu-icon,
+.app-submenu ::ng-deep .ant-menu-submenu-title:hover .menu-icon {
+    color: #5d8f2f !important;
+}
+
+.submenu-item:hover::before {
+    background: #5d8f2f !important;
+}
+
+/* submenu title layout */
+.submenu-title-wrap {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+}
+
+.menu-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* ===============================
@@ -156,10 +199,11 @@
 .menu-icon {
     width: 18px;
     min-width: 18px;
-    margin-right: 10px;
+    margin-right: 12px;
     font-size: 14px;
     color: #4b4f55;
     text-align: center;
+    flex-shrink: 0;
 }
 
 /* ===============================
@@ -168,7 +212,7 @@
 .app-menu ::ng-deep .ant-menu-item-selected,
 .app-menu ::ng-deep .ant-menu-submenu-selected > .ant-menu-submenu-title,
 .app-menu .menu-active {
-    background: #78a645 !important;
+    background: #56883b !important;
     color: #ffffff !important;
     font-weight: 600;
     box-shadow: 0 8px 18px rgba(120, 166, 69, 0.28);
@@ -180,26 +224,37 @@
     color: #ffffff !important;
 }
 
+.app-menu ::ng-deep .ant-menu-submenu-selected > .ant-menu-submenu-title .menu-label,
+.app-menu .menu-active .menu-label,
+.app-menu ::ng-deep .ant-menu-item-selected .menu-label {
+    color: #ffffff !important;
+}
+
 /* ===============================
    SUBMENUS
 ================================= */
-.app-submenu ::ng-deep .ant-menu-submenu-title {
-    color: #5f6368 !important;
-    background: transparent !important;
+.app-menu ::ng-deep .ant-menu-submenu-arrow {
+    color: #7a7f86 !important;
 }
 
-.app-menu ::ng-deep .ant-menu-submenu-arrow {
-    color: #5f6368 !important;
+.app-submenu:hover ::ng-deep .ant-menu-submenu-arrow {
+    color: #5d8f2f !important;
 }
 
 .app-menu ::ng-deep .ant-menu-sub.ant-menu-inline {
     background: transparent !important;
+    padding-top: 2px;
+    padding-bottom: 2px;
 }
 
 .submenu-item {
     padding-left: 42px !important;
+    padding-right: 14px !important;
     font-size: 12px;
     color: #767b82 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .submenu-item::before {
@@ -211,6 +266,7 @@
     display: inline-block;
     margin-right: 10px;
     vertical-align: middle;
+    flex-shrink: 0;
 }
 
 .app-menu ::ng-deep .ant-menu-inline .ant-menu-item::after,
@@ -220,7 +276,6 @@
 
 /* ===============================
    COLLAPSED DESKTOP
-   Only arrow show, logo hidden
 ================================= */
 .app-sider.desktop-collapsed .sidebar-brand {
     justify-content: center !important;
@@ -241,6 +296,7 @@
     margin: 0 auto;
 }
 
+/* host-context for collapsed mode */
 :host-context(.desktop-collapsed) .sidebar-brand {
     justify-content: center !important;
     align-items: center !important;
@@ -261,22 +317,35 @@
 }
 
 :host-context(.desktop-collapsed) .menu-icon {
-    margin-right: 0;
+    margin-right: 0 !important;
+}
+
+:host-context(.desktop-collapsed) .menu-label {
+    display: none !important;
 }
 
 :host-context(.desktop-collapsed) .app-menu-item,
 :host-context(.desktop-collapsed) .app-submenu ::ng-deep .ant-menu-submenu-title {
-    justify-content: center;
-    padding-inline: calc(50% - 9px) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    text-align: center;
+}
+
+:host-context(.desktop-collapsed) .submenu-title-wrap {
+    justify-content: center !important;
+}
+
+:host-context(.desktop-collapsed) .app-menu ::ng-deep .ant-menu-submenu-arrow {
+    display: none !important;
+}
+
+:host-context(.desktop-collapsed) .app-menu ::ng-deep .ant-menu-sub {
+    display: none !important;
 }
 
 :host-context(.desktop-collapsed) .submenu-item {
-    padding-left: 24px !important;
-}
-
-/* Optional: collapsed me text hide ho jaye */
-:host-context(.desktop-collapsed) .app-menu-item span:not(.menu-icon),
-:host-context(.desktop-collapsed) .app-submenu ::ng-deep .ant-menu-submenu-title span:not(.menu-icon) {
     display: none !important;
 }
 
@@ -342,6 +411,14 @@
         min-height: 44px;
         line-height: 44px !important;
     }
+
+    .submenu-item {
+        padding-left: 42px !important;
+    }
+
+    .menu-label {
+        display: inline !important;
+    }
 }
 
 /* ===============================
@@ -372,4 +449,4 @@
     .submenu-item {
         font-size: 12px;
     }
-}   
+}

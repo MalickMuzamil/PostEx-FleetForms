@@ -1,54 +1,90 @@
-<div class="welcome-wrapper">
-  <nz-card class="welcome-card">
-    <div class="welcome-header">
-      <div class="icon-badge">
-        <i class="fas fa-truck"></i>
-      </div>
+<div class="welcome-wrapper container-fluid">
+  <div class="row justify-content-center">
+    <div class="col-12 col-xl-10 col-xxl-9">
+      <nz-card class="welcome-card">
 
-      <div>
-        <h2 class="welcome-title">
-          Welcome to <span>Postex Fleet Forms</span>
-        </h2>
-        <p class="welcome-subtitle">
-          A centralized platform to manage logistics operations efficiently.
-        </p>
-      </div>
+        <!-- Header -->
+        <div class="d-flex align-items-start align-items-sm-center gap-3 flex-column flex-sm-row">
+          <div class="icon-badge flex-shrink-0">
+            <i class="fas fa-shield-halved"></i>
+          </div>
+
+          <div class="min-w-0">
+            <h2 class="welcome-title mb-1">
+              Welcome to <span>PostEx Fleet Forms</span>
+            </h2>
+            <p class="welcome-subtitle mb-0">
+              A centralized platform to manage logistics operations efficiently.
+            </p>
+          </div>
+        </div>
+
+        <div class="welcome-divider"></div>
+
+        <!-- Intro box -->
+        <div class="welcome-intro">
+          <p class="welcome-description mb-0">
+            PostEx Fleet Forms helps you manage
+            <strong>branch assignments</strong>,
+            <strong>employee bindings</strong>,
+            <strong>delivery routes</strong>
+            and other operational configurations in a structured and controlled way.
+            All modules are designed to reduce manual errors and ensure consistency
+            across your logistics network.
+          </p>
+        </div>
+
+        <!-- Feature cards -->
+        <div class="row g-3 welcome-features">
+          <div class="col-12 col-md-6 col-xl-4">
+            <div class="feature-card h-100">
+              <div class="feature-icon">
+                <i class="fas fa-house-circle-check"></i>
+              </div>
+              <h3 class="feature-title">Branch &amp; Sub-Branch Management</h3>
+              <p class="feature-text mb-0">
+                Organize and manage branch hierarchies with ease.
+              </p>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4">
+            <div class="feature-card h-100">
+              <div class="feature-icon">
+                <i class="fas fa-user-tie"></i>
+              </div>
+              <h3 class="feature-title">Employee &amp; Coordinator Assignments</h3>
+              <p class="feature-text mb-0">
+                Assign roles and coordinate employee operations.
+              </p>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4">
+            <div class="feature-card h-100">
+              <div class="feature-icon">
+                <i class="fas fa-location-dot"></i>
+              </div>
+              <h3 class="feature-title">Delivery Route &amp; Dashboard Bindings</h3>
+              <p class="feature-text mb-0">
+                Define and monitor delivery routes efficiently.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer hint -->
+        <div class="welcome-note d-flex align-items-start align-items-sm-center gap-3">
+          <div class="note-icon flex-shrink-0">
+            <i class="fas fa-circle-info"></i>
+          </div>
+
+          <p class="welcome-note-text mb-0">
+            Getting Started: Choose a module from the sidebar to begin managing your fleet operations.
+          </p>
+        </div>
+
+      </nz-card>
     </div>
-
-    <div class="welcome-divider"></div>
-
-    <p class="welcome-description">
-      Postex Fleet Forms helps you manage <strong>branch assignments</strong>,
-      <strong>employee bindings</strong>, <strong>delivery routes</strong> and
-      other operational configurations in a structured and controlled way.
-      All modules are designed to reduce manual errors and ensure consistency
-      across your logistics network.
-    </p>
-
-    <div class="welcome-features">
-      <div class="feature-item">
-        <i class="fas fa-sitemap"></i>
-        <span>Branch & Sub-Branch Management</span>
-      </div>
-
-      <div class="feature-item">
-        <i class="fas fa-user-tie"></i>
-        <span>Employee & Coordinator Assignments</span>
-      </div>
-
-      <div class="feature-item">
-        <i class="fas fa-route"></i>
-        <span>Delivery Route & Dashboard Bindings</span>
-      </div>
-    </div>
-
-    <div class="welcome-divider"></div>
-
-    <div class="welcome-hint">
-      <i class="fas fa-circle-info"></i>
-      <span>
-        Choose a module from the sidebar to begin managing your fleet operations.
-      </span>
-    </div>
-  </nz-card>
+  </div>
 </div>

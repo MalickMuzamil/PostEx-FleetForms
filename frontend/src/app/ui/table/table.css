@@ -10,7 +10,7 @@
 }
 
 /* =====================================================
-   CARD HEADER (PROJECTED CONTENT)
+   CARD HEADER
 ===================================================== */
 .tbl-card-header-wrap {
   padding: 14px 16px 10px;
@@ -69,7 +69,7 @@
 }
 
 /* =====================================================
-   TOOLBAR ROW
+   TOOLBAR
 ===================================================== */
 .tbl-toolbar {
   display: flex;
@@ -82,12 +82,17 @@
   background: var(--toolbar-bg);
 }
 
-/* Agar header ho to extra top line avoid ho jaye */
-.tbl-card-header-wrap:not(:empty)+.tbl-toolbar {
+.tbl-card-header-wrap:not(:empty) + .tbl-toolbar {
   border-top: 1px solid var(--border-color);
 }
 
-/* Search stretches to fill space */
+.tbl-toolbar--filters-only {
+  justify-content: flex-start;
+}
+
+/* =====================================================
+   SEARCH
+===================================================== */
 .tbl-search-wrap {
   flex: 1 1 auto;
   position: relative;
@@ -103,32 +108,41 @@
   display: flex;
   align-items: center;
   pointer-events: none;
+  z-index: 1;
 }
 
 .tbl-search-input {
   width: 100%;
-  height: 38px;
-  padding: 8px 12px 8px 36px;
+  height: 44px;
+  padding: 8px 12px 8px 38px;
   font-size: var(--fs-sm);
   font-family: var(--font);
   color: var(--text-primary);
   background: #ffffff;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 12px;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .tbl-search-input::placeholder {
-  color: #b8b8b8;
+  color: var(--text-secondary);
+}
+
+.tbl-search-input:hover {
+  border-color: var(--primary);
+  background: var(--toolbar-bg);
 }
 
 .tbl-search-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(86, 136, 59, 0.1);
+  box-shadow: 0 0 0 4px rgba(86, 136, 59, 0.12);
+  background: #ffffff;
 }
 
-/* Filters on the right */
+/* =====================================================
+   FILTERS
+===================================================== */
 .tbl-filters-right {
   display: flex;
   align-items: center;
@@ -136,75 +150,221 @@
   flex-shrink: 0;
 }
 
-/* Text filter input */
+.tbl-filter-input,
+.tbl-filter-select-wrap,
+.tbl-nz-select,
+.tbl-nz-date {
+  min-width: 180px;
+}
+
 .tbl-filter-input {
-  height: 38px;
-  padding: 7px 12px;
+  height: 44px;
+  padding: 8px 14px;
   font-size: var(--fs-sm);
   font-family: var(--font);
   color: var(--text-primary);
   background: #ffffff;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 12px;
   outline: none;
-  min-width: 130px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .tbl-filter-input::placeholder {
-  color: #b8b8b8;
+  color: var(--text-secondary);
+}
+
+.tbl-filter-input:hover {
+  border-color: var(--primary);
+  background: var(--toolbar-bg);
 }
 
 .tbl-filter-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(86, 136, 59, 0.1);
-}
-
-/* Custom select dropdown */
-.tbl-filter-select-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.tbl-filter-select {
-  appearance: none;
-  -webkit-appearance: none;
-  height: 38px;
-  padding: 7px 34px 7px 12px;
-  font-size: var(--fs-sm);
-  font-family: var(--font);
-  color: var(--text-primary);
+  box-shadow: 0 0 0 4px rgba(86, 136, 59, 0.12);
   background: #ffffff;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  outline: none;
-  cursor: pointer;
-  min-width: 130px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.tbl-filter-select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(86, 136, 59, 0.1);
-}
-
-.tbl-select-arrow {
-  position: absolute;
-  right: 10px;
-  color: var(--text-secondary);
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-}
-
-/* Filters-only toolbar (no search bar) */
-.tbl-toolbar--filters-only {
-  justify-content: flex-start;
 }
 
 /* =====================================================
-   TABLE SCROLL WRAPPER (horizontal on mobile)
+   NZ SELECT / DATE WRAPPERS
+===================================================== */
+.tbl-filter-select-wrap,
+.tbl-nz-select,
+.tbl-nz-date {
+  width: 180px;
+  min-width: 180px;
+  height: 44px;
+  border-radius: 11px;
+}
+
+.tbl-nz-date:hover{
+  border-color: var(--primary) !important;
+  background: var(--toolbar-bg) !important;
+}
+
+.tbl-nz-date:focus{
+  border-color: var(--primary) !important;
+  background: var(--toolbar-bg) !important;
+}
+
+/* =====================================================
+   NZ SELECT
+===================================================== */
+::ng-deep .tbl-nz-select {
+  display: block;
+}
+
+::ng-deep .tbl-nz-select .ant-select {
+  width: 100% !important;
+  height: 44px !important;
+  font-family: var(--font) !important;
+}
+
+::ng-deep .tbl-nz-select .ant-select-selector {
+  height: 44px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--border-color) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  padding: 0 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: all 0.2s ease !important;
+}
+
+::ng-deep .tbl-nz-select:hover .ant-select-selector {
+  border-color: var(--primary) !important;
+  background: var(--toolbar-bg) !important;
+}
+
+::ng-deep .tbl-nz-select.ant-select-focused .ant-select-selector,
+::ng-deep .tbl-nz-select.ant-select-open .ant-select-selector {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 4px rgba(86, 136, 59, 0.12) !important;
+  background: #ffffff !important;
+}
+
+::ng-deep .tbl-nz-select .ant-select-selection-search,
+::ng-deep .tbl-nz-select .ant-select-selection-item,
+::ng-deep .tbl-nz-select .ant-select-selection-placeholder {
+  display: flex !important;
+  align-items: center !important;
+  height: 42px !important;
+  line-height: 42px !important;
+  font-size: var(--fs-sm) !important;
+}
+
+::ng-deep .tbl-nz-select .ant-select-selection-placeholder {
+  color: var(--text-secondary) !important;
+}
+
+::ng-deep .tbl-nz-select .ant-select-selection-item {
+  color: var(--text-primary) !important;
+  font-weight: 500;
+}
+
+::ng-deep .tbl-nz-select .ant-select-arrow {
+  color: var(--text-secondary) !important;
+}
+
+::ng-deep .tbl-nz-select .ant-select-clear {
+  color: var(--text-secondary) !important;
+  background: var(--content-bg) !important;
+}
+
+/* =====================================================
+   NZ DATE PICKER
+===================================================== */
+::ng-deep .tbl-nz-date {
+  display: block;
+}
+
+::ng-deep .tbl-nz-date .ant-picker {
+  height: 44px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--border-color) !important;
+  background: #fff !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 14px !important;
+  transition: all 0.2s ease !important;
+}
+
+::ng-deep .tbl-nz-date:hover .ant-picker {
+  border-color: var(--primary) !important;
+  background: var(--toolbar-bg) !important;
+}
+
+::ng-deep .tbl-nz-date .ant-picker-focused,
+::ng-deep .tbl-nz-date.ant-picker-focused .ant-picker,
+::ng-deep .tbl-nz-date .ant-picker:focus,
+::ng-deep .tbl-nz-date .ant-picker-focused.ant-picker {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 4px rgba(86, 136, 59, 0.12) !important;
+  background: #ffffff !important;
+}
+
+::ng-deep .tbl-nz-date .ant-picker-input {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+}
+
+::ng-deep .tbl-nz-date .ant-picker-input > input {
+  height: 42px !important;
+  line-height: 42px !important;
+  font-size: var(--fs-sm) !important;
+  font-family: var(--font) !important;
+  color: var(--text-primary) !important;
+}
+
+::ng-deep .tbl-nz-date .ant-picker-input > input::placeholder {
+  color: var(--text-secondary) !important;
+}
+
+::ng-deep .tbl-nz-date .ant-picker-suffix,
+::ng-deep .tbl-nz-date .ant-picker-clear {
+  color: var(--text-secondary) !important;
+}
+
+/* =====================================================
+   SELECT / DATE DROPDOWNS
+===================================================== */
+::ng-deep .ant-select-dropdown,
+::ng-deep .ant-picker-dropdown .ant-picker-panel-container {
+  border-radius: 14px !important;
+  background: var(--content-bg) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14) !important;
+  overflow: hidden;
+}
+
+::ng-deep .ant-select-dropdown {
+  padding: 8px !important;
+}
+
+::ng-deep .ant-select-item {
+  border-radius: 10px !important;
+  min-height: 38px !important;
+  display: flex;
+  align-items: center;
+  color: var(--text-primary) !important;
+  font-family: var(--font) !important;
+  font-size: var(--fs-sm) !important;
+}
+
+::ng-deep .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+  background: rgba(86, 136, 59, 0.08) !important;
+}
+
+::ng-deep .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background: rgba(86, 136, 59, 0.12) !important;
+  color: var(--primary) !important;
+  font-weight: 600 !important;
+}
+
+/* =====================================================
+   TABLE SCROLL
 ===================================================== */
 .tbl-scroll {
   width: 100%;
@@ -234,7 +394,6 @@
   background: var(--content-bg);
 }
 
-/* Thead */
 .app-table thead th {
   font-size: var(--fs-xs) !important;
   font-weight: 600 !important;
@@ -252,7 +411,6 @@
   letter-spacing: 0;
 }
 
-/* Tbody cells */
 .app-table tbody td {
   font-size: var(--fs-sm) !important;
   font-family: var(--font);
@@ -267,24 +425,21 @@
   background: transparent !important;
 }
 
-/* Remove bottom border on last row */
 .app-table tbody tr:last-child td {
   border-bottom: none !important;
 }
 
-/* Row hover */
 .app-table tbody tr:hover td {
   background-color: rgba(86, 136, 59, 0.04) !important;
 }
 
-/* Actions cell */
 .tbl-actions-cell {
   text-align: center;
   white-space: nowrap;
 }
 
 /* =====================================================
-   ACTION BUTTONS
+   BUTTONS
 ===================================================== */
 .tbl-btn {
   display: inline-flex;
@@ -303,7 +458,7 @@
   color: var(--text-primary);
 }
 
-.tbl-btn+.tbl-btn {
+.tbl-btn + .tbl-btn {
   margin-left: 6px;
 }
 
@@ -351,7 +506,7 @@
 }
 
 /* =====================================================
-   PAGINATION FOOTER
+   PAGINATION
 ===================================================== */
 .tbl-pagination {
   display: flex;
@@ -405,7 +560,7 @@
 }
 
 /* =====================================================
-   MOBILE RESPONSIVE
+   MOBILE
 ===================================================== */
 @media (max-width: 768px) {
   .tbl-card-header-wrap {
@@ -437,13 +592,10 @@
     width: 100%;
   }
 
+  .tbl-filter-input,
   .tbl-filter-select-wrap,
-  .tbl-filter-input {
-    width: 100%;
-    min-width: 100%;
-  }
-
-  .tbl-filter-select {
+  .tbl-nz-select,
+  .tbl-nz-date {
     width: 100%;
     min-width: 100%;
   }
