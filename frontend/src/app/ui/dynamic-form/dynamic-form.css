@@ -1,88 +1,652 @@
-.form-grid{
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
+/* ================================
+   FORM CARD
+================================ */
+
+.figma-form-card {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--content-bg);
+  box-sizing: border-box;
 }
 
-textarea{
-  grid-column: span 1;
+:host ::ng-deep .figma-form-card .ant-card-head {
+  min-height: 52px;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 14px;
+  background: var(--content-bg);
+}
+
+:host ::ng-deep .figma-form-card .ant-card-head-title {
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 14px 0;
+}
+
+:host ::ng-deep .figma-form-card .ant-card-body {
+  padding: 14px;
+  box-sizing: border-box;
+}
+
+/* ================================
+   FIELD WRAPPER
+================================ */
+
+:host ::ng-deep nz-select,
+:host ::ng-deep nz-date-picker {
+  display: block;
+  width: 100%;
+}
+
+:host ::ng-deep .figma-select,
+:host ::ng-deep .figma-person-select,
+:host ::ng-deep .figma-date {
+  display: block;
+  width: 100%;
+}
+
+.figma-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ================================
+   LABELS / HELP / ERRORS
+================================ */
+
+.figma-label {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.figma-error {
+  display: block;
+  margin-top: 4px;
+  min-height: 14px;
+  color: #dc2626;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.figma-help {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* ================================
+   INPUT / TEXTAREA
+================================ */
+
+.figma-input,
+.figma-textarea {
+  width: 100%;
+  border-radius: 10px !important;
+  border: 1px solid var(--border-color) !important;
+  background: #fff !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box;
+}
+
+.figma-input {
+  height: 42px;
+  padding: 0 12px;
+}
+
+.figma-textarea {
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 88px;
+}
+
+.figma-input::placeholder,
+.figma-textarea::placeholder {
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.figma-input:hover,
+.figma-textarea:hover {
+  border-color: var(--primary) !important;
+}
+
+.figma-input:focus,
+.figma-textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(86, 136, 59, 0.12) !important;
+  background: #fff !important;
+}
+
+/* number input arrows cleaner */
+:host ::ng-deep input[type="number"]::-webkit-outer-spin-button,
+:host ::ng-deep input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+:host ::ng-deep input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ================================
+   SELECT BASE
+================================ */
+
+:host ::ng-deep .figma-select,
+:host ::ng-deep .figma-person-select {
+  width: 100%;
+}
+
+:host ::ng-deep .figma-select .ant-select-selector,
+:host ::ng-deep .figma-person-select .ant-select-selector {
+  height: 42px !important;
+  min-height: 42px !important;
+  border-radius: 10px !important;
+  border: 1px solid #a9c58f !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  padding: 0 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: all 0.2s ease !important;
+}
+
+:host ::ng-deep .figma-select:hover .ant-select-selector,
+:host ::ng-deep .figma-person-select:hover .ant-select-selector {
+  border-color: var(--primary) !important;
+}
+
+:host ::ng-deep .figma-select.ant-select-focused .ant-select-selector,
+:host ::ng-deep .figma-select.ant-select-open .ant-select-selector,
+:host ::ng-deep .figma-person-select.ant-select-focused .ant-select-selector,
+:host ::ng-deep .figma-person-select.ant-select-open .ant-select-selector {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(86, 136, 59, 0.12) !important;
+}
+
+:host ::ng-deep .figma-select .ant-select-selection-item,
+:host ::ng-deep .figma-person-select .ant-select-selection-item,
+:host ::ng-deep .figma-select .ant-select-selection-placeholder,
+:host ::ng-deep .figma-person-select .ant-select-selection-placeholder {
+  font-family: var(--font) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+:host ::ng-deep .figma-select .ant-select-selection-item,
+:host ::ng-deep .figma-person-select .ant-select-selection-item {
+  color: #4b5563 !important;
+}
+
+:host ::ng-deep .figma-select .ant-select-selection-placeholder,
+:host ::ng-deep .figma-person-select .ant-select-selection-placeholder {
+  color: #9ca3af !important;
+  font-weight: 400 !important;
+}
+
+:host ::ng-deep .figma-select .ant-select-arrow,
+:host ::ng-deep .figma-person-select .ant-select-arrow {
+  color: #9ca3af !important;
+  font-size: 13px !important;
+}
+
+:host ::ng-deep .figma-select .ant-select-clear,
+:host ::ng-deep .figma-person-select .ant-select-clear {
+  background: #fff !important;
+}
+
+:host ::ng-deep .figma-person-select .ant-select-selection-search-input {
+  height: 40px !important;
+}
+
+:host ::ng-deep .figma-person-select .ant-select-selection-placeholder,
+:host ::ng-deep .figma-person-select .ant-select-selection-item {
+  line-height: 40px !important;
+}
+
+/* ================================
+   DATE PICKER
+================================ */
+
+:host ::ng-deep .figma-date {
+  width: 100%;
+}
+
+:host ::ng-deep .figma-date .ant-picker {
+  height: 42px !important;
+  min-height: 42px !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--border-color) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  padding: 0 12px !important;
+  width: 100% !important;
+  transition: all 0.2s ease !important;
+}
+
+:host ::ng-deep .figma-date:hover .ant-picker {
+  border-color: var(--primary) !important;
+}
+
+:host ::ng-deep .figma-date .ant-picker-focused,
+:host ::ng-deep .figma-date .ant-picker:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(86, 136, 59, 0.12) !important;
+}
+
+:host ::ng-deep .figma-date .ant-picker-input > input {
+  font-family: var(--font) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--text-primary) !important;
+}
+
+:host ::ng-deep .figma-date .ant-picker-input > input::placeholder {
+  color: #9ca3af !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+}
+
+:host ::ng-deep .figma-date .ant-picker-suffix {
+  color: #b8b8b8 !important;
+  font-size: 14px !important;
+}
+
+/* ================================
+   DEFAULT SELECT DROPDOWN LOOK
+   (overlay wali padding styles global me hongi)
+================================ */
+
+:host ::ng-deep .ant-select-dropdown {
+  border-radius: 14px !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+  overflow: hidden !important;
+}
+
+/* ================================
+   EMPLOYEE OPTION CARD
+================================ */
+
+.person-opt-card {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-bottom: 1px solid #ececec;
+  background: #fff;
+  transition: background 0.15s ease;
+}
+
+.person-opt-card:hover {
+  background: #f8faf7;
+}
+
+.person-opt-card--selected {
+  background: #edf5e6 !important;
+  border-radius: 10px;
+}
+
+.person-opt-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.person-opt-name {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.person-opt-id {
+  min-width: 72px;
+  text-align: center;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: #f1eef2;
+  color: #666;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.person-opt-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--font);
+  font-size: 11px;
+  color: #666;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.person-opt-sep {
+  width: 1px;
+  height: 14px;
+  background: #d9d9d9;
+  flex-shrink: 0;
+}
+
+/* ================================
+   CHECKBOX
+================================ */
+
+.figma-checkbox {
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* ================================
+   BUTTONS / ACTIONS
+================================ */
+
+.figma-save-btn,
+.figma-cancel-btn,
+.figma-upload-btn {
+  min-height: 38px;
+  padding: 0 18px;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.figma-save-btn {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #fff !important;
+}
+
+.figma-save-btn:hover {
+  opacity: 0.95;
+}
+
+.figma-cancel-btn {
+  background: #fff !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.figma-cancel-btn:hover {
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+.figma-upload-btn {
+  background: #fff !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  width: fit-content;
 }
 
 .form-actions {
+  border-top: 1px solid var(--border-color);
+  padding-top: 14px;
   display: flex;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-/* ✅ DROPDOWN ROWS → GRID (table like spacing) */
-.opt-row{
-  display: grid;
   gap: 8px;
-  align-items: center;
-  padding: 6px 8px;
-  /* grid-template-columns inline style se set hoga:
-     [style.gridTemplateColumns]="getGridTemplate(field.optionColumns)" */
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
-.opt-header{
-  font-weight: 600;
-  opacity: .85;
-  border-bottom: 1px solid #f0f0f0;
+/* ================================
+   RESPONSIVE
+================================ */
+
+@media (max-width: 768px) {
+  :host ::ng-deep .figma-form-card .ant-card-body {
+    padding: 12px;
+  }
+
+  :host ::ng-deep .figma-select .ant-select-selector,
+  :host ::ng-deep .figma-person-select .ant-select-selector,
+  :host ::ng-deep .figma-date .ant-picker,
+  .figma-input {
+    height: 40px !important;
+    min-height: 40px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  :host ::ng-deep .figma-person-select .ant-select-selection-search-input {
+    height: 38px !important;
+  }
+
+  :host ::ng-deep .figma-person-select .ant-select-selection-placeholder,
+  :host ::ng-deep .figma-person-select .ant-select-selection-item {
+    line-height: 38px !important;
+  }
+
+  .figma-textarea {
+    min-height: 80px;
+    padding: 8px 10px;
+  }
+
+  .person-opt-card {
+    padding: 12px 13px;
+  }
 }
 
-.opt-cell{
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 12px;
+@media (max-width: 575.98px) {
+  :host ::ng-deep .figma-form-card {
+    border-radius: 10px;
+  }
+
+  :host ::ng-deep .figma-form-card .ant-card-head {
+    min-height: 46px;
+    padding: 0 10px;
+  }
+
+  :host ::ng-deep .figma-form-card .ant-card-head-title {
+    font-size: 14px;
+    padding: 10px 0;
+  }
+
+  :host ::ng-deep .figma-form-card .ant-card-body {
+    padding: 10px;
+  }
+
+  .person-opt-card {
+    padding: 10px 12px;
+  }
+
+  .person-opt-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .person-opt-name {
+    font-size: 11.5px;
+  }
+
+  .person-opt-id {
+    min-width: auto;
+    width: auto;
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+
+  .person-opt-meta {
+    display: block;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+
+  .person-opt-meta span {
+    display: inline;
+    margin-right: 6px;
+  }
+
+  .person-opt-sep {
+    display: none;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .figma-save-btn,
+  .figma-cancel-btn {
+    width: 100%;
+  }
 }
 
-/* selected label ellipsis */
-.select-trigger-text{
-  display: inline-block;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+@media (max-width: 480px) {
+  :host ::ng-deep .figma-select .ant-select-selector,
+  :host ::ng-deep .figma-person-select .ant-select-selector,
+  :host ::ng-deep .figma-date .ant-picker,
+  .figma-input {
+    height: 38px !important;
+    min-height: 38px !important;
+    border-radius: 8px !important;
+  }
+
+  :host ::ng-deep .figma-person-select .ant-select-selection-search-input {
+    height: 36px !important;
+  }
+
+  :host ::ng-deep .figma-person-select .ant-select-selection-placeholder,
+  :host ::ng-deep .figma-person-select .ant-select-selection-item {
+    line-height: 36px !important;
+  }
+
+  .figma-textarea {
+    border-radius: 8px !important;
+  }
+}
+/* ================================
+   REMOVE NG-ZORRO OPTION PADDING
+================================ */
+
+.cdk-overlay-container .ant-select-dropdown .ant-select-item,
+.cdk-overlay-container .ant-select-dropdown .ant-select-item-option,
+.cdk-overlay-container .ant-select-dropdown .ant-select-item-option-content {
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: 0 !important;
+  line-height: normal !important;
 }
 
-/* loading center */
-.select-loading{
-  padding: 10px 0;
+
+/* STATUS FLAG SEGMENT */
+.figma-segment {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f5f5f5;
+}
+
+.figma-segment-item {
+  position: relative;
+  margin: 0;
+  cursor: pointer;
+}
+
+.figma-segment-item input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.figma-segment-item span {
   display: flex;
+  align-items: center;
   justify-content: center;
-}
-
-/* Dropdown option text visible fix */
-:host ::ng-deep .ant-select-item-option-content,
-:host ::ng-deep .ant-select-item-option-content * {
-  color: rgba(0, 0, 0, 0.85) !important;
-}
-
-/* optional hover bg */
-:host ::ng-deep .ant-select-item-option-active {
-  background: #eaf7ff !important;
-}
-
-/* ✅ ng-zorro dropdown inside content */
-:host ::ng-deep .ant-select-item-option-content .opt-row{
-  display: grid;
-  gap: 8px;
-  align-items: center;
-  padding: 4px 8px;
-}
-
-:host ::ng-deep .ant-select-item-option-content .opt-header{
-  font-weight: 600;
-  opacity: .85;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-:host ::ng-deep .ant-select-item-option-content .opt-cell{
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  height: 34px;
+  border-radius: 6px;
+  font-family: var(--font);
   font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.figma-segment-item.active span {
+  background: #fff;
+  color: #111;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 480px) {
+  .figma-segment-item span {
+    height: 32px;
+    font-size: 11px;
+  }
+}
+
+/* ================================
+   DISABLED STATE
+================================ */
+
+.figma-input:disabled,
+.figma-textarea:disabled {
+  background: #f5f7f9 !important;
+  color: #6b7280 !important;
+  border-color: #d8dee6 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+}
+
+:host ::ng-deep .figma-select.ant-select-disabled .ant-select-selector,
+:host ::ng-deep .figma-person-select.ant-select-disabled .ant-select-selector {
+  background: #f5f7f9 !important;
+  border-color: #d8dee6 !important;
+  color: #6b7280 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+}
+
+:host ::ng-deep .figma-select.ant-select-disabled .ant-select-selection-item,
+:host ::ng-deep .figma-person-select.ant-select-disabled .ant-select-selection-item,
+:host ::ng-deep .figma-select.ant-select-disabled .ant-select-selection-placeholder,
+:host ::ng-deep .figma-person-select.ant-select-disabled .ant-select-selection-placeholder {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+}
+
+:host ::ng-deep .figma-date.ant-picker-disabled,
+:host ::ng-deep .figma-date .ant-picker.ant-picker-disabled {
+  background: #f5f7f9 !important;
+  border-color: #d8dee6 !important;
+}
+
+:host ::ng-deep .figma-date .ant-picker.ant-picker-disabled input {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
 }

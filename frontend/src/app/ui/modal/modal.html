@@ -1,12 +1,8 @@
-<nz-modal [nzVisible]="visible" [nzTitle]="title" nzWidth="720px" nzCentered [nzMaskClosable]="false"
-    (nzOnCancel)="handleCancel()" [nzFooter]="null">
-
+<nz-modal [nzVisible]="visible" [nzTitle]="title" [nzFooter]="null" [nzMaskClosable]="false" [nzWidth]="720"
+    nzWrapClassName="figma-responsive-modal" (nzOnCancel)="handleCancel()">
     <ng-template nzModalContent>
-
         <app-dynamic-form [config]="formConfig" [data]="data" (submitForm)="handleSubmit($event)"
-            (formChange)="formChange.emit($event)">
+            (formChange)="formChange.emit($event)" (cancelForm)="handleCancel()">
         </app-dynamic-form>
-
     </ng-template>
-
 </nz-modal>
