@@ -79,9 +79,9 @@
 .tbl-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   padding: 12px 16px;
   border-top: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
@@ -97,29 +97,49 @@
 }
 
 .tbl-search-wrap {
-  flex: 1 1 auto;
-  min-width: 210px;
-  max-width: none;
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   position: relative;
   display: flex;
   align-items: center;
 }
 
+/* =====================================================
+   FILTERS CONTAINER - GRID BASED
+===================================================== */
 .tbl-filters-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
 }
 
+.tbl-toolbar--filters-only {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+/* important: grid children should shrink properly */
+.tbl-filters-right > *,
+.tbl-toolbar--filters-only > * {
+  min-width: 0;
+}
+
+/* =====================================================
+   COMMON FILTER WIDTH RESET
+===================================================== */
 .tbl-filter-input,
 .tbl-filter-select-wrap,
 .tbl-nz-select,
 .tbl-nz-date {
-  min-width: 180px;
-  max-width: 240px;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* =====================================================
@@ -201,8 +221,6 @@
 .tbl-filter-select-wrap,
 .tbl-nz-select,
 .tbl-nz-date {
-  width: 180px;
-  min-width: 180px;
   height: 44px;
   border-radius: 12px;
 }
@@ -563,6 +581,28 @@
 }
 
 /* =====================================================
+   1025px - 1440px
+===================================================== */
+@media (min-width: 1025px) and (max-width: 1440px) {
+  .tbl-filters-right,
+  .tbl-toolbar--filters-only {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+/* =====================================================
+   769px - 1024px
+===================================================== */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .tbl-filters-right,
+  .tbl-toolbar--filters-only {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+/* =====================================================
    MOBILE
 ===================================================== */
 @media (max-width: 768px) {
@@ -580,36 +620,18 @@
   }
 
   .tbl-toolbar {
-    flex-wrap: wrap;
-    justify-content: flex-start;
     gap: 8px;
     padding: 12px;
   }
 
   .tbl-search-wrap {
-    flex: 1 1 100%;
     width: 100%;
-    min-width: 0;
-    max-width: 100%;
   }
 
-  .tbl-filters-right {
-    display: flex;
-    flex-wrap: wrap;
-    width: 100%;
-    min-width: 0;
+  .tbl-filters-right,
+  .tbl-toolbar--filters-only {
+    grid-template-columns: 1fr;
     gap: 8px;
-    justify-content: flex-start;
-  }
-
-  .tbl-filter-input,
-  .tbl-filter-select-wrap,
-  .tbl-nz-select,
-  .tbl-nz-date {
-    width: 100% !important;
-    min-width: 100% !important;
-    max-width: 100% !important;
-    flex: 1 1 100%;
   }
 
   .tbl-pagination {
@@ -622,46 +644,5 @@
   .app-table thead th,
   .app-table tbody td {
     padding: 10px 12px !important;
-  }
-}
-
-/* =====================================================
-   TABLET / SMALL LAPTOP
-===================================================== */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .tbl-toolbar {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 8px;
-  }
-
-  .tbl-search-wrap {
-    flex: 1 1 100%;
-    width: 100%;
-    min-width: auto;
-    max-width: 100%;
-  }
-
-  .tbl-filters-right {
-    flex: 1 1 100%;
-    width: 100%;
-    min-width: auto;
-    justify-content: space-between;
-  }
-
-  .tbl-filter-input,
-  .tbl-filter-select-wrap,
-  .tbl-nz-select,
-  .tbl-nz-date {
-    min-width: 140px;
-    max-width: 220px;
-    width: calc(50% - 6px);
-  }
-
-  .tbl-nz-select,
-  .tbl-nz-date {
-    width: calc(50% - 6px);
-    min-width: 140px;
-    max-width: 220px;
   }
 }

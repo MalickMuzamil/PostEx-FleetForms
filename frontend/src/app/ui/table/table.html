@@ -79,8 +79,8 @@
 
     <!-- ===== TABLE ===== -->
     <div class="tbl-scroll">
-        <nz-table #table class="app-table" [nzData]="filteredData" [nzFrontPagination]="config.pagination !== false"
-            [nzShowPagination]="false">
+        <nz-table #table class="app-table" [nzData]="pagedData" [nzFrontPagination]="false"
+            [nzShowPagination]="false" [nzPageIndex]="pageIndex" [nzPageSize]="pageSize">
 
             <thead>
                 <tr>
@@ -138,20 +138,18 @@
     <div class="tbl-pagination" *ngIf="config.pagination !== false">
         <span class="tbl-pagination-info">
             Showing
-            <strong>{{ table.nzPageIndex === 1 ? 1 : (table.nzPageIndex - 1) * table.nzPageSize + 1 }}</strong>
+            <strong>{{ pageIndex === 1 ? 1 : (pageIndex - 1) * pageSize + 1 }}</strong>
             to
-            <strong>{{ minVal(table.nzPageIndex * table.nzPageSize, filteredData.length) }}</strong>
+            <strong>{{ minVal(pageIndex * pageSize, filteredData.length) }}</strong>
             of
             <strong>{{ filteredData.length }}</strong>
             Results
         </span>
         <div class="tbl-pagination-btns">
-            <button class="tbl-page-btn" [disabled]="table.nzPageIndex <= 1"
-                (click)="table.nzPageIndex = table.nzPageIndex - 1">
+            <button class="tbl-page-btn" [disabled]="pageIndex <= 1" (click)="prevPage()">
                 Previous
             </button>
-            <button class="tbl-page-btn" [disabled]="table.nzPageIndex * table.nzPageSize >= filteredData.length"
-                (click)="table.nzPageIndex = table.nzPageIndex + 1">
+            <button class="tbl-page-btn" [disabled]="pageIndex * pageSize >= filteredData.length" (click)="nextPage()">
                 Next
             </button>
         </div>
