@@ -114,7 +114,21 @@
   border-radius: 6px;
   font-weight: 500;
 }
+:host ::ng-deep .role-tag-cs {
+  color: #13c2c2 !important;
+  border-color: #87e8de !important;
+  background: #e6fffb !important;
+  border-radius: 6px;
+  font-weight: 500;
+}
 
+:host ::ng-deep .role-tag-hr {
+  color: #fa8c16 !important;
+  border-color: #ffd591 !important;
+  background: #fff7e6 !important;
+  border-radius: 6px;
+  font-weight: 500;
+}
 /* action buttons */
 .theme-primary-btn {
   background: var(--primary) !important;

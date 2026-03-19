@@ -6,7 +6,7 @@
         <!-- TEXT -->
         <div class="col-12" *ngIf="field.type === 'text'">
           <div class="figma-field">
-            <label class="figma-label">
+            <label class="figma-label form-label">
               {{ field.label }}
               <span *ngIf="field.required" class="text-danger">*</span>
             </label>
@@ -16,7 +16,7 @@
               && field.mask !== 'AAA_AAA'
               && field.mask !== 'AAA_AAA_AAA';
               else maskedInput">
-              <input nz-input class="figma-input" [type]="field.key === 'email' ? 'email' : 'text'"
+              <input nz-input class="figma-input form-control" [type]="field.key === 'email' ? 'email' : 'text'"
                 [formControlName]="field.key" [disabled]="!!field.disabled"
                 [attr.maxlength]="field.key === 'email' ? 50 : null" [attr.placeholder]="'Enter ' + field.label"
                 autocomplete="off" spellcheck="false" />
@@ -24,14 +24,14 @@
 
             <ng-template #maskedInput>
               <ng-container *ngIf="field.mask === 'SHORT_CODE_3_2'; else alpha5RomanInput">
-                <input nz-input class="figma-input" type="text" [formControlName]="field.key"
+                <input nz-input class="figma-input form-control" type="text" [formControlName]="field.key"
                   [disabled]="!!field.disabled" maxlength="6" [attr.placeholder]="'Enter ' + field.label"
                   autocomplete="off" spellcheck="false" [appShortCodeMask]="'SHORT_CODE_3_2'" />
               </ng-container>
 
               <ng-template #alpha5RomanInput>
                 <ng-container *ngIf="field.mask === 'ALPHA5_ROMAN'; else aaaAaaInput">
-                  <input nz-input class="figma-input" type="text" [formControlName]="field.key"
+                  <input nz-input class="figma-input form-control" type="text" [formControlName]="field.key"
                     [disabled]="!!field.disabled" maxlength="10" autocomplete="off" spellcheck="false"
                     [appShortCodeMask]="'ALPHA5_ROMAN'"
                     [attr.placeholder]="field.mask === 'ALPHA5_ROMAN' ? 'Example: SOUTH or SOUTH-I' : null" />
@@ -40,14 +40,14 @@
 
               <ng-template #aaaAaaInput>
                 <ng-container *ngIf="field.mask === 'AAA_AAA_AAA'; else aaaAaa6Input">
-                  <input nz-input class="figma-input" type="text" [formControlName]="field.key"
+                  <input nz-input class="figma-input form-control" type="text" [formControlName]="field.key"
                     [disabled]="!!field.disabled" maxlength="20" autocomplete="off" spellcheck="false"
                     [appShortCodeMask]="'AAA_AAA_AAA'"
                     [prefix]="((form.get(field.key)?.value || '').toString().split('-')[0] || '').trim()" />
                 </ng-container>
 
                 <ng-template #aaaAaa6Input>
-                  <input nz-input class="figma-input" type="text" [formControlName]="field.key"
+                  <input nz-input class="figma-input form-control" type="text" [formControlName]="field.key"
                     [disabled]="!!field.disabled" maxlength="7" autocomplete="off" spellcheck="false"
                     [appShortCodeMask]="'AAA_AAA'" />
                 </ng-template>
@@ -101,7 +101,7 @@
               <span *ngIf="field.required" class="text-danger">*</span>
             </label>
 
-            <input nz-input class="figma-input" type="number" [formControlName]="field.key"
+            <input nz-input class="figma-input form-control" type="number" [formControlName]="field.key"
               [disabled]="!!field.disabled" [attr.placeholder]="'Enter ' + field.label" />
 
             <div class="figma-error" *ngIf="hasError(field.key, 'required')">
@@ -118,7 +118,7 @@
               <span *ngIf="field.required" class="text-danger">*</span>
             </label>
 
-            <textarea nz-input class="figma-textarea" rows="3" [formControlName]="field.key"
+            <textarea nz-input class="figma-textarea form-control" rows="3" [formControlName]="field.key"
               [disabled]="!!field.disabled" [attr.placeholder]="'Enter ' + field.label" autocomplete="off"
               spellcheck="false"></textarea>
 
@@ -296,10 +296,10 @@
     </div>
 
     <div class="d-flex gap-2 justify-content-end mt-4 form-actions">
-      <button nz-button type="button" class="figma-cancel-btn" (click)="onCancel()">
+      <button nz-button type="button" class="figma-cancel-btn btn btn-outline-secondary" (click)="onCancel()">
         Cancel
       </button>
-      <button nz-button nzType="primary" class="figma-save-btn" [disabled]="form.invalid">
+      <button nz-button nzType="primary" class="figma-save-btn btn btn-primary" [disabled]="form.invalid">
         Save
       </button>
     </div>

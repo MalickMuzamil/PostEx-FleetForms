@@ -351,6 +351,26 @@ button,
     top: 8px !important;
     right: 8px !important;
   }
+
+  .figma-responsive-modal .ant-modal {
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+  }
+}
+
+/* mobile typography boost */
+@media (max-width: 768px) {
+  html,
+  body {
+    font-size: 110% !important;
+  }
+}
+
+@media (max-width: 576px) {
+  html,
+  body {
+    font-size: 115% !important;
+  }
 }
 
 /* ================================

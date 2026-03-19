@@ -14,6 +14,7 @@ import { CommonModule } from '@angular/common';
   imports: [NzCardModule, NzFormModule, NzInputModule, NzButtonModule, ReactiveFormsModule, CommonModule],
   selector: 'app-login',
   templateUrl: './login.html',
+  styleUrl: './login.css'
 })
 export class LoginComponent {
   form!: FormGroup;

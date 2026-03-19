@@ -1,53 +1,72 @@
-<div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-12 col-sm-10 col-md-7 col-lg-5">
-      <div class="card shadow-sm border-0 rounded-4">
-        <div class="card-body p-4 p-md-5">
-          <h4 class="mb-1 fw-semibold">Login</h4>
-          <p class="text-muted mb-4">Enter your email to receive an OTP.</p>
+<div class="auth-page d-flex align-items-center">
+  <div class="container">
+    <div class="row align-items-center justify-content-between gx-lg-5 gy-4">
+
+      <!-- Left Content -->
+      <div class="col-12 col-lg-5">
+        <div class="login-content mx-auto mx-lg-0">
+          <h1 class="fw-bold mb-2 login-title">Login to Fleet Forms</h1>
+          <p class="text-secondary mb-4 login-subtitle">
+            Enter your email to receive an OTP.
+          </p>
 
           <form [formGroup]="form" (ngSubmit)="submit()">
-            <!-- Email -->
-            <div class="mb-3">
-              <label class="form-label">Email</label>
-              <div class="input-group">
-                <span class="input-group-text">
-                  <!-- optional icon -->
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                    viewBox="0 0 16 16">
-                    <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v.217l-8 4.8-8-4.8V4z" />
-                    <path
-                      d="M0 5.383v6.734A2 2 0 0 0 2 14h12a2 2 0 0 0 2-1.883V5.383l-7.555 4.533a1 1 0 0 1-.89 0L0 5.383z" />
-                  </svg>
-                </span>
+            <div class="mb-4">
+              <label class="form-label small fw-medium text-dark mb-2">Email</label>
+              <input
+                type="email"
+                class="form-control shadow-none login-input"
+                placeholder="Enter Email"
+                formControlName="email"
+                [class.is-invalid]="form.get('email')?.invalid && (form.get('email')?.dirty || form.get('email')?.touched)"
+              />
 
-                <input type="email" class="form-control" placeholder="name@example.com" formControlName="email"
-                  [class.is-invalid]="form.get('email')?.invalid && (form.get('email')?.dirty || form.get('email')?.touched)" />
-              </div>
-
-              <div class="invalid-feedback d-block"
-                *ngIf="form.get('email')?.invalid && (form.get('email')?.dirty || form.get('email')?.touched)">
+              <div
+                class="invalid-feedback"
+                *ngIf="form.get('email')?.invalid && (form.get('email')?.dirty || form.get('email')?.touched)"
+              >
                 Please enter a valid email.
               </div>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100 rounded-3 py-2" [disabled]="loading || form.invalid">
+            <button
+              type="submit"
+              class="btn w-100 text-white fw-medium login-btn"
+              [disabled]="loading || form.invalid"
+            >
               <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
               {{ loading ? 'Sending...' : 'Send OTP' }}
             </button>
 
-            <!-- Continue with Passkey -->
-            <button *ngIf="passkeyAvailable" type="button" class="btn btn-outline-secondary w-100 rounded-3 py-2 mt-2"
-              (click)="continueWithPasskey()">
+            <!-- <button
+              *ngIf="passkeyAvailable"
+              type="button"
+              class="btn btn-outline-secondary w-100 mt-2"
+              (click)="continueWithPasskey()"
+            >
               Continue with Passkey
-            </button>
+            </button> -->
 
-            <div class="text-center mt-3 small text-muted">
-              By continuing, you agree to our Terms & Privacy Policy.
-            </div>
+            <p class="small text-secondary mt-3 mb-0 login-terms">
+              By continuing, you agree to our
+              <a href="#">Terms</a> &
+              <a href="#">Privacy Policy</a>.
+            </p>
           </form>
         </div>
       </div>
+
+      <!-- Right Image -->
+      <div class="col-12 col-lg-6">
+        <div class="text-center">
+          <img
+            src="assets/auth/main.png"
+            alt="Truck"
+            class="img-fluid login-image"
+          />
+        </div>
+      </div>
+
     </div>
   </div>
 </div>

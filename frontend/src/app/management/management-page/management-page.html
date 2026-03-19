@@ -43,7 +43,9 @@
                         <td>{{ u.email }}</td>
                         <td>
                             <nz-tag [class.role-tag-admin]="u.role === 'ADMIN'"
-                                [class.role-tag-user]="u.role === 'USER'">
+                                [class.role-tag-user]="u.role === 'USER'"
+                                [class.role-tag-cs]="u.role === 'CS'"
+                                [class.role-tag-hr]="u.role === 'HR'">
                                 {{ u.role }}
                             </nz-tag>
                         </td>
@@ -118,10 +120,20 @@
                     <nz-select [(ngModel)]="form.role" class="theme-role-select">
                         <nz-option nzValue="USER" nzLabel="USER"></nz-option>
                         <nz-option nzValue="ADMIN" nzLabel="ADMIN"></nz-option>
+                        <nz-option nzValue="CS" nzLabel="CS"></nz-option>
+                        <nz-option nzValue="HR" nzLabel="HR"></nz-option>
                     </nz-select>
 
                     <small *ngIf="form.role === 'ADMIN'">
                         Backend role will be sent as <b>postex-auth-admin</b>
+                    </small>
+
+                    <small *ngIf="form.role === 'CS'">
+                        Backend role will be sent as <b>postex-auth-cs</b>
+                    </small>
+
+                    <small *ngIf="form.role === 'HR'">
+                        Backend role will be sent as <b>postex-auth-hr</b>
                     </small>
 
                     <small *ngIf="form.role === 'USER'">

@@ -13,7 +13,7 @@
    CARD HEADER
 ===================================================== */
 .tbl-card-header-wrap {
-  padding: 14px 16px 10px;
+  padding: 1rem;
   background: var(--content-bg);
   width: 100%;
 }
@@ -45,9 +45,9 @@
   justify-content: center;
   gap: 8px;
   min-height: 38px;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
   background: var(--primary);
   color: #ffffff;
   font-family: var(--font);
@@ -67,6 +67,11 @@
   font-size: 11px;
   line-height: 1;
 }
+
+::ng-deep [table-header] .tbl-add-btn.btn {
+  font-size: var(--fs-xs);
+}
+
 
 /* =====================================================
    TOOLBAR
