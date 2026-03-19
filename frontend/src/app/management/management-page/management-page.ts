@@ -12,7 +12,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 // import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
-import { Component, OnInit  } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
@@ -103,7 +103,11 @@ export class ManagementPage implements OnInit {
   }
 
   private isAllowedEmail(email: string): boolean {
-    return email.toLowerCase().endsWith('@postexglobal.com');
+    const normalizedEmail = email.toLowerCase().trim();
+    return (
+      normalizedEmail.endsWith('@postexglobal.com') ||
+      normalizedEmail.endsWith('@postex.pk')
+    );
   }
 
   // ✅ backend -> UI role mapping
@@ -183,7 +187,10 @@ export class ManagementPage implements OnInit {
 
     if (!firstName) { this.error = 'First name is required'; return; }
     if (!email) { this.error = 'Email is required'; return; }
-    if (!this.isAllowedEmail(email)) { this.error = 'Only @postexglobal.com emails allowed'; return; }
+    if (!this.isAllowedEmail(email)) {
+      this.error = 'Only @postexglobal.com or @postex.pk emails allowed';
+      return;
+    }
 
     const backendRole = this.mapRoleForBackend(uiRole);
 
