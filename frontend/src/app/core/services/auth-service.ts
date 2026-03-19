@@ -255,6 +255,42 @@ export class AuthService {
     return localStorage.getItem(this.postexAccessKey);
   }
 
+  getPostexUser(): any {
+    try {
+      const raw = localStorage.getItem(this.postexUserKey);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  getUserRoles(): string[] {
+    const user = this.getPostexUser();
+    const roles = user?.roles || [];
+    if (!Array.isArray(roles)) return [];
+
+    return roles
+      .map((r: any) => String(r || '').trim().toLowerCase())
+      .map((r: string) => {
+        if (r === 'postex-auth-admin') return 'ADMIN';
+        if (r === 'postex-auth-cs') return 'CS';
+        if (r === 'postex-auth-hr') return 'HR';
+        if (r === 'postex' || r === 'user') return 'USER';
+        if (r === 'admin') return 'ADMIN';
+        if (r === 'cs') return 'CS';
+        if (r === 'hr') return 'HR';
+        return r.toUpperCase();
+      });
+  }
+
+  hasRole(role: string): boolean {
+    if (!role) return false;
+    const normalized = String(role).trim().toUpperCase();
+    const roles = this.getUserRoles();
+    return roles.includes(normalized);
+  }
+
   verifyTokenFromBackend() {
     return this.api.get('/auth/verify-token').toPromise();
   }

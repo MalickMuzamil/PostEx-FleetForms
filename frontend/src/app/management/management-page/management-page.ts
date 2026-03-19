@@ -24,9 +24,9 @@ type UserData = {
   roles?: string[];
 };
 
-type UiRole = 'USER' | 'ADMIN';
+type UiRole = 'USER' | 'ADMIN' | 'CS' | 'HR';
 
-// ✅ active removed + role now UiRole (ADMIN/USER) in UI
+// ✅ active removed + role now UiRole (ADMIN/USER/CS/HR) in UI
 type UserRow = { id: string; name: string; email: string; role: UiRole };
 
 @Component({
@@ -109,12 +109,17 @@ export class ManagementPage implements OnInit {
   private mapRoleForUI(backendRole: string): UiRole {
     const r = (backendRole || '').toLowerCase();
     if (r === 'postex-auth-admin') return 'ADMIN';
+    if (r === 'postex-auth-cs' || r === 'cs') return 'CS';
+    if (r === 'postex-auth-hr' || r === 'hr') return 'HR';
     return 'USER';
   }
 
   // ✅ UI -> backend role mapping
   private mapRoleForBackend(uiRole: UiRole): string {
-    return uiRole === 'ADMIN' ? 'postex-auth-admin' : 'USER';
+    if (uiRole === 'ADMIN') return 'postex-auth-admin';
+    if (uiRole === 'CS') return 'CS';
+    if (uiRole === 'HR') return 'HR';
+    return 'USER';
   }
 
   applyFilter(): void {

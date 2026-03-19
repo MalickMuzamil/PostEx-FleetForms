@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
+import { AuthService } from '../../core/services/auth-service';
 
 import { Table } from '../../ui/table/table';
 import { Modal } from '../../ui/modal/modal';
@@ -57,10 +58,16 @@ export class CourierFakeAttempts implements OnInit {
     private fakeService: CourierFakeAttemptsService,
     private router: Router,
     private notification: NzNotificationService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private auth: AuthService
   ) { }
 
   ngOnInit(): void {
+    if (!this.auth.hasRole('CS') && !this.auth.hasRole('ADMIN')) {
+      this.router.navigate(['/']);
+      return;
+    }
+
     this.loadTable();
   }
 
