@@ -1,40 +1,61 @@
-<div class="auth-page">
-    <div class="auth-wrapper">
+<div class="passkey-page d-flex align-items-center">
+    <div class="container">
+        <div class="row align-items-center justify-content-between gx-lg-5 gy-4">
 
-        <nz-card nzBordered class="auth-card">
+            <!-- Left -->
+            <div class="col-12 col-lg-5">
+                <div class="passkey-content mx-auto mx-lg-0">
 
-            <div class="header">
-                <div class="icon-wrap">
-                    <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
+                    <h1 class="passkey-title fw-bold mb-3">Set up Passkey</h1>
+
+                    <p class="passkey-subtitle mb-4">
+                        Sign in faster with your device's lock features like
+                        your password, PIN, or biometric authentication.
+                    </p>
+
+                    <div class="passkey-info-box mb-4">
+                        <div class="d-flex align-items-start gap-2">
+                            <div class="passkey-info-icon">
+                                <span nz-icon nzType="info-circle" nzTheme="fill"></span>
+                            </div>
+
+                            <div>
+                                <div class="passkey-info-title mb-1">How it works</div>
+                                <p class="passkey-info-text mb-0">
+                                    If you enable the passkey, you won't see an OTP next time;
+                                    a passkey prompt will open directly. If you skip it, login with an OTP will
+                                    continue.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-3">
+                        <button type="button" class="btn passkey-enable-btn w-100" [disabled]="enabling"
+                            (click)="enablePasskey()">
+                            <span *ngIf="enabling" class="spinner-border spinner-border-sm me-2"></span>
+                            {{ enabling ? 'Enabling...' : 'Enable Passkey' }}
+                        </button>
+
+                        <button type="button" class="btn passkey-skip-btn w-100" (click)="skipForNow()">
+                            Skip for Now
+                        </button>
+                    </div>
+
+                    <p class="passkey-footnote mt-3 mb-0">
+                        You can enable / disable passkey later from settings.
+                    </p>
+
                 </div>
-
-                <h2 class="title">Set up Passkey</h2>
-                <p class="subtitle">
-                    Sign in faster using your device lock (Windows/Mac password, PIN, or biometrics).
-                </p>
             </div>
 
-            <nz-alert nzType="info" nzShowIcon class="info-box" nzMessage="How it works"
-                nzDescription="If you enable passkey, next time you won’t see OTP. A passkey prompt will open directly. If you skip, login + OTP will continue.">
-            </nz-alert>
-
-            <div class="actions">
-                <button nz-button nzType="primary" nzSize="large" class="w-100" [nzLoading]="enabling"
-                    (click)="enablePasskey()">
-                    Enable Passkey
-                </button>
-
-                <button nz-button nzType="default" nzSize="large" class="w-100 mt-2" (click)="skipForNow()">
-                    Skip for now
-                </button>
+            <!-- Right -->
+            <div class="col-12 col-lg-6">
+                <div class="text-center">
+                    <img src="assets/auth/passkey.png" alt="Set up Passkey" class="img-fluid passkey-image" />
+                </div>
             </div>
 
-            <div class="footnote">
-                <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-                <span>Tip: You can enable/disable passkey later from Settings.</span>
-            </div>
-
-        </nz-card>
-
+        </div>
     </div>
 </div>

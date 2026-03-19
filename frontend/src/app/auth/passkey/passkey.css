@@ -1,71 +1,194 @@
-.auth-page {
+.passkey-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7ff, #eef2ff);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #f3f3f3;
+  padding: 32px 0;
 }
 
-.auth-wrapper {
-  width: 100%;
-  max-width: 520px;
-  padding: 16px;
+.passkey-content {
+  max-width: 420px;
 }
 
-.auth-card {
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.08);
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 18px;
-}
-
-.icon-wrap {
-  width: 54px;
-  height: 54px;
-  margin: 0 auto 10px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(24, 144, 255, 0.08);
-  font-size: 22px;
-}
-
-.title {
+.passkey-title {
+  font-size: 2.15rem;
+  line-height: 1.2;
+  color: #111827;
   margin: 0;
+}
+
+.passkey-subtitle {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #5f6368;
+  max-width: 360px;
+}
+
+.passkey-info-box {
+  background: #eef6e8;
+  border: 1px solid #d7e7cc;
+  border-radius: 10px;
+  padding: 14px 14px;
+}
+
+.passkey-info-icon {
+  color: #5f8f3b;
+  font-size: 0.95rem;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.passkey-info-title {
+  font-size: 0.95rem;
   font-weight: 600;
+  color: #5f8f3b;
+  line-height: 1.4;
 }
 
-.subtitle {
-  margin: 6px 0 0;
-  color: #888;
+.passkey-info-text {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #6b8f52;
 }
 
-.info-box {
-  margin-top: 14px;
-  border-radius: 12px;
+.passkey-enable-btn {
+  height: 46px;
+  border-radius: 6px;
+  background: #5f8f3b;
+  border: 1px solid #5f8f3b;
+  color: #fff;
+  font-weight: 500;
+  box-shadow: none;
 }
 
-.actions {
-  margin-top: 18px;
+.passkey-enable-btn:hover,
+.passkey-enable-btn:focus,
+.passkey-enable-btn:active {
+  background: #547f34 !important;
+  border-color: #547f34 !important;
+  color: #fff !important;
+  box-shadow: none !important;
 }
 
-.w-100 {
+.passkey-enable-btn:disabled {
+  background: #5f8f3b;
+  border-color: #5f8f3b;
+  opacity: 0.75;
+  color: #fff;
+}
+
+.passkey-skip-btn {
+  height: 46px;
+  border-radius: 6px;
+  background: #f7f7f7;
+  border: 1px solid #dddddd;
+  color: #4b5563;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.passkey-skip-btn:hover,
+.passkey-skip-btn:focus,
+.passkey-skip-btn:active {
+  background: #efefef !important;
+  border-color: #d5d5d5 !important;
+  color: #374151 !important;
+  box-shadow: none !important;
+}
+
+.passkey-footnote {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.passkey-image {
   width: 100%;
+  max-width: 440px;
+  height: 565px;
+  object-fit: cover;
+  border-radius: 24px;
+  display: block;
+  margin-inline: auto;
 }
 
-.mt-2 {
-  margin-top: 12px;
+/* Large tablet */
+@media (max-width: 1199.98px) {
+  .passkey-title {
+    font-size: 2rem;
+  }
+
+  .passkey-image {
+    max-width: 400px;
+    height: 520px;
+  }
 }
 
-.footnote {
-  margin-top: 16px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  color: #888;
-  font-size: 13px;
+/* Tablet */
+@media (max-width: 991.98px) {
+  .passkey-page {
+    padding: 28px 0;
+  }
+
+  .passkey-content {
+    max-width: 100%;
+  }
+
+  .passkey-title {
+    font-size: 1.85rem;
+  }
+
+  .passkey-subtitle {
+    max-width: 100%;
+  }
+
+  .passkey-image {
+    max-width: 100%;
+    height: 420px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 575.98px) {
+  .passkey-page {
+    padding: 20px 0;
+  }
+
+  .passkey-content {
+    padding: 0 6px;
+  }
+
+  .passkey-title {
+    font-size: 1.7rem;
+  }
+
+  .passkey-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .passkey-info-box {
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .passkey-info-title {
+    font-size: 0.9rem;
+  }
+
+  .passkey-info-text {
+    font-size: 0.86rem;
+  }
+
+  .passkey-enable-btn,
+  .passkey-skip-btn {
+    height: 44px;
+    font-size: 0.95rem;
+  }
+
+  .passkey-footnote {
+    font-size: 0.82rem;
+  }
+
+  .passkey-image {
+    height: 320px;
+    border-radius: 18px;
+  }
 }
