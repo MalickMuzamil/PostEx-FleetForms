@@ -36,6 +36,9 @@ export class Table implements OnChanges {
 
   filteredData: any[] = [];
 
+  pageIndex = 1;
+  pageSize = 10;
+
   globalTerm = '';
   colFilters: Record<string, any> = {};
   private branchWasCleared = false;
@@ -61,6 +64,7 @@ export class Table implements OnChanges {
   }
 
   resetFilters() {
+    this.pageIndex = 1;
     this.globalTerm = '';
     this.colFilters = {};
 
@@ -172,6 +176,7 @@ export class Table implements OnChanges {
     }
 
     this.filteredData = data;
+    this.pageIndex = 1;
     this.cd.markForCheck();
   }
 
@@ -243,6 +248,29 @@ export class Table implements OnChanges {
 
   minVal(a: number, b: number): number {
     return Math.min(a, b);
+  }
+
+  get pagedData(): any[] {
+    if (this.config?.pagination === false) {
+      return this.filteredData;
+    }
+
+    const start = (this.pageIndex - 1) * this.pageSize;
+    return this.filteredData.slice(start, start + this.pageSize);
+  }
+
+  prevPage() {
+    if (this.pageIndex > 1) {
+      this.pageIndex -= 1;
+      this.cd.markForCheck();
+    }
+  }
+
+  nextPage() {
+    if (this.pageIndex * this.pageSize < this.filteredData.length) {
+      this.pageIndex += 1;
+      this.cd.markForCheck();
+    }
   }
 
   onColDateFilterChange(key: string, value: Date | null) {
