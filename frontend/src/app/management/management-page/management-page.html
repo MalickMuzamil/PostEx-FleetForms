@@ -43,8 +43,7 @@
                         <td>{{ u.email }}</td>
                         <td>
                             <nz-tag [class.role-tag-admin]="u.role === 'ADMIN'"
-                                [class.role-tag-user]="u.role === 'USER'"
-                                [class.role-tag-cs]="u.role === 'CS'"
+                                [class.role-tag-user]="u.role === 'USER'" [class.role-tag-cs]="u.role === 'CS'"
                                 [class.role-tag-hr]="u.role === 'HR'">
                                 {{ u.role }}
                             </nz-tag>
@@ -91,9 +90,10 @@
         </div>
     </nz-card>
 
-    <nz-modal class="theme-modal" [(nzVisible)]="modalVisible" [nzTitle]="editing ? 'Edit User' : 'Add User'"
-        [nzOkText]="editing ? 'Update' : 'Create'" [nzCancelText]="'Cancel'" (nzOnCancel)="closeModal()"
-        (nzOnOk)="save()" [nzOkLoading]="saving" [nzBodyStyle]="{ padding: '24px' }">
+    <nz-modal nzWrapClassName="figma-responsive-modal" [(nzVisible)]="modalVisible"
+        [nzTitle]="editing ? 'Edit User' : 'Add User'" [nzOkText]="editing ? 'Update' : 'Create'"
+        [nzCancelText]="'Cancel'" [nzCentered]="true" (nzOnCancel)="closeModal()" (nzOnOk)="save()"
+        [nzOkLoading]="saving" [nzBodyStyle]="{ padding: '24px' }">
         <ng-container *nzModalContent>
             <div class="modal-grid">
 

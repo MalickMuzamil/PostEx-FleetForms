@@ -222,6 +222,34 @@ button,
   color: var(--primary);
 }
 
+.ant-btn-primary,
+.ant-btn-primary:hover,
+.ant-btn-primary:focus,
+.ant-btn-primary:active {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.15),
+    0 6px 10px var(--primary-shadow);
+}
+
+.ant-btn-default,
+.ant-btn-default:hover,
+.ant-btn-default:focus,
+.ant-btn-default:active {
+  font-weight: 500;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.ant-btn-default:hover,
+.ant-btn-default:focus,
+.ant-btn-default:active {
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+
 /* =====================================================
    UTILITIES
 ===================================================== */
@@ -394,6 +422,10 @@ button,
   background: #a8b8a0;
 }
 
+.user-mgmt-modal .ant-modal-content {
+  border-radius: 18px;
+}
 
-
-
+.user-mgmt-modal .ant-modal-footer .ant-btn-primary {
+  background: var(--primary);
+}

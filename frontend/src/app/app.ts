@@ -14,10 +14,26 @@ export class App {
 
   constructor(private authService: AuthService) {
 
-    const token = localStorage.getItem('postex-auth-token');
+    this.checkTokenAndSession();
+
+    // Optional: check periodically (every 30 sec) to auto-logout when token expires while app open.
+    setInterval(() => {
+      this.checkTokenAndSession();
+    }, 30000);
+  }
+
+  private checkTokenAndSession() {
+    const token =
+      localStorage.getItem('postex.access_token') ||
+      localStorage.getItem('postex-auth-token');
 
     if (!token) {
       this.authService.setAuthenticated(false);
+      return;
+    }
+
+    if (this.authService.isTokenExpired(token)) {
+      this.authService.logout();
       return;
     }
 
@@ -26,8 +42,7 @@ export class App {
         this.authService.setAuthenticated(true);
       })
       .catch(() => {
-        localStorage.removeItem('postex-auth-token');
-        this.authService.setAuthenticated(false);
+        this.authService.logout();
       });
   }
 }

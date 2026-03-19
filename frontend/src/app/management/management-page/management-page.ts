@@ -12,11 +12,12 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 // import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit  } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { environment } from '../../../environment/environment';
+
 
 type UserData = {
   email?: string;

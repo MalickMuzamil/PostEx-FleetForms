@@ -169,6 +169,17 @@ export class AuthService {
     return !!localStorage.getItem('postex-auth-token') || !!localStorage.getItem('postex.access_token');
   }
 
+  isTokenExpired(token: string): boolean {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const exp = payload?.exp;
+      if (!exp) return true;
+      return exp <= Math.floor(Date.now() / 1000);
+    } catch {
+      return true;
+    }
+  }
+
   setAuthenticated(val: boolean) {
     this.authed$.next(val);
   }
