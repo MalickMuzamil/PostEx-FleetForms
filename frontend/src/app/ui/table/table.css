@@ -78,6 +78,7 @@
 ===================================================== */
 .tbl-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -89,6 +90,27 @@
 
 .tbl-card-header-wrap:not(:empty) + .tbl-toolbar {
   border-top: 1px solid var(--border-color);
+}
+
+.tbl-search-wrap {
+  flex: 1 1 auto;
+  min-width: 210px;
+  max-width: none;
+}
+
+.tbl-filters-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tbl-filter-input,
+.tbl-nz-select,
+.tbl-nz-date {
+  min-width: 180px;
+  max-width: 240px;
+  width: 100%;
 }
 
 .tbl-toolbar--filters-only {

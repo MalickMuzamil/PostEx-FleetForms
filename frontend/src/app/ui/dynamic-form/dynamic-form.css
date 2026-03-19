@@ -569,6 +569,32 @@
   line-height: normal !important;
 }
 
+/* dynamic-form-specific override (fixed for dropdown option padding inside this component) */
+.cdk-overlay-container .ant-select-dropdown .ant-select-item,
+.cdk-overlay-container .ant-select-dropdown .ant-select-item-option,
+.cdk-overlay-container .ant-select-dropdown .ant-select-item-option-content {
+  padding: 0.35rem 0.65rem !important;
+  margin: 0 !important;
+  min-height: 34px !important;
+  line-height: 1.35 !important;
+  display: flex !important;
+  align-items: center !important;
+  border-radius: 8px !important;
+}
+
+.cdk-overlay-container .ant-select-dropdown .ant-select-item-option-content {
+  padding: 0.35rem 0.65rem !important;
+}
+
+.cdk-overlay-container .ant-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled),
+.cdk-overlay-container .ant-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background: rgba(86, 136, 59, 0.08) !important;
+}
+
+.cdk-overlay-container .ant-select-dropdown .ant-select-item:hover {
+  background: rgba(86, 136, 59, 0.04) !important;
+}
+
 
 /* STATUS FLAG SEGMENT */
 .figma-segment {
@@ -660,4 +686,8 @@
 :host ::ng-deep .figma-date .ant-picker.ant-picker-disabled input {
   color: #6b7280 !important;
   -webkit-text-fill-color: #6b7280 !important;
+}
+
+:host ::ng-deep .ant-select-item:hover{
+    padding: 0px !important;
 }

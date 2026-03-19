@@ -1,9 +1,9 @@
 <div class="sidebar-backdrop d-lg-none" *ngIf="mobileSidebarOpen" (click)="closeMobileSidebar()">
 </div>
 
-<nz-layout class="main-layout">
+<nz-layout class="main-layout d-flex">
 
-    <nz-sider class="app-sider" [class.mobile-open]="mobileSidebarOpen"
+    <nz-sider class="app-sider bg-light border-end" [class.mobile-open]="mobileSidebarOpen"
         [class.desktop-collapsed]="isCollapsed && !mobileSidebarOpen" [nzCollapsed]="false" [nzTrigger]="null"
         [nzWidth]="236">
 
@@ -13,12 +13,12 @@
 
     </nz-sider>
 
-    <nz-layout class="main-right-layout">
-        <nz-header>
+    <nz-layout class="main-right-layout flex-fill">
+        <nz-header class="bg-white border-bottom">
             <app-header (toggle)="toggleSidebar()"></app-header>
         </nz-header>
 
-        <nz-content class="content">
+        <nz-content class="content bg-light">
             <router-outlet></router-outlet>
         </nz-content>
     </nz-layout>

@@ -1,38 +1,134 @@
-.auth-page {
+.otp-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7ff, #eef2ff);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #f3f3f3;
 }
 
-.auth-wrapper {
-  width: 100%;
+.otp-content {
   max-width: 420px;
-  padding: 16px;
 }
 
-.auth-card {
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+.otp-title {
+  font-size: 2.05rem;
+  line-height: 1.2;
+  color: #111827;
 }
 
-.title {
-  text-align: center;
-  margin-bottom: 4px;
-  font-weight: 600;
+.otp-subtitle {
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: #5f6368;
+  max-width: 360px;
 }
 
-.subtitle {
-  text-align: center;
-  color: #888;
-  margin-bottom: 24px;
+.otp-email {
+  color: #5f8f3b;
+  font-weight: 500;
 }
 
-.w-100 {
+.otp-inputs {
+  flex-wrap: nowrap;
+}
+
+.otp-box {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid #d8d8d8;
+  background: #f7f7f7;
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: #111827;
+  padding: 0;
+  box-shadow: none;
+}
+
+.otp-box:focus {
+  border-color: #5f8f3b;
+  box-shadow: 0 0 0 0.12rem rgba(95, 143, 59, 0.12);
+  background: #fff;
+}
+
+.otp-box.active {
+  border-color: #5f8f3b;
+  background: #fff;
+}
+
+.otp-help {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #222;
+}
+
+.otp-verify-btn {
+  height: 46px;
+  border-radius: 6px;
+  background: #5f8f3b;
+  border: 1px solid #5f8f3b;
+  color: #fff;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.otp-verify-btn:hover,
+.otp-verify-btn:focus,
+.otp-verify-btn:active {
+  background: #547f34 !important;
+  border-color: #547f34 !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.otp-verify-btn:disabled {
+  background: #5f8f3b;
+  border-color: #5f8f3b;
+  opacity: 0.7;
+  color: #fff;
+}
+
+.otp-resend-btn {
+  height: 46px;
+  border-radius: 6px;
+  background: #f7f7f7;
+  border: 1px solid #dddddd;
+  color: #555;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.otp-resend-btn:hover,
+.otp-resend-btn:focus,
+.otp-resend-btn:active {
+  background: #efefef !important;
+  border-color: #d5d5d5 !important;
+  color: #444 !important;
+  box-shadow: none !important;
+}
+
+.otp-image {
   width: 100%;
+  max-width: 440px;
+  height: 565px;
+  object-fit: cover;
+  border-radius: 24px;
+  display: block;
+  margin-inline: auto;
 }
 
-.mt-2 {
-  margin-top: 12px;
+@media (max-width: 991.98px) {
+  .otp-page {
+    padding: 32px 0;
+  }
+
+  .otp-content {
+    max-width: 100%;
+  }
+
+  .otp-title {
+    font-size: 1.8rem;
+  }
+
+  .otp-image {
+    height: 420px;
+    max-width: 100%;
+  }
 }
