@@ -704,17 +704,20 @@ export class BulkView {
 
   private getCreatedBy(): string {
     try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k) continue;
-        const raw = localStorage.getItem(k);
-        if (!raw) continue;
+      const raw = localStorage.getItem('postex.user');
+      if (!raw) return 'User';
 
-        try {
-          const obj = JSON.parse(raw);
-          const roles: string[] = obj?.roles ?? [];
-          if (Array.isArray(roles) && roles.includes('postex-auth-admin')) return 'Admin';
-        } catch { }
+      const obj = JSON.parse(raw);
+      const roles: string[] = obj?.roles ?? [];
+
+      if (roles.length) {
+        // Admin check
+        if (roles.includes('postex-auth-admin')) {
+          return 'Admin';
+        }
+
+        // otherwise actual role
+        return roles[0]; // e.g. "CS"
       }
     } catch { }
 
