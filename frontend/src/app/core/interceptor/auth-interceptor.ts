@@ -26,10 +26,16 @@ export class AuthInterceptor implements HttpInterceptor {
   constructor(private router: Router) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    let token = localStorage.getItem('postex-auth-token');
+    let token =
+      localStorage.getItem('postex.access_token') ||
+      localStorage.getItem('postex-auth-token');
 
-    if (token && isTokenExpired(token)) {
+    // If token not present or expired, logout and redirect
+    if (!token || isTokenExpired(token)) {
       localStorage.removeItem('postex-auth-token');
+      localStorage.removeItem('postex.access_token');
+      localStorage.removeItem('postex.refresh_token');
+      localStorage.removeItem('postex.user');
       localStorage.removeItem('UserData');
       this.router.navigate(['/auth/login']);
       token = null;
