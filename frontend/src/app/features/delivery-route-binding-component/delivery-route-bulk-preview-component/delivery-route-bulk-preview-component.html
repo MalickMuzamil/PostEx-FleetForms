@@ -9,11 +9,8 @@
                         ← Back
                     </button>
 
-                    <button
-                        class="btn btn-success bulk-top-btn px-4"
-                        *ngIf="selectedValidCount >= 2"
-                        [disabled]="isLoading || !canProceed"
-                        (click)="proceedBulkUpdate()">
+                    <button class="btn btn-success bulk-top-btn px-4" *ngIf="selectedValidCount >= 2"
+                        [disabled]="isLoading || !canProceed" (click)="proceedBulkUpdate()">
                         <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
                         {{ bulkSaving ? 'Processing...' : 'Proceed' }}
                     </button>
@@ -29,17 +26,14 @@
                     <div class="col-12 col-lg">
                         <div class="bulk-search-wrap">
                             <span class="bulk-search-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="11" cy="11" r="8"></circle>
                                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                                 </svg>
                             </span>
 
-                            <input
-                                type="text"
-                                class="form-control bulk-search-input"
-                                [(ngModel)]="searchTerm"
+                            <input type="text" class="form-control bulk-search-input" [(ngModel)]="searchTerm"
                                 placeholder="Search in table..." />
                         </div>
                     </div>
@@ -60,12 +54,8 @@
                         <thead>
                             <tr>
                                 <th class="col-check">
-                                    <input
-                                        type="checkbox"
-                                        class="form-check-input"
-                                        [ngModel]="checkAll"
-                                        (ngModelChange)="onToggleAll($event)"
-                                        [disabled]="isLoading" />
+                                    <input type="checkbox" class="form-check-input" [ngModel]="checkAll"
+                                        (ngModelChange)="onToggleAll($event)" [disabled]="isLoading" />
                                 </th>
                                 <th class="col-index">#</th>
                                 <th class="col-status">Status</th>
@@ -85,10 +75,7 @@
 
                                     <!-- Checkbox -->
                                     <td>
-                                        <input
-                                            type="checkbox"
-                                            class="form-check-input"
-                                            [(ngModel)]="row.checked"
+                                        <input type="checkbox" class="form-check-input" [(ngModel)]="row.checked"
                                             (change)="onRowToggle(row, row.checked)"
                                             [disabled]="isLoading || !row.isValid" />
                                     </td>
@@ -98,11 +85,8 @@
 
                                     <!-- Status (errors clickable) -->
                                     <td>
-                                        <button
-                                            *ngIf="!row.isValid && (row.errors?.length ?? 0) > 0"
-                                            type="button"
-                                            class="status-pill status-invalid"
-                                            (click)="showRowErrors(row)">
+                                        <button *ngIf="!row.isValid && (row.errors?.length ?? 0) > 0" type="button"
+                                            class="status-pill status-invalid" (click)="showRowErrors(row)">
                                             <span class="pill-dot"></span>
                                             {{ row.errors?.length ?? 0 }} Errors
                                         </button>
@@ -116,31 +100,24 @@
                                     <!-- Delivery Route -->
                                     <td [ngClass]="{ 'cell-invalid': isFieldInvalid(row, 'route') }">
                                         <div class="cell-wrap">
-                                            <nz-select
-                                                nzSize="small"
-                                                nzShowSearch
-                                                nzAllowClear
-                                                nzPlaceHolder="Select"
-                                                [formControl]="row.deliveryRouteControl"
-                                                [nzDisabled]="isLoading"
+                                            <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Select"
+                                                [formControl]="row.deliveryRouteControl" [nzDisabled]="isLoading"
                                                 nzDropdownClassName="opt-dropdown bulk-select-dropdown"
-                                                class="route-select bulk-control"
-                                                [(nzOpen)]="row.routeDropdownOpen"
+                                                class="route-select bulk-control" [(nzOpen)]="row.routeDropdownOpen"
                                                 (nzOpenChange)="onDropdownOpenChange(row, 'route', $event)"
                                                 (ngModelChange)="onRowRouteChange(row)"
                                                 [nzFilterOption]="filterByIdAndName">
 
                                                 <nz-option nzDisabled nzCustomContent>
-                                                    <div class="opt-row opt-header" style="grid-template-columns: 80px 1fr">
+                                                    <div class="opt-row opt-header"
+                                                        style="grid-template-columns: 80px 1fr">
                                                         <div class="opt-cell">ID</div>
                                                         <div class="opt-cell">Delivery Route</div>
                                                     </div>
                                                 </nz-option>
 
-                                                <nz-option
-                                                    *ngFor="let dr of deliveryRoutes"
-                                                    [nzValue]="dr.DeliveryRouteID"
-                                                    [nzLabel]="dr.DeliveryRouteNo"
+                                                <nz-option *ngFor="let dr of deliveryRoutes"
+                                                    [nzValue]="dr.DeliveryRouteID" [nzLabel]="dr.DeliveryRouteNo"
                                                     nzCustomContent>
                                                     <div class="opt-row" style="grid-template-columns: 80px 1fr">
                                                         <div class="opt-cell">{{ dr.DeliveryRouteID }}</div>
@@ -154,13 +131,8 @@
                                     <!-- Branch -->
                                     <td [ngClass]="{ 'cell-invalid': isFieldInvalid(row, 'branch') }">
                                         <div class="cell-wrap">
-                                            <nz-select
-                                                nzSize="small"
-                                                nzShowSearch
-                                                nzAllowClear
-                                                nzPlaceHolder="Select"
-                                                [(ngModel)]="row.branchId"
-                                                [(nzOpen)]="row.branchDropdownOpen"
+                                            <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Select"
+                                                [(ngModel)]="row.branchId" [(nzOpen)]="row.branchDropdownOpen"
                                                 [nzDisabled]="isLoading || !row.deliveryRouteControl.value"
                                                 nzDropdownClassName="opt-dropdown bulk-select-dropdown"
                                                 class="route-select bulk-control"
@@ -169,17 +141,15 @@
                                                 [nzFilterOption]="filterByIdAndName">
 
                                                 <nz-option nzDisabled nzCustomContent>
-                                                    <div class="opt-row opt-header" style="grid-template-columns: 80px 1fr">
+                                                    <div class="opt-row opt-header"
+                                                        style="grid-template-columns: 80px 1fr">
                                                         <div class="opt-cell">ID</div>
                                                         <div class="opt-cell">Branch</div>
                                                     </div>
                                                 </nz-option>
 
-                                                <nz-option
-                                                    *ngFor="let b of row.routeBranches"
-                                                    [nzValue]="b.value"
-                                                    [nzLabel]="b.label"
-                                                    nzCustomContent>
+                                                <nz-option *ngFor="let b of row.routeBranches" [nzValue]="b.value"
+                                                    [nzLabel]="b.label" nzCustomContent>
                                                     <div class="opt-row" style="grid-template-columns: 80px 1fr">
                                                         <div class="opt-cell">{{ b.value }}</div>
                                                         <div class="opt-cell">{{ b.label }}</div>
@@ -192,13 +162,8 @@
                                     <!-- Sub Branch -->
                                     <td [ngClass]="{ 'cell-invalid': isFieldInvalid(row, 'subBranch') }">
                                         <div class="cell-wrap">
-                                            <nz-select
-                                                nzSize="small"
-                                                nzShowSearch
-                                                nzAllowClear
-                                                nzPlaceHolder="Select"
-                                                [(ngModel)]="row.subBranchId"
-                                                [(nzOpen)]="row.subBranchDropdownOpen"
+                                            <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Select"
+                                                [(ngModel)]="row.subBranchId" [(nzOpen)]="row.subBranchDropdownOpen"
                                                 [nzDisabled]="isLoading || !row.branchId"
                                                 nzDropdownClassName="opt-dropdown bulk-select-dropdown"
                                                 class="route-select bulk-control"
@@ -207,17 +172,15 @@
                                                 [nzFilterOption]="filterByIdAndName">
 
                                                 <nz-option nzDisabled nzCustomContent>
-                                                    <div class="opt-row opt-header" style="grid-template-columns: 80px 1fr">
+                                                    <div class="opt-row opt-header"
+                                                        style="grid-template-columns: 80px 1fr">
                                                         <div class="opt-cell">ID</div>
                                                         <div class="opt-cell">Sub Branch</div>
                                                     </div>
                                                 </nz-option>
 
-                                                <nz-option
-                                                    *ngFor="let sb of row.subBranches"
-                                                    [nzValue]="sb.SubBranchID"
-                                                    [nzLabel]="sb.SubBranchName"
-                                                    nzCustomContent>
+                                                <nz-option *ngFor="let sb of row.subBranches" [nzValue]="sb.SubBranchID"
+                                                    [nzLabel]="sb.SubBranchName" nzCustomContent>
                                                     <div class="opt-row" style="grid-template-columns: 80px 1fr">
                                                         <div class="opt-cell">{{ sb.SubBranchID }}</div>
                                                         <div class="opt-cell">{{ sb.SubBranchName }}</div>
@@ -230,23 +193,15 @@
                                     <!-- Correct Description -->
                                     <td [ngClass]="{ 'cell-invalid': isFieldInvalid(row, 'description') }">
                                         <div class="cell-wrap">
-                                            <nz-select
-                                                nzSize="small"
-                                                nzShowSearch
-                                                nzAllowClear
-                                                nzPlaceHolder="Select"
-                                                [(ngModel)]="row.correctDescId"
-                                                [(nzOpen)]="row.correctDescDropdownOpen"
+                                            <nz-select nzSize="small" nzShowSearch nzAllowClear nzPlaceHolder="Select"
+                                                [(ngModel)]="row.correctDescId" [(nzOpen)]="row.correctDescDropdownOpen"
                                                 (nzOpenChange)="onDropdownOpenChange(row, 'description', $event)"
                                                 [nzDisabled]="isLoading"
                                                 nzDropdownClassName="opt-dropdown bulk-select-dropdown"
-                                                class="route-select bulk-control"
-                                                (ngModelChange)="onRowDescChange(row)"
+                                                class="route-select bulk-control" (ngModelChange)="onRowDescChange(row)"
                                                 [nzFilterOption]="filterByIdAndName">
 
-                                                <nz-option
-                                                    *ngFor="let d of correctDescriptions"
-                                                    [nzValue]="d.id"
+                                                <nz-option *ngFor="let d of correctDescriptions" [nzValue]="d.id"
                                                     [nzLabel]="d.text">
                                                 </nz-option>
                                             </nz-select>
@@ -256,14 +211,10 @@
                                     <!-- Effective Date -->
                                     <td [ngClass]="{ 'cell-invalid': isFieldInvalid(row, 'date') }">
                                         <div class="cell-wrap">
-                                            <nz-date-picker
-                                                nzFormat="yyyy-MM-dd"
-                                                nzSize="small"
+                                            <nz-date-picker nzFormat="yyyy-MM-dd" nzSize="small"
                                                 [formControl]="row.effectiveDateControl"
-                                                [nzDisabledDate]="disablePastDates"
-                                                [nzDisabled]="isLoading"
-                                                class="bulk-date-control"
-                                                (ngModelChange)="onRowDateChange(row)">
+                                                [nzDisabledDate]="disablePastDates" [nzDisabled]="isLoading"
+                                                class="bulk-date-control" (ngModelChange)="onRowDateChange(row)">
                                             </nz-date-picker>
                                         </div>
                                     </td>
@@ -271,33 +222,41 @@
                                     <!-- Required Reports -->
                                     <td>
                                         <div class="cell-wrap">
-                                            <select
-                                                class="form-select form-select-sm bulk-native-select"
-                                                [(ngModel)]="row.requiredReportsFlag"
-                                                [disabled]="isLoading"
-                                                (ngModelChange)="onRowFlagChange(row)">
-                                                <option [ngValue]="1">Active</option>
-                                                <option [ngValue]="0">Inactive</option>
-                                            </select>
+                                            <div class="figma-segment bulk-segment" [class.disabled]="isLoading">
+                                                <label class="figma-segment-item"
+                                                    [class.active]="+row.requiredReportsFlag === 1">
+                                                    <input type="radio" [attr.name]="'requiredReports_' + row.uid"
+                                                        [checked]="+row.requiredReportsFlag === 1"
+                                                        [disabled]="isLoading"
+                                                        (change)="setRequiredReportsFlag(row, 1)" />
+                                                    <span>Active</span>
+                                                </label>
+
+                                                <label class="figma-segment-item"
+                                                    [class.active]="+row.requiredReportsFlag === 0">
+                                                    <input type="radio" [attr.name]="'requiredReports_' + row.uid"
+                                                        [checked]="+row.requiredReportsFlag === 0"
+                                                        [disabled]="isLoading"
+                                                        (change)="setRequiredReportsFlag(row, 0)" />
+                                                    <span>Inactive</span>
+                                                </label>
+                                            </div>
                                         </div>
                                     </td>
 
                                     <!-- Action -->
                                     <td>
                                         <div class="action-stack">
-                                            <button
-                                                class="btn btn-success btn-sm bulk-action-btn"
+                                            <button class="btn btn-success btn-sm bulk-action-btn"
                                                 [disabled]="isLoading || !row.isValid || row.saving"
                                                 (click)="saveRow(row)">
-                                                <span *ngIf="row.saving" class="spinner-border spinner-border-sm me-1"></span>
+                                                <span *ngIf="row.saving"
+                                                    class="spinner-border spinner-border-sm me-1"></span>
                                                 {{ row.saving ? 'Saving...' : 'Save' }}
                                             </button>
 
-                                            <button
-                                                class="btn btn-danger btn-sm bulk-action-btn"
-                                                type="button"
-                                                [disabled]="isLoading"
-                                                (click)="removeRowByRef(row)">
+                                            <button class="btn btn-danger btn-sm bulk-action-btn" type="button"
+                                                [disabled]="isLoading" (click)="removeRowByRef(row)">
                                                 Remove
                                             </button>
                                         </div>

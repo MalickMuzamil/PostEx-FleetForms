@@ -544,4 +544,18 @@ export class BulkView {
     const s = String(v ?? '').trim();
     return /^[0-9]{1,5}$/.test(s);
   }
+
+  showRowErrors(row: any) {
+    const errors = row.errors ?? [];
+
+    const messages = errors.length
+      ? errors.map((e: string) => `<li>${e}</li>`).join('')
+      : '<li>No errors</li>';
+
+    this.modal.info({
+      nzTitle: `Row ${row.rowNo} errors`,
+      nzContent: `<ul style="padding-left:18px">${messages}</ul>`,
+      nzWidth: 420,
+    });
+  }
 }

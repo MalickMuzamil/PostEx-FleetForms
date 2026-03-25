@@ -1,9 +1,225 @@
-.table-danger {
-  background: rgba(221, 6, 28, 0.08) !important;
+:host {
+  display: block;
 }
 
+/* page */
+.bulk-page {
+  padding-inline: 4px;
+}
+
+/* card */
+.bulk-card {
+  border: 1px solid #e9ecef;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.bulk-card .card-body {
+  padding: 18px;
+}
+
+/* title / buttons */
+.bulk-title {
+  font-size: 28px;
+  line-height: 1.2;
+  color: #1f1f1f;
+}
+
+.bulk-top-btn {
+  min-height: 40px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.btn-success.bulk-top-btn {
+  background: #5b8f3b;
+  border-color: #5b8f3b;
+}
+
+.btn-success.bulk-top-btn:hover {
+  background: #4c7b31;
+  border-color: #4c7b31;
+}
+
+/* toolbar */
+.bulk-search-wrap {
+  position: relative;
+}
+
+.bulk-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  color: #8c8c8c;
+  display: flex;
+  align-items: center;
+}
+
+.bulk-search-input {
+  min-height: 44px;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  padding-left: 42px;
+  font-size: 14px;
+  box-shadow: none !important;
+}
+
+.bulk-filter-select {
+  min-height: 44px;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  font-size: 14px;
+  box-shadow: none !important;
+}
+
+.bulk-search-input:focus,
+.bulk-filter-select:focus {
+  border-color: #5b8f3b;
+  box-shadow: 0 0 0 0.18rem rgba(91, 143, 59, 0.12) !important;
+}
+
+/* table wrapper */
+.bulk-table-wrap {
+  border: 1px solid #ececec;
+  border-radius: 14px;
+  background: #fff;
+  overflow: auto;
+}
+
+/* scroll */
+.bulk-table-wrap::-webkit-scrollbar,
+::ng-deep .ant-picker-dropdown::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.bulk-table-wrap::-webkit-scrollbar-thumb,
+::ng-deep .ant-picker-dropdown::-webkit-scrollbar-thumb {
+  background: #cfcfcf;
+  border-radius: 999px;
+}
+
+.bulk-table-wrap::-webkit-scrollbar-track,
+::ng-deep .ant-picker-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* table */
+.bulk-table {
+  min-width: 1550px;
+  margin-bottom: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.bulk-table thead th {
+  background: #fafafa;
+  color: #212529;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 14px 12px;
+  white-space: nowrap;
+  border-bottom: 1px solid #ececec;
+  vertical-align: middle;
+}
+
+.bulk-table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid #f1f1f1;
+  vertical-align: top;
+  background: #fff;
+}
+
+.bulk-table tbody tr:hover td {
+  background: #fcfcfc;
+}
+
+.bulk-table tbody tr.row-selected td {
+  background: rgba(91, 143, 59, 0.05);
+}
+
+.table-danger-soft td {
+  background: rgba(221, 6, 28, 0.05) !important;
+}
+
+/* widths */
+.col-check { min-width: 46px; width: 46px; }
+.col-index { min-width: 50px; }
+.col-status { min-width: 120px; }
+.col-cn { min-width: 180px; }
+.col-branch { min-width: 190px; }
+.col-num { min-width: 150px; }
+.col-courier { min-width: 170px; }
+.col-rider { min-width: 170px; }
+.col-date { min-width: 180px; }
+.col-archive { min-width: 130px; }
+.col-created { min-width: 150px; }
+
+/* status */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: none;
+}
+
+button.status-pill {
+  cursor: pointer;
+}
+
+.pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-valid {
+  background: #e8f7ee;
+  color: #1f9d55;
+}
+
+.status-invalid {
+  background: #fdecec;
+  color: #d64545;
+}
+
+/* cells */
+.cell-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.cell-msg {
+  min-height: 22px;
+  margin-top: 2px;
+}
+
+.cell-invalid {
+  background: rgba(255, 233, 233, 0.55) !important;
+}
+
+.cell-invalid .form-select,
+.cell-invalid .ant-picker,
+.cell-invalid input {
+  border-color: #ef4444 !important;
+}
+
+/* errors */
 .field-err {
-  margin-top: 6px;
+  margin-top: 4px;
   padding: 6px 8px;
   border-radius: 8px;
   font-size: 12px;
@@ -30,19 +246,118 @@
 .field-err .file {
   margin-left: auto;
   font-size: 11px;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
-.cell-wrap {
-  display: flex;
-  flex-direction: column;
+/* inputs */
+.bulk-input,
+.bulk-native-select,
+.cell-wrap .form-control,
+.cell-wrap input {
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px solid #d9d9d9;
+  font-size: 13px;
+  box-shadow: none !important;
+}
+
+.bulk-input:hover,
+.bulk-input:focus,
+.bulk-native-select:hover,
+.bulk-native-select:focus,
+.cell-wrap input:hover,
+.cell-wrap input:focus {
+  border-color: #5b8f3b;
+  box-shadow: 0 0 0 0.18rem rgba(91, 143, 59, 0.10) !important;
+}
+
+.bulk-native-select {
+  width: 100%;
+  max-width: 100%;
+}
+
+.bulk-readonly {
+  background: #f8f9fa;
+  color: #6c757d;
+}
+
+/* date */
+.bulk-date-control {
+  width: 100%;
+  max-width: 100%;
+}
+
+::ng-deep .bulk-date-control .ant-picker {
+  width: 100% !important;
+  min-height: 38px !important;
+  border-radius: 10px !important;
+  border: 1px solid #d9d9d9 !important;
+  box-shadow: none !important;
+}
+
+::ng-deep .bulk-date-control .ant-picker:hover,
+::ng-deep .bulk-date-control .ant-picker-focused {
+  border-color: #5b8f3b !important;
+  box-shadow: 0 0 0 3px rgba(91, 143, 59, 0.10) !important;
+}
+
+::ng-deep .bulk-date-control .ant-picker-input > input {
+  font-size: 13px !important;
+  height: 36px !important;
+}
+
+/* responsive */
+@media (max-width: 1199.98px) {
+  .bulk-title {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .bulk-card .card-body {
+    padding: 14px;
+  }
+
+  .bulk-title {
+    font-size: 22px;
+  }
+
+  .bulk-page {
+    padding-inline: 0;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .bulk-title {
+    font-size: 20px;
+    text-align: left;
+  }
+
+  .bulk-top-btn {
+    flex: 1 1 auto;
+  }
+
+  .bulk-table {
+    min-width: 1380px;
+  }
+
+  .field-err .file {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .bulk-card .card-body {
+    padding: 12px;
+  }
+
+  .bulk-search-input,
+  .bulk-filter-select {
+    min-height: 42px;
+  }
 }
 
 .cell-msg {
-  min-height: 22px;
-  margin-top: 4px;
-}
-
-td {
-  vertical-align: top;
+  display: none !important;
 }

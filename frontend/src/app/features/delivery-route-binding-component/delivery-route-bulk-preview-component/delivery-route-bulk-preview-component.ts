@@ -1338,25 +1338,36 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   isFieldInvalid(row: BulkRow, field: 'route' | 'branch' | 'subBranch' | 'description' | 'date' | 'duplicate'): boolean {
     const errors = row.errors ?? [];
 
-    if (field === 'duplicate') {
-      return this.hasDuplicateRouteError(row);
+    const match = (prefixes: string[]) =>
+      errors.some(err =>
+        prefixes.some(p => err.toLowerCase().includes(p.toLowerCase()))
+      );
+
+    if (field === 'route') {
+      return match(['delivery route']);
     }
 
-    const routeErrors = ['Delivery Route is required', 'Delivery Route ID does not exist'];
-    const branchErrors = ['Branch is required', 'Branch ID is wrong', 'Branch does not belong to selected Route', this.BRANCH_MISMATCH];
-    const subBranchErrors = ['Sub Branch is required', 'Invalid SubBranchID (not found OR not mapped to Branch)', 'Sub Branch does not exist in DB / not mapped to Branch'];
-    const descErrors = ['Correct Description is required', 'Correct Description not found', 'Correct Description not found:'];
-    const dateErrors = ['Invalid Date', 'Effective Date must be a future date', 'Date must be a future.'];
+    if (field === 'branch') {
+      return match(['branch']);
+    }
 
-    const lookup = {
-      route: routeErrors,
-      branch: branchErrors,
-      subBranch: subBranchErrors,
-      description: descErrors,
-      date: dateErrors,
-    } as const;
+    if (field === 'subBranch') {
+      return match(['sub branch']);
+    }
 
-    return errors.some((err) => (lookup[field] || []).some((key) => err.toLowerCase().includes(key.toLowerCase())));
+    if (field === 'description') {
+      return match(['correct description']);
+    }
+
+    if (field === 'date') {
+      return match(['date', 'effective date']);
+    }
+
+    if (field === 'duplicate') {
+      return match(['duplicate']);
+    }
+
+    return false;
   }
 
   showRowErrors(row: BulkRow) {
@@ -1539,6 +1550,11 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
 
   removeRowByRef(row: BulkRow) {
     this.removeRowRef(row);
+  }
+
+  setRequiredReportsFlag(row: any, value: number) {
+    row.requiredReportsFlag = Number(value);
+    this.onRowFlagChange(row);
   }
 }
 

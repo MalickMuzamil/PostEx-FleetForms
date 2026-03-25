@@ -106,6 +106,9 @@ export class BulkView {
   private readonly MAX_LEN = 20;
   private readonly TOO_LONG = (label: string) => `${label}: Max ${this.MAX_LEN} characters allowed`;
 
+  searchTerm = '';
+  statusFilter: 'all' | 'valid' | 'invalid' | 'selected' = 'all';
+
   constructor(
     private fakeService: CourierFakeAttemptsService,
     private notification: NzNotificationService,
@@ -751,6 +754,62 @@ export class BulkView {
     row.fakeAttempts = cleaned === '' ? null : Number(cleaned);
     row.rawFakeAttempts = s;
     this.onRowTextChange(row);
+  }
+
+  get filteredRows() {
+    let list = [...this.rows];
+    const term = this.searchTerm.trim().toLowerCase();
+
+    if (term) {
+      list = list.filter((row: any) => {
+        const text = [
+          row.rowNo,
+          row.cnNo,
+          row.branchName,
+          row.attempts,
+          row.courierId,
+          row.rider,
+          row.fakeAttempts,
+          row.rawCnNo,
+          row.rawBranchName,
+          row.rawAttempts,
+          row.rawCourierId,
+          row.rawRider,
+          row.rawFakeAttempts,
+          row.rawDate,
+          row.rawIsArchived,
+          row.createdBy,
+          row.isValid ? 'valid' : 'invalid',
+          ...(row.errors ?? [])
+        ].join(' ').toLowerCase();
+
+        return text.includes(term);
+      });
+    }
+
+    if (this.statusFilter === 'valid') {
+      list = list.filter((r: any) => !!r.isValid);
+    } else if (this.statusFilter === 'invalid') {
+      list = list.filter((r: any) => !r.isValid);
+    } else if (this.statusFilter === 'selected') {
+      list = list.filter((r: any) => !!r.checked);
+    }
+
+    return list;
+  }
+
+  showRowErrors(row: any) {
+    const errors = row.errors ?? [];
+    const messages = errors.length
+      ? errors.map((err: string) => `<li>${err}</li>`).join('')
+      : '<li>No errors</li>';
+
+    this.modal.info({
+      nzTitle: `Row ${row.rowNo} errors`,
+      nzContent: `<ul style="margin:0;padding-left:18px">${messages}</ul>`,
+      nzClosable: true,
+      nzWidth: 420,
+    });
   }
 
 }

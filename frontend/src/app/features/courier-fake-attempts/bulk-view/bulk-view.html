@@ -1,75 +1,117 @@
-<div class="container-fluid mt-4">
-  <div class="card shadow-sm">
+<div class="container-fluid bulk-page mt-4">
+  <div class="card bulk-card shadow-sm">
     <div class="card-body">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <!-- LEFT -->
-        <div class="d-flex align-items-center gap-2">
-          <button class="btn btn-outline-secondary" routerLink="/courier-fake-attempts">
+
+      <!-- Header -->
+      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <button class="btn btn-outline-secondary bulk-top-btn" routerLink="/courier-fake-attempts">
             ← Back
           </button>
 
-          <button class="btn btn-success px-4"
-                  *ngIf="selectedValidCount >= 1"
-                  [disabled]="!canProceed"
-                  (click)="proceedBulkImport()">
+          <button class="btn btn-success bulk-top-btn px-4" *ngIf="selectedValidCount >= 1" [disabled]="!canProceed"
+            (click)="proceedBulkImport()">
             <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
             {{ bulkSaving ? 'Processing...' : 'Proceed' }}
           </button>
         </div>
 
-        <!-- RIGHT -->
-        <h4 class="fw-bold mb-0 text-end">Courier Fake Attempts Bulk Preview</h4>
+        <h4 class="fw-bold mb-0 bulk-title">Courier Fake Attempts Bulk Preview</h4>
       </div>
 
       <nz-spin [nzSpinning]="isLoading" [nzTip]="loadingText">
-        <div class="table-responsive">
-          <table class="table table-bordered table-hover align-middle">
-            <thead class="table-light">
+
+        <!-- Toolbar -->
+        <div class="row g-2 align-items-center mb-3">
+          <div class="col-12 col-lg">
+            <div class="bulk-search-wrap">
+              <span class="bulk-search-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
+
+              <input type="text" class="form-control bulk-search-input" [(ngModel)]="searchTerm"
+                placeholder="Search in table..." />
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-lg-auto">
+            <select class="form-select bulk-filter-select" [(ngModel)]="statusFilter">
+              <option value="all">Status</option>
+              <option value="valid">Valid</option>
+              <option value="invalid">Invalid</option>
+              <option value="selected">Selected</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive bulk-table-wrap">
+          <table class="table bulk-table align-middle mb-0">
+            <thead>
               <tr>
-                <th style="width: 40px">
-                  <input type="checkbox" class="form-check-input"
-                         [ngModel]="checkAll"
-                         (ngModelChange)="onToggleAll($event)"
-                         [disabled]="isLoading" />
+                <th class="col-check">
+                  <input type="checkbox" class="form-check-input" [ngModel]="checkAll"
+                    (ngModelChange)="onToggleAll($event)" [disabled]="isLoading" />
                 </th>
 
-                <th>#</th>
-
-                <th>CNNo</th>
-                <th>BranchName</th>
-                <th>Attempts</th>
-                <th>CourierID</th>
-                <th>Rider</th>
-                <th>Fake_Attempts</th>
-                <th>Date</th>
-                <th>IsArchived</th>
-                <th>CreatedBy</th>
+                <th class="col-index">#</th>
+                <th class="col-status">Status</th>
+                <th class="col-cn">CNNo</th>
+                <th class="col-branch">BranchName</th>
+                <th class="col-num">Attempts</th>
+                <th class="col-courier">CourierID</th>
+                <th class="col-rider">Rider</th>
+                <th class="col-num">Fake_Attempts</th>
+                <th class="col-date">Date</th>
+                <th class="col-archive">IsArchived</th>
+                <th class="col-created">CreatedBy</th>
               </tr>
             </thead>
 
             <tbody>
-              <ng-container *ngFor="let row of rows; trackBy: trackByRow">
-                <tr [class.table-warning]="row.checked"
-                    [class.table-danger]="(row.errors?.length ?? 0) > 0">
+              <ng-container *ngFor="let row of filteredRows; trackBy: trackByRow">
+                <tr [class.row-selected]="row.checked"
+                  [class.table-danger-soft]="!row.isValid && (row.errors?.length ?? 0) > 0">
 
                   <!-- Checkbox -->
                   <td>
-                    <input type="checkbox" class="form-check-input"
-                           [(ngModel)]="row.checked"
-                           (change)="onRowToggle(row, row.checked)"
-                           [disabled]="isLoading || !row.isValid" />
+                    <input type="checkbox" class="form-check-input" [(ngModel)]="row.checked"
+                      (change)="onRowToggle(row, row.checked)"
+                      [disabled]="isLoading || !row.isValid || hasErrLike(row, 'Duplicate with row')" />
                   </td>
 
                   <!-- Row No -->
                   <td>{{ row.rowNo }}</td>
 
-                  <!-- CNNo -->
+                  <!-- Status -->
                   <td>
+                    <span *ngIf="row.isValid" class="status-pill status-valid">
+                      <span class="pill-dot"></span>
+                      Valid
+                    </span>
+
+                    <button *ngIf="!row.isValid && (row.errors?.length ?? 0) > 0" type="button"
+                      class="status-pill status-invalid" (click)="showRowErrors(row)">
+                      <span class="pill-dot"></span>
+                      {{ row.errors?.length ?? 0 }} Errors
+                    </button>
+
+                    <span *ngIf="!row.isValid && !(row.errors?.length ?? 0)" class="status-pill status-invalid">
+                      <span class="pill-dot"></span>
+                      Invalid
+                    </span>
+                  </td>
+
+                  <!-- CNNo -->
+                  <td
+                    [ngClass]="{ 'cell-invalid': hasErr(row,'CNNo is required') || hasErrLike(row,'Duplicate with row') }">
                     <div class="cell-wrap">
-                      <input class="form-control form-control-sm"
-                             [(ngModel)]="row.cnNo"
-                             [disabled]="isLoading"
-                             (ngModelChange)="onRowTextChange(row)" />
+                      <input class="form-control form-control-sm bulk-input" [(ngModel)]="row.cnNo"
+                        [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
 
                       <div class="cell-msg">
                         <div class="field-err" *ngIf="hasErr(row,'CNNo is required')">
@@ -77,78 +119,80 @@
                           <strong>CNNo is required</strong>
                           <span class="file" *ngIf="row.rawCnNo">Value: <strong>{{ row.rawCnNo }}</strong></span>
                         </div>
-                      </div>
-                    </div>
 
-                    <div class="field-err" *ngIf="hasErrLike(row,'Duplicate with row')">
-                      <span class="dot"></span>
-                      <strong>{{ getErrLike(row,'Duplicate with row') }}</strong>
+                        <div class="field-err warn" *ngIf="hasErrLike(row,'Duplicate with row')">
+                          <span class="dot"></span>
+                          <strong>{{ getErrLike(row,'Duplicate with row') }}</strong>
+                        </div>
+                      </div>
                     </div>
                   </td>
 
                   <!-- BranchName -->
-                  <td>
+                  <td [ngClass]="{ 'cell-invalid': hasErr(row,'BranchName is required') }">
                     <div class="cell-wrap">
-                      <input class="form-control form-control-sm"
-                             [(ngModel)]="row.branchName"
-                             [disabled]="isLoading"
-                             (ngModelChange)="onRowTextChange(row)" />
+                      <input class="form-control form-control-sm bulk-input" [(ngModel)]="row.branchName"
+                        [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
+
                       <div class="cell-msg">
                         <div class="field-err" *ngIf="hasErr(row,'BranchName is required')">
                           <span class="dot"></span>
                           <strong>BranchName is required</strong>
-                          <span class="file" *ngIf="row.rawBranchName">Value: <strong>{{ row.rawBranchName }}</strong></span>
+                          <span class="file" *ngIf="row.rawBranchName">Value: <strong>{{ row.rawBranchName
+                              }}</strong></span>
                         </div>
                       </div>
                     </div>
                   </td>
 
                   <!-- Attempts -->
-                  <td>
+                  <td
+                    [ngClass]="{ 'cell-invalid': hasErr(row,'Attempts is required') || hasErr(row,'Attempts must be digits only') }">
                     <div class="cell-wrap">
-                      <input class="form-control form-control-sm"
-                             [(ngModel)]="row.attempts"
-                             [disabled]="isLoading"
-                             (ngModelChange)="onAttemptsInput(row, $event)" />
+                      <input class="form-control form-control-sm bulk-input" [(ngModel)]="row.attempts"
+                        [disabled]="isLoading" (ngModelChange)="onAttemptsInput(row, $event)" />
+
                       <div class="cell-msg">
                         <div class="field-err" *ngIf="hasErr(row,'Attempts is required')">
                           <span class="dot"></span>
                           <strong>Attempts is required</strong>
-                          <span class="file" *ngIf="row.rawAttempts">Value: <strong>{{ row.rawAttempts }}</strong></span>
+                          <span class="file" *ngIf="row.rawAttempts">Value: <strong>{{ row.rawAttempts
+                              }}</strong></span>
                         </div>
+
                         <div class="field-err" *ngIf="hasErr(row,'Attempts must be digits only')">
                           <span class="dot"></span>
                           <strong>Attempts must be digits only</strong>
-                          <span class="file" *ngIf="row.rawAttempts">Value: <strong>{{ row.rawAttempts }}</strong></span>
+                          <span class="file" *ngIf="row.rawAttempts">Value: <strong>{{ row.rawAttempts
+                              }}</strong></span>
                         </div>
                       </div>
                     </div>
                   </td>
 
                   <!-- CourierID -->
-                  <td>
+                  <td [ngClass]="{ 'cell-invalid': hasErr(row,'CourierID is required') }">
                     <div class="cell-wrap">
-                      <input class="form-control form-control-sm"
-                             [(ngModel)]="row.courierId"
-                             [disabled]="isLoading"
-                             (ngModelChange)="onRowTextChange(row)" />
+                      <input class="form-control form-control-sm bulk-input" [(ngModel)]="row.courierId"
+                        [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
+
                       <div class="cell-msg">
                         <div class="field-err" *ngIf="hasErr(row,'CourierID is required')">
                           <span class="dot"></span>
                           <strong>CourierID is required</strong>
-                          <span class="file" *ngIf="row.rawCourierId">Value: <strong>{{ row.rawCourierId }}</strong></span>
+                          <span class="file" *ngIf="row.rawCourierId">Value: <strong>{{ row.rawCourierId
+                              }}</strong></span>
                         </div>
                       </div>
                     </div>
                   </td>
 
                   <!-- Rider -->
-                  <td>
+                  <td [ngClass]="{ 'cell-invalid': hasErr(row,'Rider is required') }">
                     <div class="cell-wrap">
-                      <input class="form-control form-control-sm"
-                             [(ngModel)]="row.rider"
-                             [disabled]="isLoading"
-                             (ngModelChange)="onRowTextChange(row)" />
+                      <input class="form-control form-control-sm bulk-input" [(ngModel)]="row.rider"
+                        [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
+
                       <div class="cell-msg">
                         <div class="field-err" *ngIf="hasErr(row,'Rider is required')">
                           <span class="dot"></span>
@@ -160,35 +204,36 @@
                   </td>
 
                   <!-- Fake_Attempts -->
-                  <td>
+                  <td
+                    [ngClass]="{ 'cell-invalid': hasErr(row,'Fake_Attempts is required') || hasErr(row,'Fake_Attempts must be digits only') }">
                     <div class="cell-wrap">
-                      <input class="form-control form-control-sm"
-                             [(ngModel)]="row.fakeAttempts"
-                             [disabled]="isLoading"
-                             (ngModelChange)="onFakeAttemptsInput(row, $event)" />
+                      <input class="form-control form-control-sm bulk-input" [(ngModel)]="row.fakeAttempts"
+                        [disabled]="isLoading" (ngModelChange)="onFakeAttemptsInput(row, $event)" />
+
                       <div class="cell-msg">
                         <div class="field-err" *ngIf="hasErr(row,'Fake_Attempts is required')">
                           <span class="dot"></span>
                           <strong>Fake_Attempts is required</strong>
-                          <span class="file" *ngIf="row.rawFakeAttempts">Value: <strong>{{ row.rawFakeAttempts }}</strong></span>
+                          <span class="file" *ngIf="row.rawFakeAttempts">Value: <strong>{{ row.rawFakeAttempts
+                              }}</strong></span>
                         </div>
+
                         <div class="field-err" *ngIf="hasErr(row,'Fake_Attempts must be digits only')">
                           <span class="dot"></span>
                           <strong>Fake_Attempts must be digits only</strong>
-                          <span class="file" *ngIf="row.rawFakeAttempts">Value: <strong>{{ row.rawFakeAttempts }}</strong></span>
+                          <span class="file" *ngIf="row.rawFakeAttempts">Value: <strong>{{ row.rawFakeAttempts
+                              }}</strong></span>
                         </div>
                       </div>
                     </div>
                   </td>
 
                   <!-- Date -->
-                  <td>
+                  <td [ngClass]="{ 'cell-invalid': hasErr(row,'Date is required') || hasErr(row,'Invalid Date') }">
                     <div class="cell-wrap">
-                      <nz-date-picker nzFormat="yyyy-MM-dd"
-                                      nzSize="small"
-                                      [formControl]="row.dateControl"
-                                      [nzDisabled]="isLoading"
-                                      (ngModelChange)="onRowDateChange(row)"></nz-date-picker>
+                      <nz-date-picker nzFormat="yyyy-MM-dd" nzSize="small" [formControl]="row.dateControl"
+                        [nzDisabled]="isLoading" class="bulk-date-control" (ngModelChange)="onRowDateChange(row)">
+                      </nz-date-picker>
 
                       <div class="cell-msg">
                         <div class="field-err" *ngIf="hasErr(row,'Date is required')">
@@ -207,12 +252,11 @@
                   </td>
 
                   <!-- IsArchived -->
-                  <td>
+                  <td
+                    [ngClass]="{ 'cell-invalid': hasErr(row,'IsArchived is required') || hasErr(row,'IsArchived must be 0 or 1') }">
                     <div class="cell-wrap">
-                      <select class="form-select form-select-sm"
-                              [(ngModel)]="row.isArchived"
-                              [disabled]="isLoading"
-                              (ngModelChange)="onRowArchivedChange(row)">
+                      <select class="form-select form-select-sm bulk-native-select" [(ngModel)]="row.isArchived"
+                        [disabled]="isLoading" (ngModelChange)="onRowArchivedChange(row)">
                         <option [ngValue]="0">0</option>
                         <option [ngValue]="1">1</option>
                       </select>
@@ -221,21 +265,26 @@
                         <div class="field-err" *ngIf="hasErr(row,'IsArchived is required')">
                           <span class="dot"></span>
                           <strong>IsArchived is required</strong>
-                          <span class="file" *ngIf="row.rawIsArchived">Value: <strong>{{ row.rawIsArchived }}</strong></span>
+                          <span class="file" *ngIf="row.rawIsArchived">Value: <strong>{{ row.rawIsArchived
+                              }}</strong></span>
                         </div>
 
                         <div class="field-err" *ngIf="hasErr(row,'IsArchived must be 0 or 1')">
                           <span class="dot"></span>
                           <strong>IsArchived must be 0 or 1</strong>
-                          <span class="file" *ngIf="row.rawIsArchived">Value: <strong>{{ row.rawIsArchived }}</strong></span>
+                          <span class="file" *ngIf="row.rawIsArchived">Value: <strong>{{ row.rawIsArchived
+                              }}</strong></span>
                         </div>
                       </div>
                     </div>
                   </td>
 
-                  <!-- CreatedBy (readonly) -->
+                  <!-- CreatedBy -->
                   <td>
-                    <input class="form-control form-control-sm" [value]="row.createdBy" disabled />
+                    <div class="cell-wrap">
+                      <input class="form-control form-control-sm bulk-input bulk-readonly" [value]="row.createdBy"
+                        disabled />
+                    </div>
                   </td>
 
                 </tr>
