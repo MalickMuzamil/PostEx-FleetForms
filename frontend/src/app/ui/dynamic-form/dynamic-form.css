@@ -691,3 +691,39 @@
 :host ::ng-deep .ant-select-item:hover{
     padding: 0px !important;
 }
+
+/* ================================
+   FIGMA BULK UPLOAD BOX
+================================ */
+
+.figma-upload-box {
+  border: 2px dashed #d1d5db;
+  border-radius: 10px;
+  padding: 24px;
+  text-align: center;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.figma-upload-box:hover {
+  border-color: var(--primary);
+  background: #f8faf7;
+}
+
+.upload-icon {
+  font-size: 20px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+.upload-text {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.upload-text .browse {
+  color: var(--primary);
+  font-weight: 600;
+  margin-left: 4px;
+}

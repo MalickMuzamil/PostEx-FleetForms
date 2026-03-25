@@ -268,27 +268,28 @@
         <!-- FILE -->
         <div class="col-12" *ngIf="field.type === 'file'">
           <div class="figma-field">
+
             <label class="figma-label">{{ field.label }}</label>
 
-            <div class="d-flex flex-column gap-2">
-              <button nz-button nzType="default" type="button" class="figma-upload-btn"
-                [disabled]="isFileDisabled(field) || uploadingMap[field.key]" (click)="fileInput.click()">
-                <i class="fa fa-upload me-1"></i>
-                Bulk Import
-              </button>
+            <div class="figma-upload-box" (click)="fileInput.click()">
+
+              <div class="upload-icon">
+                <i class="fa fa-upload"></i>
+              </div>
+
+              <div class="upload-text">
+                <span>Drag & drop files or</span>
+                <span class="browse">browse files</span>
+              </div>
 
               <input #fileInput type="file" hidden [accept]="field.accept"
                 (change)="onFileSelected(field.key, $event)" />
-
-              <div *ngIf="uploadingMap[field.key]">
-                <nz-progress [nzPercent]="uploadProgressMap[field.key]" nzStatus="active" nzSize="small"></nz-progress>
-                <small class="text-muted">Uploading... {{ uploadProgressMap[field.key] }}%</small>
-              </div>
-
-              <small class="figma-help" *ngIf="!uploadingMap[field.key]">
-                Only CSV / Excel files allowed
-              </small>
             </div>
+
+            <small class="figma-help">
+              Only CSV / Excel files allowed
+            </small>
+
           </div>
         </div>
 
