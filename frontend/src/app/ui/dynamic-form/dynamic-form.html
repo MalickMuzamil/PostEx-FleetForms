@@ -140,7 +140,7 @@
             <ng-container *ngIf="
                     field.key === 'statusFlag' ||
                     field.key === 'conferenceCallFlag' ||
-                    field.key === 'activeFlag'
+                    field.key === 'activeFlag' || field.key === 'requiredReportsFlag'
                     ; else normalSelect">
               <div class="figma-segment">
                 <label class="figma-segment-item" *ngFor="let opt of field.options || []"

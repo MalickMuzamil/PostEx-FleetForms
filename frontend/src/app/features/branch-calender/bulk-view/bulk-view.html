@@ -1,129 +1,157 @@
-<div class="container-fluid mt-4">
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-outline-secondary" routerLink="/branch-wise-calender">
-                        ← Back
-                    </button>
+<div class="bulk-page container-fluid mt-3">
+  <div class="bulk-card shadow-sm">
+    <div class="card-body">
 
-                    <button class="btn btn-success px-4" *ngIf="selectedValidCount >= 1" [disabled]="!canProceed"
-                        (click)="proceedBulkImport()">
-                        <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
-                        {{ bulkSaving ? 'Processing...' : 'Proceed' }}
-                    </button>
-                </div>
+      <!-- TOP -->
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
 
-                <h4 class="fw-bold mb-0 text-end">Branch Wise Calender Bulk Preview</h4>
-            </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary bulk-top-btn" routerLink="/branch-wise-calender">
+            ← Back
+          </button>
 
-            <nz-spin [nzSpinning]="isLoading" [nzTip]="loadingText">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width: 40px">
-                                    <input type="checkbox" class="form-check-input" [ngModel]="checkAll"
-                                        (ngModelChange)="onToggleAll($event)" [disabled]="isLoading" />
-                                </th>
+          <button class="btn btn-success bulk-top-btn px-4"
+            *ngIf="selectedValidCount >= 1"
+            [disabled]="!canProceed"
+            (click)="proceedBulkImport()">
 
-                                <th>#</th>
-                                <th>BRANCH</th>
-                                <th>CALENDER_DATE</th>
-                                <th>ISNOTWORKINGDAY</th>
-                                <th>NOTWORKINGDAYDESC</th>
-                                <th>IsArchived</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            <ng-container *ngFor="let row of rows; trackBy: trackByRow">
-                                <tr [class.table-warning]="row.checked"
-                                    [class.table-danger]="(row.errors?.length ?? 0) > 0">
-
-                                    <td>
-                                        <input type="checkbox" class="form-check-input" [(ngModel)]="row.checked"
-                                            (change)="onRowToggle(row, row.checked)"
-                                            [disabled]="isLoading || !row.isValid" />
-                                    </td>
-
-                                    <td>{{ row.rowNo }}</td>
-
-                                    <!-- BRANCH (id or name) -->
-                                    <td>
-                                        <input class="form-control form-control-sm" [(ngModel)]="row.branch"
-                                            [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
-                                        <div class="field-err" *ngIf="hasErr(row,'BRANCH is required')">
-                                            <span class="dot"></span><strong>BRANCH is required</strong>
-                                        </div>
-                                        <div class="field-err" *ngIf="hasErr(row,'BRANCHID must be numeric (max 5 digits)')">
-                                            <span class="dot"></span><strong>BRANCHID must be numeric (max 5 digits)</strong>
-                                        </div>
-                                    </td>
-
-                                    <!-- Date -->
-                                    <td>
-                                        <nz-date-picker nzFormat="yyyy-MM-dd" nzSize="small"
-                                            [formControl]="row.calDateControl" [nzDisabled]="isLoading"
-                                            (ngModelChange)="onRowDateChange(row)"></nz-date-picker>
-
-                                        <div class="field-err" *ngIf="hasErr(row,'CALENDER_DATE is required')">
-                                            <span class="dot"></span><strong>CALENDER_DATE is required</strong>
-                                        </div>
-                                        <div class="field-err" *ngIf="hasErr(row,'Invalid Date')">
-                                            <span class="dot"></span><strong>Invalid Date</strong>
-                                        </div>
-                                    </td>
-
-                                    <!-- IsNotWorkingDay -->
-                                    <td>
-                                        <select class="form-select form-select-sm" [(ngModel)]="row.isNotWorkingDay"
-                                            [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)">
-                                            <option [ngValue]="0">0</option>
-                                            <option [ngValue]="1">1</option>
-                                        </select>
-
-                                        <div class="field-err" *ngIf="hasErr(row,'ISNOTWORKINGDAY must be 0 or 1')">
-                                            <span class="dot"></span><strong>ISNOTWORKINGDAY must be 0 or 1</strong>
-                                        </div>
-                                    </td>
-
-                                    <!-- Desc -->
-                                    <td>
-                                        <input class="form-control form-control-sm" [(ngModel)]="row.notWorkingDayDesc"
-                                            [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
-
-                                        <div class="field-err" *ngIf="hasErr(row,'NOTWORKINGDAYDESC is required')">
-                                            <span class="dot"></span><strong>NOTWORKINGDAYDESC is required</strong>
-                                        </div>
-                                    </td>
-
-                                    <!-- IsArchived -->
-                                    <td>
-                                        <select class="form-select form-select-sm" [(ngModel)]="row.isArchived"
-                                            [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)">
-                                            <option [ngValue]="0">0</option>
-                                            <option [ngValue]="1">1</option>
-                                        </select>
-
-                                        <div class="field-err" *ngIf="hasErr(row,'IsArchived must be 0 or 1')">
-                                            <span class="dot"></span><strong>IsArchived must be 0 or 1</strong>
-                                        </div>
-                                    </td>
-
-                                </tr>
-
-                                <!-- duplicate msg -->
-                                <tr *ngIf="hasErrLike(row,'Duplicate with row')" class="table-danger">
-                                    <td colspan="9" class="py-1">
-                                        <small><strong>{{ getErrLike(row,'Duplicate with row') }}</strong></small>
-                                    </td>
-                                </tr>
-                            </ng-container>
-                        </tbody>
-                    </table>
-                </div>
-            </nz-spin>
+            <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
+            {{ bulkSaving ? 'Processing...' : 'Proceed' }}
+          </button>
         </div>
+
+        <h4 class="bulk-title mb-0">Branch Wise Calendar Bulk Preview</h4>
+      </div>
+
+      <nz-spin [nzSpinning]="isLoading" [nzTip]="loadingText">
+
+        <div class="bulk-table-wrap">
+          <table class="table bulk-table">
+
+            <!-- HEADER -->
+            <thead>
+              <tr>
+                <th class="col-check">
+                  <input type="checkbox"
+                    class="form-check-input"
+                    [ngModel]="checkAll"
+                    (ngModelChange)="onToggleAll($event)"
+                    [disabled]="isLoading" />
+                </th>
+
+                <th>#</th>
+                <th>Status</th>
+
+                <th>Branch</th>
+                <th>Calendar Date</th>
+                <th>Is Working</th>
+                <th>Description</th>
+                <th>IsArchived</th>
+              </tr>
+            </thead>
+
+            <!-- BODY -->
+            <tbody>
+              <tr *ngFor="let row of rows; trackBy: trackByRow"
+                  [class.row-selected]="row.checked">
+
+                <!-- checkbox -->
+                <td>
+                  <input type="checkbox"
+                    class="form-check-input"
+                    [(ngModel)]="row.checked"
+                    (change)="onRowToggle(row, row.checked)"
+                    [disabled]="isLoading || !row.isValid" />
+                </td>
+
+                <!-- index -->
+                <td>{{ row.rowNo }}</td>
+
+                <!-- STATUS -->
+                <td>
+                  <button
+                    class="status-pill"
+                    [ngClass]="row.isValid ? 'status-valid' : 'status-invalid'"
+                    (click)="!row.isValid && showRowErrors(row)">
+
+                    <span class="pill-dot"></span>
+                    {{ row.isValid ? 'Valid' : (row.errors?.length || 0) + ' Errors' }}
+                  </button>
+                </td>
+
+                <!-- BRANCH -->
+                <td>
+                  <div class="cell-wrap"
+                       [class.cell-invalid]="hasErrLike(row,'BRANCH')">
+                    <input class="form-control"
+                           [(ngModel)]="row.branch"
+                           (ngModelChange)="onRowTextChange(row)" />
+                  </div>
+                </td>
+
+                <!-- DATE -->
+                <td>
+                  <div class="cell-wrap bulk-date-control"
+                       [class.cell-invalid]="hasErrLike(row,'DATE')">
+
+                    <nz-date-picker
+                      nzFormat="yyyy-MM-dd"
+                      [formControl]="row.calDateControl"
+                      (ngModelChange)="onRowDateChange(row)">
+                    </nz-date-picker>
+
+                  </div>
+                </td>
+
+                <!-- WORKING -->
+                <td>
+                  <div class="cell-wrap"
+                       [class.cell-invalid]="hasErrLike(row,'ISNOTWORKINGDAY')">
+
+                    <select class="form-select"
+                            [(ngModel)]="row.isNotWorkingDay"
+                            (ngModelChange)="onRowTextChange(row)">
+                      <option [ngValue]="0">0</option>
+                      <option [ngValue]="1">1</option>
+                    </select>
+
+                  </div>
+                </td>
+
+                <!-- DESC -->
+                <td>
+                  <div class="cell-wrap"
+                       [class.cell-invalid]="hasErrLike(row,'NOTWORKINGDAYDESC')">
+
+                    <input class="form-control"
+                           [(ngModel)]="row.notWorkingDayDesc"
+                           (ngModelChange)="onRowTextChange(row)" />
+
+                  </div>
+                </td>
+
+                <!-- ARCHIVED -->
+                <td>
+                  <div class="cell-wrap"
+                       [class.cell-invalid]="hasErrLike(row,'ISARCHIVED')">
+
+                    <select class="form-select"
+                            [(ngModel)]="row.isArchived"
+                            (ngModelChange)="onRowTextChange(row)">
+                      <option [ngValue]="0">0</option>
+                      <option [ngValue]="1">1</option>
+                    </select>
+
+                  </div>
+                </td>
+
+              </tr>
+            </tbody>
+
+          </table>
+        </div>
+
+      </nz-spin>
     </div>
+  </div>
 </div>

@@ -95,6 +95,17 @@ export class BulkView implements OnInit {
   private readonly ARCH_REQUIRED = 'IsArchived is required';
   private readonly INVALID_ARCH = 'IsArchived must be 0 or 1';
 
+  private readonly EMP_NAME_REQUIRED = 'EMP_NAME is required';
+  private readonly DESIGNATION_REQUIRED = 'DESIGNATION is required';
+  private readonly DIVISION_REQUIRED = 'DIVISION is required';
+  private readonly ZONE_REQUIRED = 'ZONE is required';
+  private readonly BRANCH_REQUIRED = 'BRANCH is required';
+  private readonly DEPARTMENT_REQUIRED = 'DEPARTMENT is required';
+  private readonly FUNCTION_REQUIRED = 'FUNCTION is required';
+  private readonly AREA_REQUIRED = 'AREA is required';
+  private readonly SHIFT_REQUIRED = 'SHIFT is required';
+  private readonly SHIFT_TIME_REQUIRED = 'SHIFT_TIME is required';
+
   // text fields errors
   private readonly NO_NUM = (label: string) => `${label}: Numbers not allowed`;
   private readonly SHIFT_TIME_INVALID = 'SHIFT_TIME: Invalid format (HH:mm-HH:mm)';
@@ -116,6 +127,9 @@ export class BulkView implements OnInit {
   private localValidateTimer: any = null;
   private readonly MAX_LEN = 20;
   private readonly TOO_LONG = (label: string) => `${label}: Max ${this.MAX_LEN} characters allowed`;
+
+  searchTerm = '';
+  statusFilter: 'all' | 'valid' | 'invalid' | 'selected' = 'all';
 
   constructor(
     private attendanceService: AttendanceService,
@@ -450,12 +464,22 @@ export class BulkView implements OnInit {
       this.INVALID_ARCH,
       this.SHIFT_TIME_INVALID,
 
+      this.EMP_NAME_REQUIRED,
+      this.DESIGNATION_REQUIRED,
+      this.DIVISION_REQUIRED,
+      this.ZONE_REQUIRED,
+      this.BRANCH_REQUIRED,
+      this.DEPARTMENT_REQUIRED,
+      this.FUNCTION_REQUIRED,
+      this.AREA_REQUIRED,
+      this.SHIFT_REQUIRED,
+      this.SHIFT_TIME_REQUIRED,
+
       this.NO_NUM('EMP_NAME'),
     ].forEach((m) => this.removeErr(row, m));
 
     row.errors = (row.errors ?? []).filter((e) => !/IN_TIME: Invalid time format/i.test(e));
     row.errors = (row.errors ?? []).filter((e) => !/OUT_TIME: Invalid time format/i.test(e));
-
     row.errors = (row.errors ?? []).filter((e) => !/Max 20 characters allowed/i.test(e));
   }
 
@@ -484,6 +508,18 @@ export class BulkView implements OnInit {
 
       const arch = Number(row.isArchived);
       if (!(arch === 0 || arch === 1)) this.addErr(row, this.INVALID_ARCH);
+
+      if (!String(row.empName ?? '').trim()) this.addErr(row, this.EMP_NAME_REQUIRED);
+      if (!String(row.designation ?? '').trim()) this.addErr(row, this.DESIGNATION_REQUIRED);
+      if (!String(row.division ?? '').trim()) this.addErr(row, this.DIVISION_REQUIRED);
+      if (!String(row.zone ?? '').trim()) this.addErr(row, this.ZONE_REQUIRED);
+      if (!String(row.branch ?? '').trim()) this.addErr(row, this.BRANCH_REQUIRED);
+      if (!String(row.department ?? '').trim()) this.addErr(row, this.DEPARTMENT_REQUIRED);
+      if (!String(row.function ?? '').trim()) this.addErr(row, this.FUNCTION_REQUIRED);
+      if (!String(row.area ?? '').trim()) this.addErr(row, this.AREA_REQUIRED);
+      if (!String(row.shift ?? '').trim()) this.addErr(row, this.SHIFT_REQUIRED);
+      if (!String(row.shiftTime ?? '').trim()) this.addErr(row, this.SHIFT_TIME_REQUIRED);
+
 
       // ✅ ONLY EMP_NAME: no numbers
       this.validateNoNumber(row, row.empName, 'EMP_NAME');
@@ -529,6 +565,16 @@ export class BulkView implements OnInit {
   isRowValid(row: BulkAttendanceRow): boolean {
     return (row.errors?.length ?? 0) === 0 &&
       !!String(row.empId ?? '').trim() &&
+      !!String(row.empName ?? '').trim() &&
+      !!String(row.designation ?? '').trim() &&
+      !!String(row.division ?? '').trim() &&
+      !!String(row.zone ?? '').trim() &&
+      !!String(row.branch ?? '').trim() &&
+      !!String(row.department ?? '').trim() &&
+      !!String(row.function ?? '').trim() &&
+      !!String(row.area ?? '').trim() &&
+      !!String(row.shift ?? '').trim() &&
+      !!String(row.shiftTime ?? '').trim() &&
       !!row.dateControl?.value &&
       !!String(row.inTime ?? '').trim() &&
       !!String(row.outTime ?? '').trim() &&
@@ -790,12 +836,84 @@ export class BulkView implements OnInit {
     return (row.errors ?? []).find(e => String(e).startsWith(prefix)) ?? null;
   }
 
-  
+
 
   private validateMaxLen(row: BulkAttendanceRow, value: any, label: string) {
     const msg = this.TOO_LONG(label);
     const s = String(value ?? '').trim();
     if (s && s.length > this.MAX_LEN) this.addErr(row, msg);
     else this.removeErr(row, msg);
+  }
+
+  get filteredRows() {
+    let list = [...this.rows];
+
+    const term = this.searchTerm.trim().toLowerCase();
+
+    if (term) {
+      list = list.filter((row: any) => {
+        const text = [
+          row.rowNo,
+          row.empId,
+          row.empName,
+          row.designation,
+          row.division,
+          row.zone,
+          row.branch,
+          row.department,
+          row.function,
+          row.area,
+          row.shift,
+          row.shiftTime,
+          row.inTime,
+          row.outTime,
+          row.rawEmpId,
+          row.rawEmpName,
+          row.rawDesignation,
+          row.rawDivision,
+          row.rawZone,
+          row.rawBranch,
+          row.rawDepartment,
+          row.rawFunction,
+          row.rawArea,
+          row.rawShift,
+          row.rawShiftTime,
+          row.rawDate,
+          row.rawInTime,
+          row.rawOutTime,
+          row.rawIsArchived,
+          row.isValid ? 'valid' : 'invalid',
+          ...(row.errors ?? [])
+        ]
+          .join(' ')
+          .toLowerCase();
+
+        return text.includes(term);
+      });
+    }
+
+    if (this.statusFilter === 'valid') {
+      list = list.filter((r: any) => !!r.isValid);
+    } else if (this.statusFilter === 'invalid') {
+      list = list.filter((r: any) => !r.isValid);
+    } else if (this.statusFilter === 'selected') {
+      list = list.filter((r: any) => !!r.checked);
+    }
+
+    return list;
+  }
+
+  showRowErrors(row: any) {
+    const errors = row.errors ?? [];
+    const messages = errors.length
+      ? errors.map((err: string) => `<li>${err}</li>`).join('')
+      : '<li>No errors</li>';
+
+    this.modal.info({
+      nzTitle: `Row ${row.rowNo} errors`,
+      nzContent: `<ul style="margin:0;padding-left:18px">${messages}</ul>`,
+      nzClosable: true,
+      nzWidth: 420,
+    });
   }
 }

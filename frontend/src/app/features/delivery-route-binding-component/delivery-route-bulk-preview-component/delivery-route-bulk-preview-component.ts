@@ -31,6 +31,10 @@ interface BulkRow {
 
   deliveryRouteId: number | null;
   deliveryRouteControl: FormControl<number | null>;
+  routeDropdownOpen?: boolean;
+  branchDropdownOpen?: boolean;
+  subBranchDropdownOpen?: boolean;
+  correctDescDropdownOpen?: boolean;
 
   effectiveDate: Date | null;
   effectiveDateControl: FormControl<Date | null>;
@@ -130,12 +134,15 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   private subBranchesInFlight = new Set<string>();
   private descKeyToId = new Map<string, number>();
 
+  searchTerm = '';
+  statusFilter: 'all' | 'valid' | 'invalid' | 'selected' = 'all';
+
   constructor(
     private bindingService: DeliveryRouteBindingService,
     private definitionService: DeliveryRouteDefinitionService,
     private notification: NzNotificationService,
     private modal: NzModalService,
-  ) {}
+  ) { }
 
   async ngOnInit(): Promise<void> {
     const state = history.state;
@@ -175,14 +182,13 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
         nzContent: `
           <div>
             <p>${message || 'Confirm overwrite?'}</p>
-            ${
-              existingDate
-                ? `<p style="margin-top:8px">
+            ${existingDate
+            ? `<p style="margin-top:8px">
                      <strong>Existing Effective Date:</strong>
                      <span style="color:#d46b08">${existingDate}</span>
                    </p>`
-                : ''
-            }
+            : ''
+          }
           </div>
         `,
         nzOkText: 'OK',
@@ -233,7 +239,7 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   }
 
   private clearManagedErrors(row: BulkRow) {
-    [
+    const patterns = [
       this.ROUTE_NOT_EXIST,
       this.BRANCH_MISMATCH,
       this.INVALID_FLAG,
@@ -243,7 +249,15 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       this.DATE_REQUIRED,
       this.INVALID_DATE,
       this.PAST_DATE_ERR,
-    ].forEach((m) => this.removeErr(row, m));
+    ];
+
+    row.errors = (row.errors ?? []).filter((e) => {
+      if (patterns.includes(e)) return false;
+      if (/^Delivery Route ID \d+ does not exist$/i.test(e)) return false;
+      if (/^Branch ID \d+ does not exist$/i.test(e)) return false;
+      if (/^Sub Branch ID \d+ does not exist$/i.test(e)) return false;
+      return true;
+    });
   }
 
   private normDesc(v: any): string {
@@ -521,6 +535,10 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
 
         deliveryRouteId: routeId,
         deliveryRouteControl: new FormControl(routeId, { nonNullable: false }),
+        routeDropdownOpen: false,
+        branchDropdownOpen: false,
+        subBranchDropdownOpen: false,
+        correctDescDropdownOpen: false,
 
         effectiveDate: date,
         effectiveDateControl: new FormControl(date, [
@@ -738,9 +756,29 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     for (const row of this.rows) {
       this.clearManagedErrors(row);
 
+      // Safe reset of old static required errors so validity can recover after user edits
+      this.removeErr(row, 'Delivery Route is required');
+      this.removeErr(row, 'Branch is required');
+      this.removeErr(row, 'Sub Branch is required');
+
       const routeId = Number(row.deliveryRouteControl.value) || 0;
       const branchId = Number(row.branchId) || 0;
       const subBranchId = Number(row.subBranchId) || 0;
+
+      if (!routeId) {
+        this.addErr(row, 'Delivery Route is required');
+        row.checked = false;
+      }
+
+      if (!branchId) {
+        this.addErr(row, 'Branch is required');
+        row.checked = false;
+      }
+
+      if (!subBranchId) {
+        this.addErr(row, 'Sub Branch is required');
+        row.checked = false;
+      }
 
       // ---------- DEBUG: Description mapping ----------
       const rawTxt = String(row.correctDescText ?? '');
@@ -809,7 +847,11 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
 
       const route = routeMap.get(routeId);
       if (!route) {
-        this.addErr(row, this.ROUTE_NOT_EXIST);
+        if (routeId) {
+          this.addErr(row, `Delivery Route ID ${routeId} does not exist`);
+        } else {
+          this.addErr(row, this.ROUTE_NOT_EXIST);
+        }
         row.checked = false;
         continue;
       }
@@ -897,18 +939,16 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
         // map by (branch|sub|route|date) to avoid wrong matches
         const rowMap = new Map<string, BulkRow>();
         for (const r of this.rows) {
-          const k = `${Number(r.branchId) || 0}|${Number(r.subBranchId) || 0}|${
-            Number(r.deliveryRouteControl.value) || 0
-          }|${r.effectiveDateControl.value?.toISOString().split('T')[0] || ''}`;
+          const k = `${Number(r.branchId) || 0}|${Number(r.subBranchId) || 0}|${Number(r.deliveryRouteControl.value) || 0
+            }|${r.effectiveDateControl.value?.toISOString().split('T')[0] || ''}`;
           rowMap.set(k, r);
         }
 
         for (const inv of invalidRows) {
-          const k = `${Number(inv.branchId) || 0}|${
-            Number(inv.subBranchId) || 0
-          }|${Number(inv.deliveryRouteId) || 0}|${String(
-            inv.effectiveDate || '',
-          )}`;
+          const k = `${Number(inv.branchId) || 0}|${Number(inv.subBranchId) || 0
+            }|${Number(inv.deliveryRouteId) || 0}|${String(
+              inv.effectiveDate || '',
+            )}`;
           const match = rowMap.get(k);
           if (!match) continue;
 
@@ -928,6 +968,9 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   // ---------------- DEPENDENT DROPDOWNS (OPTIMIZED) ----------------
   onRowRouteChange(row: BulkRow) {
     const routeId = Number(row.deliveryRouteControl.value) || null;
+
+    // close dropdown after selection (fix sticky dropdown behaviour)
+    row.routeDropdownOpen = false;
 
     // Keep old for compare (optional)
     const oldRouteId = Number(row.deliveryRouteId) || null;
@@ -992,6 +1035,9 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   }
 
   onRowBranchChange(row: BulkRow) {
+    // clear or close dropdowns after user action
+    row.branchDropdownOpen = false;
+
     row.subBranchId = null;
     row.subBranches = [];
     row.checked = false;
@@ -1289,6 +1335,55 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
     return (row.errors ?? []).includes(this.DUP_ROUTE_ERR);
   }
 
+  isFieldInvalid(row: BulkRow, field: 'route' | 'branch' | 'subBranch' | 'description' | 'date' | 'duplicate'): boolean {
+    const errors = row.errors ?? [];
+
+    const match = (prefixes: string[]) =>
+      errors.some(err =>
+        prefixes.some(p => err.toLowerCase().includes(p.toLowerCase()))
+      );
+
+    if (field === 'route') {
+      return match(['delivery route']);
+    }
+
+    if (field === 'branch') {
+      return match(['branch']);
+    }
+
+    if (field === 'subBranch') {
+      return match(['sub branch']);
+    }
+
+    if (field === 'description') {
+      return match(['correct description']);
+    }
+
+    if (field === 'date') {
+      return match(['date', 'effective date']);
+    }
+
+    if (field === 'duplicate') {
+      return match(['duplicate']);
+    }
+
+    return false;
+  }
+
+  showRowErrors(row: BulkRow) {
+    const errors = row.errors ?? [];
+    const messages = errors.length
+      ? errors.map((err) => `<li>${err}</li>`).join('')
+      : '<li>No errors</li>';
+
+    this.modal.info({
+      nzTitle: `Row ${row.rowNo} errors`,
+      nzContent: `<ul style="margin:0;padding-left:18px">${messages}</ul>`,
+      nzClosable: true,
+      nzWidth: 400,
+    });
+  }
+
   removeRow(index: number) {
     this.rows.splice(index, 1);
     this.rows.forEach((r, i) => (r.rowNo = i + 1));
@@ -1323,10 +1418,27 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
   }
 
   onRowSubBranchChange(row: BulkRow) {
+    row.subBranchDropdownOpen = false;
     row.checked = false;
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
     this.scheduleServerValidation();
+  }
+
+  onDropdownOpenChange(row: BulkRow, field: 'route' | 'branch' | 'subBranch' | 'description', open: boolean) {
+    if (!open) {
+      if (field === 'route') row.routeDropdownOpen = false;
+      if (field === 'branch') row.branchDropdownOpen = false;
+      if (field === 'subBranch') row.subBranchDropdownOpen = false;
+      if (field === 'description') row.correctDescDropdownOpen = false;
+      return;
+    }
+
+    // close all other dropdowns for same row
+    row.routeDropdownOpen = field === 'route';
+    row.branchDropdownOpen = field === 'branch';
+    row.subBranchDropdownOpen = field === 'subBranch';
+    row.correctDescDropdownOpen = field === 'description';
   }
 
   onRowDescChange(row: BulkRow) {
@@ -1389,11 +1501,60 @@ export class DeliveryRouteBulkPreviewComponent implements OnInit {
       return false;
     }
 
-    return !row.routeBranches.some((b:any) => b.value === row.branchId);
+    return !row.routeBranches.some((b: any) => b.value === row.branchId);
   }
 
   filterByIdAndName = (input: string, option: any): boolean =>
-  option.nzValue?.toString().toLowerCase().includes(input.toLowerCase()) ||
-  option.nzLabel?.toLowerCase().includes(input.toLowerCase());
+    option.nzValue?.toString().toLowerCase().includes(input.toLowerCase()) ||
+    option.nzLabel?.toLowerCase().includes(input.toLowerCase());
+
+  get filteredRows(): BulkRow[] {
+    let list = [...this.rows];
+
+    const term = this.searchTerm.trim().toLowerCase();
+
+    if (term) {
+      list = list.filter((row) => {
+        const text = [
+          row.rowNo,
+          row.deliveryRouteControl?.value,
+          row.rawDeliveryRoute,
+          row.branchId,
+          row.rawBranch,
+          row.subBranchId,
+          row.rawSubBranch,
+          row.correctDescText,
+          row.rawCorrectDesc,
+          row.rawEffectiveDate,
+          row.requiredReportsFlag,
+          row.isValid ? 'valid' : 'invalid',
+          ...(row.errors ?? [])
+        ]
+          .join(' ')
+          .toLowerCase();
+
+        return text.includes(term);
+      });
+    }
+
+    if (this.statusFilter === 'valid') {
+      list = list.filter((r) => !!r.isValid);
+    } else if (this.statusFilter === 'invalid') {
+      list = list.filter((r) => !r.isValid);
+    } else if (this.statusFilter === 'selected') {
+      list = list.filter((r) => !!r.checked);
+    }
+
+    return list;
+  }
+
+  removeRowByRef(row: BulkRow) {
+    this.removeRowRef(row);
+  }
+
+  setRequiredReportsFlag(row: any, value: number) {
+    row.requiredReportsFlag = Number(value);
+    this.onRowFlagChange(row);
+  }
 }
 

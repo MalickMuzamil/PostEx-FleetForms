@@ -426,7 +426,7 @@ export class CallLogsBulkView {
   private clearManagedErrors(row: BulkCallLogsRow) {
     [
       this.CUST_REQUIRED,
-      'Customer_Number must be exactly 11 digits', // ✅ ADD THIS
+      'Customer_Number must be exactly 11 digits',
       this.CONS_REQUIRED,
       this.CONS_INVALID,
       this.MASTER_REQUIRED,
@@ -449,6 +449,7 @@ export class CallLogsBulkView {
     for (const row of this.rows) {
       this.clearManagedErrors(row);
 
+      // Customer_Number
       const cust = String(row.customerNumber ?? '').trim();
       if (!cust) {
         this.addErr(row, this.CUST_REQUIRED);
@@ -458,34 +459,52 @@ export class CallLogsBulkView {
 
       // Consignee_Cell_Length
       const consRaw = String(row.consigneeCellLength ?? '').trim();
-      if (!String(row.rawConsigneeCellLength ?? '').trim() && (row.consigneeCellLength === null || row.consigneeCellLength === undefined)) {
+      if (!consRaw) {
         this.addErr(row, this.CONS_REQUIRED);
-      } else if (row.consigneeCellLength === null || row.consigneeCellLength === undefined) {
+      } else if (row.consigneeCellLength === null || row.consigneeCellLength === undefined || isNaN(Number(consRaw))) {
         this.addErr(row, this.CONS_INVALID);
       }
 
+      // Master_No
       const master = String(row.masterNo ?? '').trim();
-      if (!master) this.addErr(row, this.MASTER_REQUIRED);
+      if (!master) {
+        this.addErr(row, this.MASTER_REQUIRED);
+      }
 
+      // Agent Duration
       const ag = String(row.agentDuration ?? '').trim();
-      if (!ag) this.addErr(row, this.AG_REQUIRED);
-      else if (!this.isDurationValid(ag)) this.addErr(row, this.AG_INVALID);
+      if (!ag) {
+        this.addErr(row, this.AG_REQUIRED);
+      } else if (!this.isDurationValid(ag)) {
+        this.addErr(row, this.AG_INVALID);
+      }
 
+      // Total Duration
       const tot = String(row.totalDuration ?? '').trim();
-      if (!tot) this.addErr(row, this.TOT_REQUIRED);
-      else if (!this.isDurationValid(tot)) this.addErr(row, this.TOT_INVALID);
+      if (!tot) {
+        this.addErr(row, this.TOT_REQUIRED);
+      } else if (!this.isDurationValid(tot)) {
+        this.addErr(row, this.TOT_INVALID);
+      }
 
+      // Call_Response
       const resp = String(row.callResponse ?? '').trim();
-      if (!resp) this.addErr(row, this.RESP_REQUIRED);
+      if (!resp) {
+        this.addErr(row, this.RESP_REQUIRED);
+      }
 
+      // Time
       const dt = row.timeControl?.value;
       if (!dt) {
         if (!String(row.rawTime ?? '').trim()) this.addErr(row, this.TIME_REQUIRED);
         else this.addErr(row, this.INVALID_TIME);
       }
 
+      // IsArchived
       const arch = Number(row.isArchived);
-      if (!(arch === 0 || arch === 1)) this.addErr(row, this.INVALID_ARCH);
+      if (!(arch === 0 || arch === 1)) {
+        this.addErr(row, this.INVALID_ARCH);
+      }
 
       // max len
       this.validateMaxLen(row, row.customerNumber, 'Customer_Number');
@@ -507,15 +526,26 @@ export class CallLogsBulkView {
   }
 
   isRowValid(row: BulkCallLogsRow): boolean {
+    const cust = String(row.customerNumber ?? '').trim();
+    const cons = String(row.consigneeCellLength ?? '').trim();
+    const master = String(row.masterNo ?? '').trim();
+    const ag = String(row.agentDuration ?? '').trim();
+    const tot = String(row.totalDuration ?? '').trim();
+    const resp = String(row.callResponse ?? '').trim();
+
     return (row.errors?.length ?? 0) === 0 &&
-      !!String(row.customerNumber ?? '').trim() &&
+      !!cust &&
+      /^\d{11}$/.test(cust) &&
+      !!cons &&
       row.consigneeCellLength !== null &&
-      !!String(row.masterNo ?? '').trim() &&
-      !!String(row.agentDuration ?? '').trim() &&
-      this.isDurationValid(String(row.agentDuration ?? '')) &&
-      !!String(row.totalDuration ?? '').trim() &&
-      this.isDurationValid(String(row.totalDuration ?? '')) &&
-      !!String(row.callResponse ?? '').trim() &&
+      row.consigneeCellLength !== undefined &&
+      !isNaN(Number(cons)) &&
+      !!master &&
+      !!ag &&
+      this.isDurationValid(ag) &&
+      !!tot &&
+      this.isDurationValid(tot) &&
+      !!resp &&
       !!row.timeControl?.value &&
       (Number(row.isArchived) === 0 || Number(row.isArchived) === 1);
   }
@@ -695,5 +725,26 @@ export class CallLogsBulkView {
 
     const validRows = this.rows.filter(r => r.isValid);
     this.checkAll = validRows.length > 0 && validRows.every(r => r.checked);
+  }
+
+  hasErrLike(row: BulkCallLogsRow, key: string): boolean {
+    return (row.errors ?? []).some(e =>
+      String(e).toLowerCase().includes(key.toLowerCase())
+    );
+  }
+
+  showRowErrors(row: BulkCallLogsRow) {
+    const errors = row.errors ?? [];
+
+    const messages = errors.length
+      ? errors.map((err: string) => `<li>${err}</li>`).join('')
+      : '<li>No errors</li>';
+
+    this.modal.info({
+      nzTitle: `Row ${row.rowNo} errors`,
+      nzContent: `<ul style="margin:0;padding-left:18px">${messages}</ul>`,
+      nzClosable: true,
+      nzWidth: 420,
+    });
   }
 }
