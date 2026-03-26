@@ -697,11 +697,11 @@
 ================================ */
 
 .figma-upload-box {
-  border: 2px dashed #d1d5db;
+  border: 1.5px dashed #d1d5db;
   border-radius: 10px;
-  padding: 24px;
+  padding: 20px;
   text-align: center;
-  background: #fafafa;
+  background: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -711,19 +711,73 @@
   background: #f8faf7;
 }
 
+.figma-upload-box.is-uploading {
+  cursor: not-allowed;
+  background: #fcfcfc;
+}
+
 .upload-icon {
-  font-size: 20px;
-  color: #9ca3af;
-  margin-bottom: 8px;
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  background: #fff;
 }
 
 .upload-text {
-  font-size: 13px;
-  color: #6b7280;
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
 }
 
 .upload-text .browse {
   color: var(--primary);
   font-weight: 600;
-  margin-left: 4px;
+}
+
+.upload-loader-wrap {
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.upload-progress-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.upload-spinner {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  border: 3px solid #e5e7eb;
+  border-top-color: var(--primary);
+  animation: figmaSpin 0.8s linear infinite;
+}
+
+:host ::ng-deep .upload-loader-wrap .ant-progress {
+  margin-bottom: 0;
+}
+
+:host ::ng-deep .upload-loader-wrap .ant-progress-bg {
+  height: 8px !important;
+  border-radius: 999px;
+  background: var(--primary) !important;
+}
+
+:host ::ng-deep .upload-loader-wrap .ant-progress-outer {
+  padding-inline-end: 0 !important;
+}
+
+@keyframes figmaSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }

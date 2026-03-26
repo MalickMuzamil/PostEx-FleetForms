@@ -21,9 +21,10 @@
 
 /* title / buttons */
 .bulk-title {
-  font-size: 28px;
-  line-height: 1.2;
-  color: #1f1f1f;
+  font-size: var(--fs-lg) !important;
+  line-height: 1.2 !important;
+  font-weight: 600;
+  color: var(--text-primary) !important;
 }
 
 .bulk-top-btn {

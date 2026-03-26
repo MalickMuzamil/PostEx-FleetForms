@@ -21,9 +21,10 @@
 
 /* title / buttons */
 .bulk-title {
-  font-size: 28px;
-  line-height: 1.2;
-  color: #1f1f1f;
+  font-size: var(--fs-lg) !important;
+  line-height: 1.2 !important;
+  font-weight: 600;
+  color: var(--text-primary) !important;
 }
 
 .bulk-top-btn {
@@ -144,17 +145,50 @@
 }
 
 /* widths */
-.col-check { min-width: 46px; width: 46px; }
-.col-index { min-width: 50px; }
-.col-status { min-width: 125px; }
-.col-errors { min-width: 120px; }
-.col-route { min-width: 220px; }
-.col-branch { min-width: 220px; }
-.col-subbranch { min-width: 220px; }
-.col-desc { min-width: 230px; }
-.col-date { min-width: 180px; }
-.col-report { min-width: 160px; }
-.col-action { min-width: 150px; }
+.col-check {
+  min-width: 46px;
+  width: 46px;
+}
+
+.col-index {
+  min-width: 50px;
+}
+
+.col-status {
+  min-width: 125px;
+}
+
+.col-errors {
+  min-width: 120px;
+}
+
+.col-route {
+  min-width: 220px;
+}
+
+.col-branch {
+  min-width: 220px;
+}
+
+.col-subbranch {
+  min-width: 220px;
+}
+
+.col-desc {
+  min-width: 230px;
+}
+
+.col-date {
+  min-width: 180px;
+}
+
+.col-report {
+  min-width: 160px;
+}
+
+.col-action {
+  min-width: 150px;
+}
 
 /* status */
 .status-pill {
@@ -230,7 +264,7 @@
   line-height: 38px !important;
 }
 
-.bulk-table tbody td .ant-picker .ant-picker-input > input {
+.bulk-table tbody td .ant-picker .ant-picker-input>input {
   height: 38px !important;
   line-height: 38px !important;
   padding-left: 12px;
@@ -344,7 +378,7 @@
 ::ng-deep .ant-select-dropdown {
   max-height: 300px;
   min-width: 260px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.14) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14) !important;
 }
 
 ::ng-deep .ant-select-item-option-content .opt-cell {

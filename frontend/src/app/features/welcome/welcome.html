@@ -1,4 +1,11 @@
-<div class="welcome-wrapper container-fluid">
+<div class="welcome-loader" *ngIf="isPageLoading">
+  <div class="welcome-loader-box">
+    <div class="welcome-spinner"></div>
+  </div>
+</div>
+
+
+<div class="welcome-wrapper container-fluid" [class.welcome-ready]="!isPageLoading">
   <div class="row justify-content-center">
     <div class="col-12 col-xl-10 col-xxl-9">
       <nz-card class="welcome-card">
