@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
   selector: 'app-welcome',
   imports: [NzCardModule, CommonModule],
   templateUrl: './welcome.html',
-  styleUrl: './welcome.css',
+  styleUrl: './welcome.css',  
 })
 export class Welcome implements OnInit {
   isPageLoading = true;

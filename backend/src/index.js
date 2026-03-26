@@ -2,11 +2,11 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 
 import { logger } from "./loggers/winston.js";
 import { errorHandler } from "./middleware/error-middleware.js";
+import { generalRateLimiter, authRateLimiter } from "./middleware/rate-limit-middleware.js";
 import { getPool, getAuthPool } from "./config/sql-config.js";
 import authRoutes from "./routes/auth-routes.js";
 
@@ -62,14 +62,7 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(express.json({ limit: "1mb" }));
 
 // rate limit
-app.use(
-    rateLimit({
-        windowMs: 60 * 1000,
-        limit: 120,
-        standardHeaders: true,
-        legacyHeaders: false,
-    })
-);
+app.use(generalRateLimiter);
 
 // logs
 app.use(
@@ -82,7 +75,7 @@ app.use(
 app.get("/health", (req, res) => res.json({ ok: true }));
 
 // routes
-app.use("/auth", authRoutes);
+app.use("/auth", authRateLimiter, authRoutes);
 app.use("/bindings", bindingRoutes);
 app.use("/branch-general-emp-binding", branchGeneralEmpBindingRoutes);
 app.use("/branch-dashboard-binding", branchDashboardBindingRoutes);
