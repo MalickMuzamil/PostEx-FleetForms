@@ -134,6 +134,7 @@ export class BranchCoordinatorAssignment implements OnInit {
         }),
       )
       .subscribe((rows) => {
+        console.log('PARENT rows.length =', rows.length);
         this.tableData = rows;
 
         const branchOptions = [...new Set(

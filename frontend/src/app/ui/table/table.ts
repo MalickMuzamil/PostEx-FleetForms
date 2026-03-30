@@ -48,10 +48,11 @@ export class Table implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['config']) {
       this.resetFilters();
-      return;
     }
 
-    if (changes['data']) this.applyFilters();
+    if (changes['data']) {
+      this.applyFilters();
+    }
   }
 
   onEdit(row: any) {
