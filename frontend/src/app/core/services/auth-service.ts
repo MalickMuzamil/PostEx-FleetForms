@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
 
 // STAGE / LOCAL
-import { AuthSDK, AuthSDKFetchError, setPasskeyEmail, getPasskeyEmail } from 'postex-auth-sdk-stage'
+// import { AuthSDK, AuthSDKFetchError, setPasskeyEmail, getPasskeyEmail } from 'postex-auth-sdk-stage'
 
 // PRODUCTION
-// import { AuthSDK, AuthSDKFetchError, setPasskeyEmail, getPasskeyEmail } from 'postex-auth-sdk-live'
+import { AuthSDK, AuthSDKFetchError, setPasskeyEmail, getPasskeyEmail } from 'postex-auth-sdk-live'
 
 import { environment } from '../../../environment/environment';
 import { BehaviorSubject } from 'rxjs';
