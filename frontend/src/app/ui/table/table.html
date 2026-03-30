@@ -90,7 +90,7 @@
             </thead>
 
             <tbody>
-                @for (row of table.data; track row) {
+                @for (row of pagedData; track row) {
                 <tr>
                     <td *ngFor="let col of config.columns">
                         <ng-container *ngIf="

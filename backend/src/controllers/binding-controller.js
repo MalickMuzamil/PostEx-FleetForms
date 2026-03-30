@@ -23,7 +23,11 @@ class BindingController {
     getAllBindings = async (req, res, next) => {
         try {
             const data = await bindingService.listBindings();
-            res.json({ data });
+            return res.status(200).send({
+                check: "BINDING_CONTROLLER_HIT",
+                length: data.length,
+                data
+            });
         } catch (err) {
             next(err);
         }
