@@ -305,5 +305,6 @@ export class AuthService {
   verifyTokenFromBackend() {
     return this.api.get('/auth/verify-token').toPromise();
   }
+  
 
 }
