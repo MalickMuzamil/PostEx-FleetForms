@@ -34,6 +34,10 @@ export class SidebarComponent implements OnChanges{
     return this.auth.hasRole('HR');
   }
 
+  get isUser(): boolean {
+    return this.auth.hasRole('USER');
+  }
+
   get canAccessFakeAttempts(): boolean {
     return this.isAdmin || this.isCS;
   }
@@ -43,8 +47,9 @@ export class SidebarComponent implements OnChanges{
   }
 
   get canAccessCommon(): boolean {
-    // only admin can see everything else
-    return this.isAdmin;
+    // admin or plain users (non-CS/HR) can access all common forms
+    const isPlainUser = this.isUser && !this.isCS && !this.isHR;
+    return this.isAdmin || isPlainUser;
   }
 
   ngOnChanges() {

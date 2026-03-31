@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Output } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzAvatarModule } from 'ng-zorro-antd/avatar';
@@ -22,7 +23,7 @@ type PostexUser = {
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [NzIconModule, NzDropDownModule, NzAvatarModule, NzMenuModule],
+  imports: [CommonModule, NzIconModule, NzDropDownModule, NzAvatarModule, NzMenuModule],
   templateUrl: './header.html',
   styleUrl: './header.css',
 })
@@ -49,6 +50,10 @@ export class Header {
   }
 
   constructor(private auth: AuthService, private router: Router) {}
+
+  get isAdmin(): boolean {
+    return this.auth.hasRole('ADMIN');
+  }
 
   logout() {
     this.auth.logout();
