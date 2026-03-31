@@ -48,6 +48,9 @@ export class LoginComponent {
     this.loading = true;
     const email = String(this.form.value.email || '').trim().toLowerCase();
 
+    // ✅ ADD THIS LINE
+    localStorage.setItem('auth.email', email);
+
     try {
       const hasPasskey = await this.auth.hasPasskeyRegistered(email);
 
@@ -97,7 +100,10 @@ export class LoginComponent {
           token_type: data?.token_type,
           auth_method: data?.auth_method,
         };
+
+        console.log('[Login] Submitted email:', email);
         localStorage.setItem('postex.user', JSON.stringify(user));
+
         sessionStorage.removeItem('auth.loginDone');
         sessionStorage.removeItem('auth.otpVerified');
 
@@ -113,7 +119,6 @@ export class LoginComponent {
       this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
 
     } catch (err: any) {
-
       const message =
         err?.error?.error?.message ||
         err?.error?.message ||
@@ -133,11 +138,18 @@ export class LoginComponent {
 
       const email = await this.auth.getSavedPasskeyEmail();
 
-      if (!email) return;
+      console.log('[Login] SDK email:', email);
+
+      if (!email) {
+        console.log('[Login] No saved email found');
+        return;
+      }
 
       this.savedEmail = email;
 
       this.form.patchValue({ email });
+
+       console.log('[Login] Email patched in form:', email);
 
       this.passkeyAvailable = await this.auth.hasPasskeyRegistered(email);
 
@@ -155,7 +167,11 @@ export class LoginComponent {
 
     try {
 
-      const result: any = await this.auth.startOtp(this.savedEmail);
+      // ✅ FIX
+      const email = String(this.savedEmail || '').trim().toLowerCase();
+      localStorage.setItem('auth.email', email);
+
+      const result: any = await this.auth.startOtp(email);
 
       if (result?.status !== 'webauthn_challenge') return;
 
@@ -166,6 +182,7 @@ export class LoginComponent {
       });
 
       const data = res?.data ?? res;
+      console.log('[Passkey] Using saved email:', this.savedEmail);
 
       localStorage.setItem('postex.access_token', data.access_token);
       localStorage.setItem('postex.refresh_token', data.refresh_token);
@@ -173,9 +190,7 @@ export class LoginComponent {
       this.router.navigateByUrl('/');
 
     } catch (err) {
-
       console.error(err);
-
     }
 
   }

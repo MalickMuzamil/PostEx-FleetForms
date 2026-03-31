@@ -64,7 +64,7 @@ export class AuthService {
     email = String(email || '').trim().toLowerCase();
     if (!email) throw new Error('Email required');
 
-    const status: any = await this.auth.getStatus(email);
+    const status: any = await this.auth.getStatus({ email });
 
     const notFound =
       status?.status === 'not_found' ||
@@ -74,7 +74,7 @@ export class AuthService {
 
     if (notFound) throw new Error('User not found');
 
-    const result: any = await this.auth.initiateAuth(email);
+    const result: any = await this.auth.initiateAuth({ email });
 
     localStorage.setItem(this.otpEmailKey, email);
 
@@ -220,7 +220,8 @@ export class AuthService {
 
   async hasPasskeyRegistered(email: string): Promise<boolean> {
 
-    const status: any = await this.auth.getStatus(String(email || '').trim().toLowerCase());
+    const normalized = String(email || '').trim().toLowerCase();
+    const status: any = await this.auth.getStatus({ email: normalized });
 
     const credentialIds =
       status?.credentialIds ??
@@ -305,6 +306,6 @@ export class AuthService {
   verifyTokenFromBackend() {
     return this.api.get('/auth/verify-token').toPromise();
   }
-  
+
 
 }
