@@ -56,7 +56,7 @@
             Role : {{ rolesText }}
           </li>
 
-          <li nz-menu-item (click)="goToUsers()">
+          <li nz-menu-item *ngIf="isAdmin" (click)="goToUsers()">
             <i nz-icon nzType="team"></i>
             User Management
           </li>

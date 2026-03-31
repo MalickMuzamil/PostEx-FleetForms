@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { AuthLayout } from './layout/auth-layout/auth-layout';
 import { MainLayout } from './layout/main-layout/main-layout';
 import { AuthGuard } from './core/guards/auth-guard';
+import { AdminGuard } from './core/guards/admin-guard';
 import { LoginGuard } from './core/guards/login-guard';
 import { PasskeyGuard } from './core/guards/passkey-guard';
 import { OtpGuard } from './core/guards/otp-guard';
@@ -209,6 +210,7 @@ export const routes: Routes = [
 
       {
         path: 'users',
+        canActivate: [AdminGuard],
         loadComponent: () =>
           import(
             './management/management-page/management-page'
