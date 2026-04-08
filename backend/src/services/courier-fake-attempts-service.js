@@ -93,10 +93,10 @@ class CourierFakeAttemptsService {
         // ---- CreatedBy (Admin/User) - optional input; if provided must match
         let createdBy = null;
         if (createdByRaw === "" || createdByRaw == null) {
-            createdBy = "User"; // default
+            createdBy = "CS"; // default
         } else {
             createdBy = this.normalizeCreatedBy(createdByRaw);
-            if (!createdBy) reasons.push("CreatedBy must be Admin or User");
+            if (!createdBy) reasons.push("CreatedBy must be Admin or CS");
         }
 
         return {
@@ -370,7 +370,7 @@ class CourierFakeAttemptsService {
     normalizeCreatedBy(v) {
         const s = String(v ?? "").trim().toLowerCase();
         if (s === "admin") return "Admin";
-        if (s === "user") return "User";
+        if (s === "cs") return "CS";
         return null;
     }
 
