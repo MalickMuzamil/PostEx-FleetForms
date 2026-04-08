@@ -67,7 +67,6 @@
                 <th class="col-rider">Rider</th>
                 <th class="col-num">Fake_Attempts</th>
                 <th class="col-date">Date</th>
-                <th class="col-archive">IsArchived</th>
                 <th class="col-created">CreatedBy</th>
               </tr>
             </thead>
@@ -246,34 +245,6 @@
                           <span class="dot"></span>
                           <strong>Invalid Date</strong>
                           <span class="file" *ngIf="row.rawDate">Value: <strong>{{ row.rawDate }}</strong></span>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-
-                  <!-- IsArchived -->
-                  <td
-                    [ngClass]="{ 'cell-invalid': hasErr(row,'IsArchived is required') || hasErr(row,'IsArchived must be 0 or 1') }">
-                    <div class="cell-wrap">
-                      <select class="form-select form-select-sm bulk-native-select" [(ngModel)]="row.isArchived"
-                        [disabled]="isLoading" (ngModelChange)="onRowArchivedChange(row)">
-                        <option [ngValue]="0">0</option>
-                        <option [ngValue]="1">1</option>
-                      </select>
-
-                      <div class="cell-msg">
-                        <div class="field-err" *ngIf="hasErr(row,'IsArchived is required')">
-                          <span class="dot"></span>
-                          <strong>IsArchived is required</strong>
-                          <span class="file" *ngIf="row.rawIsArchived">Value: <strong>{{ row.rawIsArchived
-                              }}</strong></span>
-                        </div>
-
-                        <div class="field-err" *ngIf="hasErr(row,'IsArchived must be 0 or 1')">
-                          <span class="dot"></span>
-                          <strong>IsArchived must be 0 or 1</strong>
-                          <span class="file" *ngIf="row.rawIsArchived">Value: <strong>{{ row.rawIsArchived
-                              }}</strong></span>
                         </div>
                       </div>
                     </div>

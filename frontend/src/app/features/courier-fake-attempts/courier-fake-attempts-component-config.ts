@@ -31,16 +31,6 @@ export const COURIER_FAKE_ATTEMPTS_EDIT_FORM: FormConfig = {
       required: true,
       validators: [AppValidators.futureDate()],
     },
-    {
-      key: 'isArchived',
-      label: 'IsArchived',
-      type: 'select',
-      required: true,
-      options: [
-        { value: 0, label: '0' },
-        { value: 1, label: '1' },
-      ],
-    },
   ],
 };
 
@@ -92,7 +82,6 @@ export const COURIER_FAKE_ATTEMPTS_TABLE: TableConfig = {
       },
     },
 
-    { key: 'isArchivedDisplay', title: 'IsArchived' },
     { key: 'createdBy', title: 'CreatedBy' },
     { key: 'createdOnDisplay', title: 'CreatedOn' },
   ],

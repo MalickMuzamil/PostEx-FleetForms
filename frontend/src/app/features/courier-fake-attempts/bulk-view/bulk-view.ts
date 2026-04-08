@@ -45,7 +45,6 @@ interface BulkFakeAttemptsRow {
   rawRider?: string;
   rawFakeAttempts?: string;
   rawDate?: string;
-  rawIsArchived?: string;
 }
 
 @Component({
@@ -85,11 +84,8 @@ export class BulkView {
   private readonly DATE_REQUIRED = 'Date is required';
   private readonly INVALID_DATE = 'Invalid Date';
 
-  private readonly ARCH_REQUIRED = 'IsArchived is required';
-  private readonly INVALID_ARCH = 'IsArchived must be 0 or 1';
-
   // required columns (strict)
-  readonly REQUIRED_COLUMNS = ['CNNo', 'BranchName', 'Attempts', 'CourierID', 'Rider', 'Fake_Attempts', 'Date', 'IsArchived'];
+  readonly REQUIRED_COLUMNS = ['CNNo', 'BranchName', 'Attempts', 'CourierID', 'Rider', 'Fake_Attempts', 'Date'];
 
   rows: BulkFakeAttemptsRow[] = [];
   checkAll = false;
@@ -103,7 +99,7 @@ export class BulkView {
   loadingText = 'Reading file & validating...';
 
   private localValidateTimer: any = null;
-  private readonly MAX_LEN = 20;
+  private readonly MAX_LEN = 50;
   private readonly TOO_LONG = (label: string) => `${label}: Max ${this.MAX_LEN} characters allowed`;
 
   searchTerm = '';
@@ -271,7 +267,6 @@ export class BulkView {
     this.columnMap['Rider'] = pick(['Rider', 'RIDER']);
     this.columnMap['Fake_Attempts'] = pick(['Fake_Attempts', 'FAKE_ATTEMPTS', 'FAKEATTEMPTS']);
     this.columnMap['Date'] = pick(['Date', 'DATE']);
-    this.columnMap['IsArchived'] = pick(['IsArchived', 'ISARCHIVED', 'Is_Archived']);
   }
 
   // ---------------- ROW MAPPING ----------------
@@ -291,7 +286,6 @@ export class BulkView {
       const rawRider = String(getVal(r, 'Rider') ?? '').trim();
       const rawFakeAttempts = String(getVal(r, 'Fake_Attempts') ?? '').trim();
       const rawDate = String(getVal(r, 'Date') ?? '').trim();
-      const rawIsArchived = String(getVal(r, 'IsArchived') ?? '').trim();
 
       // CNNo
       const cnNo = rawCnNo || null;
@@ -334,15 +328,6 @@ export class BulkView {
       if (!rawDate) errors.push(this.DATE_REQUIRED);
       else if (!date) errors.push(this.INVALID_DATE);
 
-      // IsArchived
-      let isArchivedNum: number | null = null;
-      if (rawIsArchived === '') errors.push(this.ARCH_REQUIRED);
-      else {
-        const n = Number(rawIsArchived);
-        if (n === 0 || n === 1) isArchivedNum = n;
-        else errors.push(this.INVALID_ARCH);
-      }
-
       // Max length
       const checkMax = (val: string, label: string) => {
         if (val && val.length > this.MAX_LEN) errors.push(this.TOO_LONG(label));
@@ -363,7 +348,6 @@ export class BulkView {
         rawRider,
         rawFakeAttempts,
         rawDate,
-        rawIsArchived,
 
         cnNo,
         branchName,
@@ -375,7 +359,7 @@ export class BulkView {
         date,
         dateControl: new FormControl<Date | null>(date),
 
-        isArchived: isArchivedNum ?? 0,
+        isArchived: 0,
         createdBy,
 
         checked: false,
@@ -411,11 +395,11 @@ export class BulkView {
       this.FAKE_INVALID,
       this.DATE_REQUIRED,
       this.INVALID_DATE,
-      this.ARCH_REQUIRED,
-      this.INVALID_ARCH,
     ].forEach((m) => this.removeErr(row, m));
 
-    row.errors = (row.errors ?? []).filter((e) => !/Max 20 characters allowed/i.test(e));
+    row.errors = (row.errors ?? []).filter(
+      (e) => !new RegExp(`Max ${this.MAX_LEN} characters allowed`, 'i').test(e)
+    );
     row.errors = (row.errors ?? []).filter((e) => !e.startsWith('Duplicate with row'));
     this.removeErr(row, 'Attempts must be digits only');
     this.removeErr(row, 'Fake_Attempts must be digits only');
@@ -454,8 +438,6 @@ export class BulkView {
         else this.addErr(row, this.INVALID_DATE);
       }
 
-      const arch = Number(row.isArchived);
-      if (!(arch === 0 || arch === 1)) this.addErr(row, this.INVALID_ARCH);
 
       this.validateMaxLen(row, row.cnNo, 'CNNo');
       this.validateMaxLen(row, row.branchName, 'BranchName');
@@ -484,8 +466,7 @@ export class BulkView {
       !!String(row.courierId ?? '').trim() &&
       !!String(row.rider ?? '').trim() &&
       row.fakeAttempts !== null &&
-      !!row.dateControl?.value &&
-      (Number(row.isArchived) === 0 || Number(row.isArchived) === 1);
+      !!row.dateControl?.value;
   }
 
   updateHasValidRow() {
@@ -523,12 +504,6 @@ export class BulkView {
     this.updateHasValidRow();
   }
 
-  onRowArchivedChange(row: BulkFakeAttemptsRow) {
-    row.checked = false;
-    this.applyLocalValidationsSafe();
-    this.updateHasValidRow();
-  }
-
   onRowTextChange(row: BulkFakeAttemptsRow) {
     row.checked = false;
     this.applyLocalValidationsSafe();
@@ -559,7 +534,7 @@ export class BulkView {
         Rider: String(r.rider || '').trim(),
         Fake_Attempts: Number(r.fakeAttempts),
         Date: r.dateControl.value ? this.toYMD(r.dateControl.value) : null,
-        IsArchived: Number(r.isArchived),
+        IsArchived: 0,
         CreatedBy: String(r.createdBy || '').trim(), // Admin/User (frontend)
       }))
       .filter((p) => p.CNNo && p.Date);
@@ -777,7 +752,6 @@ export class BulkView {
           row.rawRider,
           row.rawFakeAttempts,
           row.rawDate,
-          row.rawIsArchived,
           row.createdBy,
           row.isValid ? 'valid' : 'invalid',
           ...(row.errors ?? [])

@@ -51,7 +51,6 @@ export class CourierFakeAttempts implements OnInit {
     'Rider',
     'Fake_Attempts',
     'Date',
-    'IsArchived',
   ];
 
   constructor(

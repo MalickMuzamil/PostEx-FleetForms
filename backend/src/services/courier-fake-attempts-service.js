@@ -19,7 +19,6 @@ class CourierFakeAttemptsService {
         Rider,
         Fake_Attempts,
         CAST([Date] AS date) AS [Date],
-        IsArchived,
         CreatedBy,
         CreatedOn
       FROM dbo.CourierFakeAttempts
@@ -45,8 +44,6 @@ class CourierFakeAttemptsService {
         const fakeRaw = row?.Fake_Attempts ?? row?.fakeAttempts ?? row?.FAKE_ATTEMPTS;
 
         const dateRaw = row?.Date ?? row?.DATE ?? row?.date;
-        const isArchivedRaw = row?.IsArchived ?? row?.isArchived;
-
         const createdByRaw = row?.CreatedBy ?? row?.createdBy;
 
         // ---- required strings (frontend: max 20 chars)
@@ -82,13 +79,6 @@ class CourierFakeAttemptsService {
         // ---- Date (date)
         const date = this.parseDateOnly(dateRaw);
         if (!date) reasons.push("Date is invalid (expected yyyy-mm-dd)");
-
-        // ---- IsArchived (bit) 0/1
-        if (isArchivedRaw === "" || isArchivedRaw == null) reasons.push("IsArchived is required");
-        else {
-            const n = Number(isArchivedRaw);
-            if (!(n === 0 || n === 1)) reasons.push("IsArchived must be 0 or 1");
-        }
 
         // ---- CreatedBy (Admin/User) - optional input; if provided must match
         let createdBy = null;
@@ -188,7 +178,7 @@ class CourierFakeAttemptsService {
 
             Date: this.parseDateOnly(p.Date ?? p.date ?? p.DATE),
 
-            IsArchived: Number(p.IsArchived ?? p.isArchived) === 1 ? 1 : 0,
+            IsArchived: 0,
 
             CreatedBy: this.normalizeCreatedBy(p.CreatedBy ?? p.createdBy) || "User",
         }));
