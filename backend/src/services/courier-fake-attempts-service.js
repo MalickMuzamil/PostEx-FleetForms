@@ -5,10 +5,10 @@ class CourierFakeAttemptsService {
     /* =========================
        LIST
     ========================== */
-    async list({ top = 500 } = {}) {
+    async list({ top = 10000 } = {}) {
         const pool = await getPool();
         const request = pool.request();
-        request.input("top", sql.Int, Number(top) || 500);
+        request.input("top", sql.Int, Number(top) || 10000);
 
         const result = await request.query(`
       SELECT TOP (@top)
@@ -19,10 +19,11 @@ class CourierFakeAttemptsService {
         Rider,
         Fake_Attempts,
         CAST([Date] AS date) AS [Date],
+        IsArchived,
         CreatedBy,
         CreatedOn
       FROM dbo.CourierFakeAttempts
-      ORDER BY CAST([Date] AS date) DESC, CNNo ASC;
+      ORDER BY CreatedOn DESC, CNNo ASC;
     `);
 
         return result.recordset;
@@ -54,7 +55,7 @@ class CourierFakeAttemptsService {
         else if (branchName.length > 20) reasons.push("BranchName max 20 characters");
 
         if (!rider) reasons.push("Rider is required");
-        else if (rider.length > 20) reasons.push("Rider max 20 characters");
+        else if (rider.length > 50) reasons.push("Rider max 50 characters");
 
         // ---- Attempts (tinyint 0-255)
         const attempts = this.toTinyIntOrNull(attemptsRaw);
