@@ -240,7 +240,7 @@ export class BulkView {
         this.rows = [];
         this.uidCounter = Date.now();
 
-        // ===== CHUNK PROCESSING =====
+        // ===== CHUNK PROCESS =====
         const CHUNK_SIZE = 500;
         const total = json.length;
         let index = 0;
@@ -248,6 +248,7 @@ export class BulkView {
         const processChunk = () => {
           const slice = json.slice(index, index + CHUNK_SIZE);
 
+          // ===== sanitize =====
           const sanitizedChunk = slice.map((row: any) => {
             const clean: any = {};
 
@@ -269,15 +270,22 @@ export class BulkView {
             return clean;
           });
 
-          this.appendRowsChunk(sanitizedChunk);
+          // ===== append =====
+          const newRows = this.appendRowsChunk(sanitizedChunk);
+
+          // ===== 🔥 parallel validation =====
+          setTimeout(() => {
+            this.validateChunk(newRows);
+          }, 0);
 
           index += CHUNK_SIZE;
 
+          this.loadingText = `Processing ${Math.min(index, total)} / ${total} rows...`;
+
           if (index < total) {
-            this.loadingText = `Processing ${Math.min(index, total)} / ${total} rows...`;
-            setTimeout(processChunk, 0); // 🔥 UI freeze fix
+            setTimeout(processChunk, 0);
           } else {
-            this.afterFullProcessing();
+            this.finishProcessing();
           }
         };
 
@@ -299,7 +307,6 @@ export class BulkView {
 
   private appendRowsChunk(data: any[]) {
     const startIndex = this.rows.length;
-
     const getVal = (rowObj: any, key: string) => rowObj?.[this.columnMap[key]];
     const createdBy = this.getCreatedBy();
 
@@ -344,19 +351,44 @@ export class BulkView {
     });
 
     this.rows = [...this.rows, ...newRows];
+    return newRows;
   }
 
-  private afterFullProcessing() {
-    setTimeout(() => {
-      this.applyLocalValidations();
-      this.updateHasValidRow();
-      this.checkDuplicateInFile();
+  private validateChunk(rows: any[]) {
+    for (const row of rows) {
+      this.clearManagedErrors(row);
 
+      if (!row.cnNo) this.addErr(row, this.CN_REQUIRED);
+      if (!row.branchName) this.addErr(row, this.BR_REQUIRED);
+
+      if (!row.rawAttempts) this.addErr(row, this.ATT_REQUIRED);
+      else if (!/^\d+$/.test(row.rawAttempts)) this.addErr(row, 'Attempts must be digits only');
+
+      if (!row.courierId) this.addErr(row, this.COURIER_REQUIRED);
+      if (!row.rider) this.addErr(row, this.RIDER_REQUIRED);
+
+      if (!row.rawFakeAttempts) this.addErr(row, this.FAKE_REQUIRED);
+      else if (!/^\d+$/.test(row.rawFakeAttempts)) this.addErr(row, 'Fake_Attempts must be digits only');
+
+      if (!row.dateControl?.value) {
+        if (!row.rawDate) this.addErr(row, this.DATE_REQUIRED);
+        else this.addErr(row, this.INVALID_DATE);
+      }
+
+      row.isValid = this.isRowValid(row);
+    }
+
+    // this.updateHasValidRow();
+  }
+
+  private finishProcessing() {
+    setTimeout(() => {
+      this.checkDuplicateInFile();
+      this.updateHasValidRow(); 
       this.isLoading = false;
       this.loadingText = '';
     }, 0);
   }
-
 
 
   // ---------------- HEADER VALIDATION & MAPPING ----------------
