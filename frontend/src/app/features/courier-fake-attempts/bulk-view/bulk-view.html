@@ -34,12 +34,13 @@
               </span>
 
               <input type="text" class="form-control bulk-search-input" [(ngModel)]="searchTerm"
-                placeholder="Search in table..." />
+                (ngModelChange)="onSearchOrFilterChange()" placeholder="Search in table..." />
             </div>
           </div>
 
           <div class="col-12 col-sm-6 col-lg-auto">
-            <select class="form-select bulk-filter-select" [(ngModel)]="statusFilter">
+            <select class="form-select bulk-filter-select" [(ngModel)]="statusFilter"
+              (ngModelChange)="onSearchOrFilterChange()">
               <option value="all">Status</option>
               <option value="valid">Valid</option>
               <option value="invalid">Invalid</option>
@@ -72,7 +73,7 @@
             </thead>
 
             <tbody>
-              <ng-container *ngFor="let row of filteredRows; trackBy: trackByRow">
+              <ng-container *ngFor="let row of pagedRows; trackBy: trackByRow">
                 <tr [class.row-selected]="row.checked"
                   [class.table-danger-soft]="!row.isValid && (row.errors?.length ?? 0) > 0">
 
@@ -262,6 +263,29 @@
               </ng-container>
             </tbody>
           </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-3">
+          <div class="text-muted small">
+            Showing {{ pageStart + 1 }} - {{ pageEnd }} of {{ filteredRows.length }} rows
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary btn-sm" (click)="prevPage()"
+              [disabled]="pageIndex === 1 || isLoading">
+              Prev
+            </button>
+
+            <span class="fw-semibold">
+              Page {{ pageIndex }} / {{ totalPages }}
+            </span>
+
+            <button class="btn btn-outline-secondary btn-sm" (click)="nextPage()"
+              [disabled]="pageIndex === totalPages || isLoading">
+              Next
+            </button>
+          </div>
         </div>
       </nz-spin>
     </div>
