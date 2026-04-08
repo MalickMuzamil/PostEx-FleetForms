@@ -173,10 +173,14 @@ export class BulkView {
 
   parseExcel(file: File) {
     const reader = new FileReader();
+
     reader.onload = (e: any) => {
       try {
-        const wb = XLSX.read(e.target.result, { type: 'binary' });
-        const sheetName = wb.SheetNames?.[0];
+        const wb = XLSX.read(e.target.result, { type: 'binary', cellDates: true });
+
+        const sheetName =
+          wb.SheetNames.find((s) => s === 'Courier_Data') || wb.SheetNames[0];
+
         const sheet = wb.Sheets?.[sheetName];
 
         if (!sheetName || !sheet) {
@@ -185,7 +189,11 @@ export class BulkView {
           return;
         }
 
-        const rowsHeader: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
+        // ===== HEADER =====
+        const rowsHeader: any[][] = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          raw: true,
+        });
 
         if (!rowsHeader?.length || !rowsHeader[0]?.length) {
           this.toast('error', 'Invalid File', 'Excel file is empty or missing header row.');
@@ -203,8 +211,78 @@ export class BulkView {
           return;
         }
 
-        const json: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
-        this.handleHeaderValidation(json || []);
+        // ===== DATA =====
+        const json: any[] = XLSX.utils.sheet_to_json(sheet, {
+          defval: '',
+          raw: true,
+        });
+
+        if (!json.length) {
+          this.toast('error', 'Invalid File', 'Excel has no data rows.');
+          this.isLoading = false;
+          return;
+        }
+
+        // ===== HEADER VALIDATION =====
+        const headerSet = new Set(this.fileHeaders.map((h) => this.normHeader(h)));
+        const required = this.REQUIRED_COLUMNS.map((c) => this.normHeader(c));
+        const missing = required.filter((c) => !headerSet.has(c));
+
+        if (missing.length) {
+          this.toast('error', 'Invalid File', `Missing required columns: ${missing.join(', ')}`);
+          this.isLoading = false;
+          return;
+        }
+
+        this.autoMapColumns();
+
+        // ===== RESET =====
+        this.rows = [];
+        this.uidCounter = Date.now();
+
+        // ===== CHUNK PROCESSING =====
+        const CHUNK_SIZE = 500;
+        const total = json.length;
+        let index = 0;
+
+        const processChunk = () => {
+          const slice = json.slice(index, index + CHUNK_SIZE);
+
+          const sanitizedChunk = slice.map((row: any) => {
+            const clean: any = {};
+
+            for (const key of Object.keys(row)) {
+              const val = row[key];
+
+              if (val instanceof Date) {
+                const y = val.getFullYear();
+                const m = String(val.getMonth() + 1).padStart(2, '0');
+                const d = String(val.getDate()).padStart(2, '0');
+                clean[key] = `${y}-${m}-${d}`;
+              } else if (typeof val === 'number') {
+                clean[key] = String(Math.trunc(val));
+              } else {
+                clean[key] = val;
+              }
+            }
+
+            return clean;
+          });
+
+          this.appendRowsChunk(sanitizedChunk);
+
+          index += CHUNK_SIZE;
+
+          if (index < total) {
+            this.loadingText = `Processing ${Math.min(index, total)} / ${total} rows...`;
+            setTimeout(processChunk, 0); // 🔥 UI freeze fix
+          } else {
+            this.afterFullProcessing();
+          }
+        };
+
+        processChunk();
+
       } catch {
         this.toast('error', 'Invalid File', 'Unable to read Excel file.');
         this.isLoading = false;
@@ -218,6 +296,68 @@ export class BulkView {
 
     reader.readAsBinaryString(file);
   }
+
+  private appendRowsChunk(data: any[]) {
+    const startIndex = this.rows.length;
+
+    const getVal = (rowObj: any, key: string) => rowObj?.[this.columnMap[key]];
+    const createdBy = this.getCreatedBy();
+
+    const newRows = data.map((r, i) => {
+      const rawCnNo = String(getVal(r, 'CNNo') ?? '').trim();
+      const rawBranchName = String(getVal(r, 'BranchName') ?? '').trim();
+      const rawAttempts = String(getVal(r, 'Attempts') ?? '').trim();
+      const rawCourierId = String(getVal(r, 'CourierID') ?? '').trim();
+      const rawRider = String(getVal(r, 'Rider') ?? '').trim();
+      const rawFakeAttempts = String(getVal(r, 'Fake_Attempts') ?? '').trim();
+      const rawDate = String(getVal(r, 'Date') ?? '').trim();
+
+      return {
+        uid: ++this.uidCounter,
+        rowNo: startIndex + i + 1,
+
+        rawCnNo,
+        rawBranchName,
+        rawAttempts,
+        rawCourierId,
+        rawRider,
+        rawFakeAttempts,
+        rawDate,
+
+        cnNo: rawCnNo || null,
+        branchName: rawBranchName || null,
+        attempts: /^\d+$/.test(rawAttempts) ? Number(rawAttempts) : null,
+        courierId: rawCourierId || null,
+        rider: rawRider || null,
+        fakeAttempts: /^\d+$/.test(rawFakeAttempts) ? Number(rawFakeAttempts) : null,
+
+        date: this.parseAnyDate(rawDate),
+        dateControl: new FormControl<Date | null>(this.parseAnyDate(rawDate)),
+
+        isArchived: 0,
+        createdBy,
+
+        checked: false,
+        errors: [],
+        isValid: false,
+      };
+    });
+
+    this.rows = [...this.rows, ...newRows];
+  }
+
+  private afterFullProcessing() {
+    setTimeout(() => {
+      this.applyLocalValidations();
+      this.updateHasValidRow();
+      this.checkDuplicateInFile();
+
+      this.isLoading = false;
+      this.loadingText = '';
+    }, 0);
+  }
+
+
 
   // ---------------- HEADER VALIDATION & MAPPING ----------------
   private normHeader(h: any): string {
@@ -608,17 +748,28 @@ export class BulkView {
     const s = String(raw ?? '').trim();
     if (!s) return null;
 
+    // yyyy-MM-dd  (Excel sanitized + ISO)
     const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (iso) {
-      const y = +iso[1];
-      const mo = +iso[2];
-      const da = +iso[3];
-      const d = new Date(y, mo - 1, da);
+      const d = new Date(+iso[1], +iso[2] - 1, +iso[3]);
       return isNaN(d.getTime()) ? null : d;
     }
 
-    const d = new Date(s);
-    return isNaN(d.getTime()) ? null : d;
+    // ✅ M/D/YYYY or MM/DD/YYYY  (CSV se aye to)
+    const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (mdy) {
+      const d = new Date(+mdy[3], +mdy[1] - 1, +mdy[2]);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // ✅ D-M-YYYY or DD-MM-YYYY
+    const dmy = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (dmy) {
+      const d = new Date(+dmy[3], +dmy[1] - 1, +dmy[2]);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    return null; // new Date(s) hata do — unreliable hai
   }
 
   private toNumberOrNull(v: any): number | null {
