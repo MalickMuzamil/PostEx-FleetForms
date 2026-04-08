@@ -63,8 +63,12 @@ interface BulkFakeAttemptsRow {
   styleUrl: './bulk-view.css',
 })
 export class BulkView {
+  pageSize = 100;
+  pageIndex = 1;
+
   file!: File;
   private uidCounter = 0;
+  filteredRows: BulkFakeAttemptsRow[] = [];
 
   // ---------- errors ----------
   private readonly CN_REQUIRED = 'CNNo is required';
@@ -123,6 +127,7 @@ export class BulkView {
 
     this.isLoading = true;
     this.loadingText = 'Reading file & validating...';
+    this.refreshFilteredRows();
     this.parseFile(this.file);
   }
 
@@ -351,6 +356,7 @@ export class BulkView {
     });
 
     this.rows = [...this.rows, ...newRows];
+    this.refreshFilteredRows();
     return newRows;
   }
 
@@ -384,7 +390,8 @@ export class BulkView {
   private finishProcessing() {
     setTimeout(() => {
       this.checkDuplicateInFile();
-      this.updateHasValidRow(); 
+      this.updateHasValidRow();
+      this.refreshFilteredRows();
       this.isLoading = false;
       this.loadingText = '';
     }, 0);
@@ -415,6 +422,7 @@ export class BulkView {
 
     this.autoMapColumns();
     this.mapRows(data);
+    this.refreshFilteredRows();
 
     this.isLoading = false;
   }
@@ -661,6 +669,7 @@ export class BulkView {
     this.checkAll = checked;
     this.rows.forEach((r) => (r.checked = checked ? !!r.isValid : false));
     this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+    this.refreshFilteredRows();
   }
 
   onRowToggle(row: BulkFakeAttemptsRow, checked: boolean) {
@@ -668,18 +677,21 @@ export class BulkView {
     row.checked = checked && canSelect;
 
     this.enforceSelectionRules();
+    this.refreshFilteredRows();
   }
 
   onRowDateChange(row: BulkFakeAttemptsRow) {
     row.checked = false;
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
+    this.refreshFilteredRows();
   }
 
   onRowTextChange(row: BulkFakeAttemptsRow) {
     row.checked = false;
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
+    this.refreshFilteredRows();
   }
 
   // ---------------- BULK PROCEED ----------------
@@ -759,6 +771,7 @@ export class BulkView {
 
     this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
     this.updateHasValidRow();
+    this.refreshFilteredRows();
   }
 
   private chunk<T>(arr: T[], size: number): T[][] {
@@ -914,12 +927,12 @@ export class BulkView {
     this.onRowTextChange(row);
   }
 
-  get filteredRows() {
+  private refreshFilteredRows() {
     let list = [...this.rows];
     const term = this.searchTerm.trim().toLowerCase();
 
     if (term) {
-      list = list.filter((row: any) => {
+      list = list.filter((row: BulkFakeAttemptsRow) => {
         const text = [
           row.rowNo,
           row.cnNo,
@@ -945,14 +958,18 @@ export class BulkView {
     }
 
     if (this.statusFilter === 'valid') {
-      list = list.filter((r: any) => !!r.isValid);
+      list = list.filter((r: BulkFakeAttemptsRow) => !!r.isValid);
     } else if (this.statusFilter === 'invalid') {
-      list = list.filter((r: any) => !r.isValid);
+      list = list.filter((r: BulkFakeAttemptsRow) => !r.isValid);
     } else if (this.statusFilter === 'selected') {
-      list = list.filter((r: any) => !!r.checked);
+      list = list.filter((r: BulkFakeAttemptsRow) => !!r.checked);
     }
 
-    return list;
+    this.filteredRows = list;
+
+    if (this.pageIndex > this.totalPages) {
+      this.pageIndex = this.totalPages;
+    }
   }
 
   showRowErrors(row: any) {
@@ -969,4 +986,34 @@ export class BulkView {
     });
   }
 
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredRows.length / this.pageSize));
+  }
+
+  get pageStart(): number {
+    return (this.pageIndex - 1) * this.pageSize;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.pageStart + this.pageSize, this.filteredRows.length);
+  }
+
+  get pagedRows() {
+    const start = this.pageStart;
+    const end = start + this.pageSize;
+    return this.filteredRows.slice(start, end);
+  }
+
+  nextPage() {
+    if (this.pageIndex < this.totalPages) this.pageIndex++;
+  }
+
+  prevPage() {
+    if (this.pageIndex > 1) this.pageIndex--;
+  }
+
+  onSearchOrFilterChange() {
+    this.pageIndex = 1;
+    this.refreshFilteredRows();
+  }
 }
