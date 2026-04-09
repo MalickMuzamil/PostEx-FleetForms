@@ -60,9 +60,8 @@ class CallLogsService {
             throw err;
         }
 
-        // Rate limiter: Maximum 200,000 rows per import to prevent DB overload and session timeouts
         if (payloads.length > 200000) {
-            const err = new Error("Maximum 200,000 rows allowed per import operation to ensure system stability.");
+            const err = new Error("Maximum 200,000 rows allowed per import operation.");
             err.code = "RATE_LIMIT_EXCEEDED";
             throw err;
         }
@@ -70,14 +69,11 @@ class CallLogsService {
         const { valid, invalidRows } = this._validatePayloads(payloads);
 
         if (invalidRows.length) {
-            const err = new Error("Bulk validation failed. Fix invalid rows and try again.");
+            const err = new Error("Bulk validation failed.");
             err.code = "BULK_VALIDATION_FAILED";
             err.invalidRows = invalidRows;
             throw err;
         }
-
-        // ✅ recommended:
-        // CREATE UNIQUE INDEX uq_call_logs ON dbo.CALL_LOGS (Customer_Number, Master_No, [Time]);
 
         const pool = await getPool();
         const tx = new sql.Transaction(pool);
@@ -87,20 +83,32 @@ class CallLogsService {
 
             const CHUNK = 10000;
             let inserted = 0;
+            let updated = 0;
 
             for (let i = 0; i < valid.length; i += CHUNK) {
                 const batch = valid.slice(i, i + CHUNK);
+
                 console.log(`🚀 Processing chunk ${i / CHUNK + 1}`);
                 console.log(`➡️ Rows in chunk: ${batch.length}`);
 
-                const insertedChunk = await this._bulkImportBatch(tx, batch);
-                inserted += insertedChunk;
+                const chunkResult = await this._bulkImportBatch(tx, batch);
 
-                console.log(`✅ Chunk ${i / CHUNK + 1} inserted: ${insertedChunk}`);
+                inserted += chunkResult.inserted;
+                updated += chunkResult.updated;
+
+                console.log(
+                    `✅ Chunk ${i / CHUNK + 1} inserted: ${chunkResult.inserted}, updated: ${chunkResult.updated}`
+                );
             }
 
             await tx.commit();
-            return { inserted, invalidCount: 0 };
+
+            return {
+                inserted,
+                updated,
+                invalidCount: 0
+            };
+
         } catch (e) {
             try {
                 await tx.rollback();
@@ -111,31 +119,26 @@ class CallLogsService {
 
     async _bulkImportBatch(tx, batch) {
         if (!Array.isArray(batch) || batch.length === 0) {
-            return 0;
+            console.log("⚠️ Empty batch received");
+            return { inserted: 0, updated: 0 };
         }
 
-        // DEDUPLICATE: Keep only the latest occurrence per key (Customer_Number, Master_No, Time)
-        // This prevents MERGE "attempted to UPDATE or DELETE the same row more than once" error
-        const deduped = new Map();
-        if (!Array.isArray(batch) || batch.length === 0) {
-            console.log("⚠️ Empty batch received");
-            return 0;
-        }
         console.log(`📦 Incoming batch size: ${batch.length}`);
 
-
+        // Deduplicate
+        const deduped = new Map();
         for (const row of batch) {
             const key = `${row.Customer_Number}|${row.Master_No}|${row.Time}`;
-            deduped.set(key, row); // Latest occurrence overwrites earlier ones
+            deduped.set(key, row);
         }
+
         const uniqueBatch = Array.from(deduped.values());
         console.log(`🧹 After dedupe: ${uniqueBatch.length}`);
 
-
-        // Accumulate ALL rows in a single table object
-        // Let mssql library auto-create the temp table
+        // Temp table
         const table = new sql.Table('#CallLogsBulk');
-        table.create = true; // Let mssql create the table
+        table.create = true;
+
         table.columns.add('Customer_Number', sql.VarChar(20), { nullable: false });
         table.columns.add('Consignee_Cell_Length', sql.Int, { nullable: false });
         table.columns.add('Master_No', sql.VarChar(20), { nullable: false });
@@ -162,61 +165,74 @@ class CallLogsService {
             );
         }
 
-        // Bulk insert - mssql will create the temp table automatically
+        // Bulk insert temp table
         await new sql.Request(tx).bulk(table);
         console.log("📥 Bulk insert into temp table done");
 
-        // After bulk load, merge into main table
+        // Merge
         const mergeResult = await new sql.Request(tx).query(`
-      DECLARE @OutputActions TABLE (Action NVARCHAR(10));
+        DECLARE @OutputActions TABLE (Action NVARCHAR(10));
 
-      MERGE dbo.CALL_LOGS AS target
-      USING #CallLogsBulk AS src
-      ON target.Customer_Number = src.Customer_Number
-         AND target.Master_No = src.Master_No
-         AND target.[Time] = src.[Time]
-      WHEN MATCHED THEN
-        UPDATE SET
-          target.Consignee_Cell_Length = src.Consignee_Cell_Length,
-          target.[Agent Duration] = src.[Agent Duration],
-          target.[Total Duration] = src.[Total Duration],
-          target.Extension = src.Extension,
-          target.Call_Response = src.Call_Response,
-          target.[Time] = src.[Time],
-          target.Recording = src.Recording,
-          target.IsArchived = src.IsArchived
-      WHEN NOT MATCHED THEN
-        INSERT (
-          Customer_Number,
-          Consignee_Cell_Length,
-          Master_No,
-          [Agent Duration],
-          [Total Duration],
-          Extension,
-          Call_Response,
-          [Time],
-          Recording,
-          IsArchived
-        )
-        VALUES (
-          src.Customer_Number,
-          src.Consignee_Cell_Length,
-          src.Master_No,
-          src.[Agent Duration],
-          src.[Total Duration],
-          src.Extension,
-          src.Call_Response,
-          src.[Time],
-          src.Recording,
-          src.IsArchived
-        )
-      OUTPUT $action INTO @OutputActions;
+        MERGE dbo.CALL_LOGS AS target
+        USING #CallLogsBulk AS src
+        ON target.Customer_Number = src.Customer_Number
+           AND target.Master_No = src.Master_No
+           AND target.[Time] = src.[Time]
 
-      SELECT SUM(CASE WHEN Action = 'INSERT' THEN 1 ELSE 0 END) AS InsertedCount
-      FROM @OutputActions;
+        WHEN MATCHED THEN
+          UPDATE SET
+            target.Consignee_Cell_Length = src.Consignee_Cell_Length,
+            target.[Agent Duration] = src.[Agent Duration],
+            target.[Total Duration] = src.[Total Duration],
+            target.Extension = src.Extension,
+            target.Call_Response = src.Call_Response,
+            target.[Time] = src.[Time],
+            target.Recording = src.Recording,
+            target.IsArchived = src.IsArchived
+
+        WHEN NOT MATCHED THEN
+          INSERT (
+            Customer_Number,
+            Consignee_Cell_Length,
+            Master_No,
+            [Agent Duration],
+            [Total Duration],
+            Extension,
+            Call_Response,
+            [Time],
+            Recording,
+            IsArchived
+          )
+          VALUES (
+            src.Customer_Number,
+            src.Consignee_Cell_Length,
+            src.Master_No,
+            src.[Agent Duration],
+            src.[Total Duration],
+            src.Extension,
+            src.Call_Response,
+            src.[Time],
+            src.Recording,
+            src.IsArchived
+          )
+
+        OUTPUT $action INTO @OutputActions;
+
+        SELECT
+          SUM(CASE WHEN Action = 'INSERT' THEN 1 ELSE 0 END) AS InsertedCount,
+          SUM(CASE WHEN Action = 'UPDATE' THEN 1 ELSE 0 END) AS UpdatedCount
+        FROM @OutputActions;
     `);
 
-        return Number(mergeResult?.recordset?.[0]?.InsertedCount ?? 0);
+        const insertedCount = Number(mergeResult?.recordset?.[0]?.InsertedCount ?? 0);
+        const updatedCount = Number(mergeResult?.recordset?.[0]?.UpdatedCount ?? 0);
+
+        console.log(`🧾 Merge completed. Inserted: ${insertedCount}, Updated: ${updatedCount}`);
+
+        return {
+            inserted: insertedCount,
+            updated: updatedCount
+        };
     }
 
     // =============================
