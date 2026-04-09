@@ -53,13 +53,11 @@ import BranchCalender from './routes/branch-wise-calender-routes.js';
 dotenv.config();
 
 const app = express();
-app.use(express.json());
-
 
 // security + basics
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "20mb" }));
 
 // rate limit
 app.use(generalRateLimiter);

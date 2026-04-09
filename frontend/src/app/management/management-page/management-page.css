@@ -147,7 +147,8 @@
 :host ::ng-deep .role-tag-user,
 :host ::ng-deep .role-tag-admin,
 :host ::ng-deep .role-tag-cs,
-:host ::ng-deep .role-tag-hr {
+:host ::ng-deep .role-tag-hr,
+:host ::ng-deep .role-tag-it {
   border-radius: 999px;
   font-weight: 600;
   padding-inline: 10px;
@@ -169,6 +170,12 @@
   color: #13c2c2 !important;
   border-color: #87e8de !important;
   background: #e6fffb !important;
+}
+
+:host ::ng-deep .role-tag-it {
+  color: #722ed1 !important;
+  border-color: #d3adf7 !important;
+  background: #f9f0ff !important;
 }
 
 :host ::ng-deep .role-tag-hr {

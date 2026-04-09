@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
 
 // STAGE / LOCAL
-// import { AuthSDK, AuthSDKFetchError, setPasskeyEmail, getPasskeyEmail } from 'postex-auth-sdk-stage'
+import { AuthSDK, AuthSDKFetchError, setPasskeyEmail, getPasskeyEmail } from 'postex-auth-sdk-stage'
 
 // PRODUCTION
-import { AuthSDK, AuthSDKFetchError, setPasskeyEmail, getPasskeyEmail } from 'postex-auth-sdk-live'
+// import { AuthSDK, AuthSDKFetchError, setPasskeyEmail, getPasskeyEmail } from 'postex-auth-sdk-live'
 
 import { environment } from '../../../environment/environment';
 import { BehaviorSubject } from 'rxjs';
@@ -288,10 +288,12 @@ export class AuthService {
         if (r === 'postex-auth-admin') return 'ADMIN';
         if (r === 'postex-auth-cs') return 'CS';
         if (r === 'postex-auth-hr') return 'HR';
+        if (r === 'postex-auth-it') return 'IT';
         if (r === 'postex' || r === 'user') return 'USER';
         if (r === 'admin') return 'ADMIN';
         if (r === 'cs') return 'CS';
         if (r === 'hr') return 'HR';
+        if (r === 'it') return 'IT';
         return r.toUpperCase();
       });
   }
