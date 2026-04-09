@@ -1,449 +1,443 @@
 <div class="container-fluid bulk-page mt-4">
-    <div class="card bulk-card shadow-sm">
-        <div class="card-body">
+  <div class="card bulk-card shadow-sm">
+    <div class="card-body">
 
-            <!-- Header -->
-            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <button class="btn btn-outline-secondary bulk-top-btn" routerLink="/attendance">
-                        ← Back
-                    </button>
+      <!-- Header -->
+      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <button class="btn btn-outline-secondary bulk-top-btn" routerLink="/attendance">
+            ← Back
+          </button>
 
-                    <button class="btn btn-success bulk-top-btn px-4" *ngIf="selectedValidCount >= 1"
-                        [disabled]="!canProceed" (click)="proceedBulkImport()">
-                        <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
-                        {{ bulkSaving ? 'Processing...' : 'Proceed' }}
-                    </button>
-                </div>
-
-                <h4 class="fw-bold mb-0 bulk-title">Attendance Bulk Preview</h4>
-            </div>
-
-            <nz-spin [nzSpinning]="isLoading" [nzTip]="loadingText">
-
-                <!-- Toolbar -->
-                <div class="row g-2 align-items-center mb-3">
-                    <div class="col-12 col-lg">
-                        <div class="bulk-search-wrap">
-                            <span class="bulk-search-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="11" cy="11" r="8"></circle>
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                                </svg>
-                            </span>
-
-                            <input type="text" class="form-control bulk-search-input" [(ngModel)]="searchTerm"
-                                placeholder="Search in table..." />
-                        </div>
-                    </div>
-
-                    <div class="col-12 col-sm-6 col-lg-auto">
-                        <select class="form-select bulk-filter-select" [(ngModel)]="statusFilter">
-                            <option value="all">Status</option>
-                            <option value="valid">Valid</option>
-                            <option value="invalid">Invalid</option>
-                            <option value="selected">Selected</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Table -->
-                <div class="table-responsive bulk-table-wrap">
-                    <table class="table bulk-table align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th class="col-check">
-                                    <input type="checkbox" class="form-check-input" [ngModel]="checkAll"
-                                        (ngModelChange)="onToggleAll($event)" [disabled]="isLoading" />
-                                </th>
-
-                                <th class="col-index">#</th>
-                                <th class="col-status">Status</th>
-
-                                <th class="col-empid">EMP_ID</th>
-                                <th class="col-name">EMP_NAME</th>
-                                <th class="col-text">DESIGNATION</th>
-                                <th class="col-text">DIVISION</th>
-                                <th class="col-text">ZONE</th>
-                                <th class="col-text">BRANCH</th>
-                                <th class="col-text">DEPARTMENT</th>
-                                <th class="col-text">FUNCTION</th>
-                                <th class="col-text">AREA</th>
-                                <th class="col-text">SHIFT</th>
-                                <th class="col-shifttime">SHIFT_TIME</th>
-                                <th class="col-date">DATE</th>
-                                <th class="col-time">IN_TIME</th>
-                                <th class="col-time">OUT_TIME</th>
-                                <th class="col-archive">IsArchived</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            <ng-container *ngFor="let row of filteredRows; trackBy: trackByRow">
-                                <tr [class.row-selected]="row.checked"
-                                    [class.table-danger-soft]="(row.errors?.length ?? 0) > 0">
-
-                                    <!-- Checkbox -->
-                                    <td>
-                                        <input type="checkbox" class="form-check-input" [(ngModel)]="row.checked"
-                                            (change)="onRowToggle(row, row.checked)"
-                                            [disabled]="isLoading || !row.isValid" />
-                                    </td>
-
-                                    <!-- Row No -->
-                                    <td>{{ row.rowNo }}</td>
-
-                                    <!-- Status -->
-                                    <td>
-                                        <!-- Valid -->
-                                        <span *ngIf="row.isValid" class="status-pill status-valid">
-                                            <span class="pill-dot"></span>
-                                            Valid
-                                        </span>
-
-                                        <!-- Invalid -->
-                                        <button *ngIf="!row.isValid && (row.errors?.length ?? 0) > 0" type="button"
-                                            class="status-pill status-invalid" (click)="showRowErrors(row)">
-                                            <span class="pill-dot"></span>
-                                            {{ row.errors?.length ?? 0 }} Errors
-                                        </button>
-
-                                        <!-- Fallback -->
-                                        <span *ngIf="!row.isValid && !(row.errors?.length ?? 0)"
-                                            class="status-pill status-invalid">
-                                            <span class="pill-dot"></span>
-                                            Invalid
-                                        </span>
-                                    </td>
-
-                                    <!-- EMP_ID -->
-                                    <td
-                                        [ngClass]="{ 'cell-invalid': hasErr(row,'EMP_ID is required') || hasErr(row,'EMP_ID: Invalid format') || hasErrLike(row,'Duplicate with row') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input"
-                                                [(ngModel)]="row.empId" [disabled]="isLoading"
-                                                (ngModelChange)="onRowTextChange(row)" />
-
-                                            <div class="cell-msg">
-                                                <div class="field-err" *ngIf="hasErr(row,'EMP_ID is required')">
-                                                    <span class="dot"></span>
-                                                    <strong>EMP_ID is required</strong>
-                                                    <span class="file" *ngIf="row.rawEmpId">Value: <strong>{{
-                                                            row.rawEmpId }}</strong></span>
-                                                </div>
-
-                                                <div class="field-err" *ngIf="hasErr(row,'EMP_ID: Invalid format')">
-                                                    <span class="dot"></span>
-                                                    <strong>EMP_ID invalid (example: E1001)</strong>
-                                                    <span class="file" *ngIf="row.rawEmpId">Value: <strong>{{
-                                                            row.rawEmpId }}</strong></span>
-                                                </div>
-
-                                                <div class="field-err warn"
-                                                    *ngIf="hasErrLike(row,'Duplicate with row')">
-                                                    <span class="dot"></span>
-                                                    <strong>{{ getErrLike(row,'Duplicate with row') }}</strong>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- EMP_NAME -->
-                                    <td [ngClass]="{ 'cell-invalid': hasErr(row,'EMP_NAME: Numbers not allowed') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input"
-                                                [(ngModel)]="row.empName" [disabled]="isLoading"
-                                                (ngModelChange)="onRowTextChange(row)" />
-
-                                            <div class="cell-msg">
-                                                <div class="field-err"
-                                                    *ngIf="hasErr(row,'EMP_NAME: Numbers not allowed')">
-                                                    <span class="dot"></span>
-                                                    <strong>EMP_NAME: Numbers not allowed</strong>
-                                                    <span class="file" *ngIf="row.rawEmpName">Value: <strong>{{
-                                                            row.rawEmpName }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- DESIGNATION -->
-                                    <td [ngClass]="{ 'cell-invalid': hasErr(row,'DESIGNATION: Numbers not allowed') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input"
-                                                [(ngModel)]="row.designation" [disabled]="isLoading"
-                                                (ngModelChange)="onRowTextChange(row)" />
-                                            <div class="cell-msg">
-                                                <div class="field-err"
-                                                    *ngIf="hasErr(row,'DESIGNATION: Numbers not allowed')">
-                                                    <span class="dot"></span>
-                                                    <strong>DESIGNATION: Numbers not allowed</strong>
-                                                    <span class="file" *ngIf="row.rawDesignation">Value: <strong>{{
-                                                            row.rawDesignation }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- DIVISION -->
-                                    <td [ngClass]="{ 'cell-invalid': hasErr(row,'DIVISION: Numbers not allowed') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input"
-                                                [(ngModel)]="row.division" [disabled]="isLoading"
-                                                (ngModelChange)="onRowTextChange(row)" />
-                                            <div class="cell-msg">
-                                                <div class="field-err"
-                                                    *ngIf="hasErr(row,'DIVISION: Numbers not allowed')">
-                                                    <span class="dot"></span>
-                                                    <strong>DIVISION: Numbers not allowed</strong>
-                                                    <span class="file" *ngIf="row.rawDivision">Value: <strong>{{
-                                                            row.rawDivision }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- ZONE -->
-                                    <td [ngClass]="{ 'cell-invalid': hasErr(row,'ZONE: Numbers not allowed') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input"
-                                                [(ngModel)]="row.zone" [disabled]="isLoading"
-                                                (ngModelChange)="onRowTextChange(row)" />
-                                            <div class="cell-msg">
-                                                <div class="field-err" *ngIf="hasErr(row,'ZONE: Numbers not allowed')">
-                                                    <span class="dot"></span>
-                                                    <strong>ZONE: Numbers not allowed</strong>
-                                                    <span class="file" *ngIf="row.rawZone">Value: <strong>{{ row.rawZone
-                                                            }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- BRANCH -->
-                                    <td [ngClass]="{ 'cell-invalid': hasErr(row,'BRANCH: Numbers not allowed') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input"
-                                                [(ngModel)]="row.branch" [disabled]="isLoading"
-                                                (ngModelChange)="onRowTextChange(row)" />
-                                            <div class="cell-msg">
-                                                <div class="field-err"
-                                                    *ngIf="hasErr(row,'BRANCH: Numbers not allowed')">
-                                                    <span class="dot"></span>
-                                                    <strong>BRANCH: Numbers not allowed</strong>
-                                                    <span class="file" *ngIf="row.rawBranch">Value: <strong>{{
-                                                            row.rawBranch }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- DEPARTMENT -->
-                                    <td [ngClass]="{ 'cell-invalid': hasErr(row,'DEPARTMENT: Numbers not allowed') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input"
-                                                [(ngModel)]="row.department" [disabled]="isLoading"
-                                                (ngModelChange)="onRowTextChange(row)" />
-                                            <div class="cell-msg">
-                                                <div class="field-err"
-                                                    *ngIf="hasErr(row,'DEPARTMENT: Numbers not allowed')">
-                                                    <span class="dot"></span>
-                                                    <strong>DEPARTMENT: Numbers not allowed</strong>
-                                                    <span class="file" *ngIf="row.rawDepartment">Value: <strong>{{
-                                                            row.rawDepartment }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- FUNCTION -->
-                                    <td [ngClass]="{ 'cell-invalid': hasErr(row,'FUNCTION: Numbers not allowed') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input"
-                                                [(ngModel)]="row.function" [disabled]="isLoading"
-                                                (ngModelChange)="onRowTextChange(row)" />
-                                            <div class="cell-msg">
-                                                <div class="field-err"
-                                                    *ngIf="hasErr(row,'FUNCTION: Numbers not allowed')">
-                                                    <span class="dot"></span>
-                                                    <strong>FUNCTION: Numbers not allowed</strong>
-                                                    <span class="file" *ngIf="row.rawFunction">Value: <strong>{{
-                                                            row.rawFunction }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- AREA -->
-                                    <td [ngClass]="{ 'cell-invalid': hasErr(row,'AREA: Numbers not allowed') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input"
-                                                [(ngModel)]="row.area" [disabled]="isLoading"
-                                                (ngModelChange)="onRowTextChange(row)" />
-                                            <div class="cell-msg">
-                                                <div class="field-err" *ngIf="hasErr(row,'AREA: Numbers not allowed')">
-                                                    <span class="dot"></span>
-                                                    <strong>AREA: Numbers not allowed</strong>
-                                                    <span class="file" *ngIf="row.rawArea">Value: <strong>{{ row.rawArea
-                                                            }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- SHIFT -->
-                                    <td [ngClass]="{ 'cell-invalid': hasErr(row,'SHIFT: Numbers not allowed') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input"
-                                                [(ngModel)]="row.shift" [disabled]="isLoading"
-                                                (ngModelChange)="onRowTextChange(row)" />
-                                            <div class="cell-msg">
-                                                <div class="field-err" *ngIf="hasErr(row,'SHIFT: Numbers not allowed')">
-                                                    <span class="dot"></span>
-                                                    <strong>SHIFT: Numbers not allowed</strong>
-                                                    <span class="file" *ngIf="row.rawShift">Value: <strong>{{
-                                                            row.rawShift }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- SHIFT_TIME -->
-                                    <td
-                                        [ngClass]="{ 'cell-invalid': hasErr(row,'SHIFT_TIME: Invalid format (HH:mm-HH:mm)') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input"
-                                                placeholder="09:00-18:00" [(ngModel)]="row.shiftTime"
-                                                [disabled]="isLoading" (ngModelChange)="onRowShiftTimeChange(row)" />
-                                            <div class="cell-msg">
-                                                <div class="field-err"
-                                                    *ngIf="hasErr(row,'SHIFT_TIME: Invalid format (HH:mm-HH:mm)')">
-                                                    <span class="dot"></span>
-                                                    <strong>SHIFT_TIME invalid (09:00-18:00)</strong>
-                                                    <span class="file" *ngIf="row.rawShiftTime">Value: <strong>{{
-                                                            row.rawShiftTime }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- DATE -->
-                                    <td
-                                        [ngClass]="{ 'cell-invalid': hasErr(row,'DATE is required') || hasErr(row,'Invalid DATE') }">
-                                        <div class="cell-wrap">
-                                            <nz-date-picker nzFormat="yyyy-MM-dd" nzSize="small"
-                                                [formControl]="row.dateControl" [nzDisabled]="isLoading"
-                                                class="bulk-date-control" (ngModelChange)="onRowDateChange(row)">
-                                            </nz-date-picker>
-
-                                            <div class="cell-msg">
-                                                <div class="field-err" *ngIf="hasErr(row,'DATE is required')">
-                                                    <span class="dot"></span>
-                                                    <strong>DATE is required</strong>
-                                                    <span class="file" *ngIf="row.rawDate">Value: <strong>{{ row.rawDate
-                                                            }}</strong></span>
-                                                </div>
-
-                                                <div class="field-err" *ngIf="hasErr(row,'Invalid DATE')">
-                                                    <span class="dot"></span>
-                                                    <strong>Invalid DATE</strong>
-                                                    <span class="file" *ngIf="row.rawDate">Value: <strong>{{ row.rawDate
-                                                            }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- IN_TIME -->
-                                    <td
-                                        [ngClass]="{ 'cell-invalid': hasErr(row,'IN_TIME is required') || hasErr(row,'IN_TIME: Invalid time format (HH:mm)') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input" placeholder="HH:mm"
-                                                [(ngModel)]="row.inTime" [disabled]="isLoading"
-                                                (ngModelChange)="onRowInTimeChange(row)" />
-
-                                            <div class="cell-msg">
-                                                <div class="field-err" *ngIf="hasErr(row,'IN_TIME is required')">
-                                                    <span class="dot"></span>
-                                                    <strong>IN_TIME is required</strong>
-                                                    <span class="file" *ngIf="row.rawInTime">Value: <strong>{{
-                                                            row.rawInTime }}</strong></span>
-                                                </div>
-
-                                                <div class="field-err"
-                                                    *ngIf="hasErr(row,'IN_TIME: Invalid time format (HH:mm)')">
-                                                    <span class="dot"></span>
-                                                    <strong>Invalid IN_TIME (HH:mm)</strong>
-                                                    <span class="file" *ngIf="row.rawInTime">Value: <strong>{{
-                                                            row.rawInTime }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- OUT_TIME -->
-                                    <td
-                                        [ngClass]="{ 'cell-invalid': hasErr(row,'OUT_TIME is required') || hasErr(row,'OUT_TIME: Invalid time format (HH:mm)') }">
-                                        <div class="cell-wrap">
-                                            <input class="form-control form-control-sm bulk-input" placeholder="HH:mm"
-                                                [(ngModel)]="row.outTime" [disabled]="isLoading"
-                                                (ngModelChange)="onRowOutTimeChange(row)" />
-
-                                            <div class="cell-msg">
-                                                <div class="field-err" *ngIf="hasErr(row,'OUT_TIME is required')">
-                                                    <span class="dot"></span>
-                                                    <strong>OUT_TIME is required</strong>
-                                                    <span class="file" *ngIf="row.rawOutTime">Value: <strong>{{
-                                                            row.rawOutTime }}</strong></span>
-                                                </div>
-
-                                                <div class="field-err"
-                                                    *ngIf="hasErr(row,'OUT_TIME: Invalid time format (HH:mm)')">
-                                                    <span class="dot"></span>
-                                                    <strong>Invalid OUT_TIME (HH:mm)</strong>
-                                                    <span class="file" *ngIf="row.rawOutTime">Value: <strong>{{
-                                                            row.rawOutTime }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- IsArchived -->
-                                    <td
-                                        [ngClass]="{ 'cell-invalid': hasErr(row,'IsArchived is required') || hasErr(row,'IsArchived must be 0 or 1') }">
-                                        <div class="cell-wrap">
-                                            <select class="form-select form-select-sm bulk-native-select"
-                                                [(ngModel)]="row.isArchived" [disabled]="isLoading"
-                                                (ngModelChange)="onRowArchivedChange(row)">
-                                                <option [ngValue]="0">0</option>
-                                                <option [ngValue]="1">1</option>
-                                            </select>
-
-                                            <div class="cell-msg">
-                                                <div class="field-err" *ngIf="hasErr(row,'IsArchived is required')">
-                                                    <span class="dot"></span>
-                                                    <strong>IsArchived is required</strong>
-                                                    <span class="file" *ngIf="row.rawIsArchived">Value: <strong>{{
-                                                            row.rawIsArchived }}</strong></span>
-                                                </div>
-
-                                                <div class="field-err" *ngIf="hasErr(row,'IsArchived must be 0 or 1')">
-                                                    <span class="dot"></span>
-                                                    <strong>IsArchived must be 0 or 1</strong>
-                                                    <span class="file" *ngIf="row.rawIsArchived">Value: <strong>{{
-                                                            row.rawIsArchived }}</strong></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                </tr>
-                            </ng-container>
-                        </tbody>
-                    </table>
-                </div>
-            </nz-spin>
+          <button
+            class="btn btn-success bulk-top-btn px-4"
+            *ngIf="selectedValidCount >= 1"
+            [disabled]="!canProceed"
+            (click)="proceedBulkImport()"
+          >
+            <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
+            {{ bulkSaving ? 'Processing...' : 'Proceed' }}
+          </button>
         </div>
+
+        <h4 class="fw-bold mb-0 bulk-title">Attendance Bulk Preview</h4>
+      </div>
+
+      <nz-spin [nzSpinning]="isLoading" [nzTip]="loadingText">
+
+        <!-- Toolbar -->
+        <div class="row g-2 align-items-center mb-3">
+          <div class="col-12 col-lg">
+            <div class="bulk-search-wrap">
+              <span class="bulk-search-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
+
+              <input
+                type="text"
+                class="form-control bulk-search-input"
+                [(ngModel)]="searchTerm"
+                (ngModelChange)="onSearchOrFilterChange()"
+                placeholder="Search in table..."
+              />
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-lg-auto">
+            <select
+              class="form-select bulk-filter-select"
+              [(ngModel)]="statusFilter"
+              (ngModelChange)="onSearchOrFilterChange()"
+            >
+              <option value="all">Status</option>
+              <option value="valid">Valid</option>
+              <option value="invalid">Invalid</option>
+              <option value="selected">Selected</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive bulk-table-wrap">
+          <table class="table bulk-table align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="col-check">
+                  <input
+                    type="checkbox"
+                    class="form-check-input"
+                    [ngModel]="checkAll"
+                    (ngModelChange)="onToggleAll($event)"
+                    [disabled]="isLoading"
+                  />
+                </th>
+
+                <th class="col-index">#</th>
+                <th class="col-status">Status</th>
+
+                <th class="col-empid">EMP_ID</th>
+                <th class="col-name">EMP_NAME</th>
+                <th class="col-text">DESIGNATION</th>
+                <th class="col-text">DIVISION</th>
+                <th class="col-text">ZONE</th>
+                <th class="col-text">BRANCH</th>
+                <th class="col-text">DEPARTMENT</th>
+                <th class="col-text">FUNCTION</th>
+                <th class="col-text">AREA</th>
+                <th class="col-text">SHIFT</th>
+                <th class="col-shifttime">SHIFT_TIME</th>
+                <th class="col-date">DATE</th>
+                <th class="col-time">IN_TIME</th>
+                <th class="col-time">OUT_TIME</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <ng-container *ngFor="let row of pagedRows; trackBy: trackByRow">
+                <tr
+                  [class.row-selected]="row.checked"
+                  [class.table-danger-soft]="(row.errors?.length ?? 0) > 0"
+                >
+
+                  <!-- Checkbox -->
+                  <td>
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      [(ngModel)]="row.checked"
+                      (change)="onRowToggle(row, row.checked)"
+                      [disabled]="isLoading || !row.isValid || hasErrLike(row,'Duplicate with row')"
+                    />
+                  </td>
+
+                  <!-- Row No -->
+                  <td>{{ row.rowNo }}</td>
+
+                  <!-- Status -->
+                  <td>
+                    <span *ngIf="row.isValid" class="status-pill status-valid">
+                      <span class="pill-dot"></span>
+                      Valid
+                    </span>
+
+                    <button
+                      *ngIf="!row.isValid && (row.errors?.length ?? 0) > 0"
+                      type="button"
+                      class="status-pill status-invalid"
+                      (click)="showRowErrors(row)"
+                    >
+                      <span class="pill-dot"></span>
+                      {{ row.errors?.length ?? 0 }} Errors
+                    </button>
+
+                    <span
+                      *ngIf="!row.isValid && !(row.errors?.length ?? 0)"
+                      class="status-pill status-invalid"
+                    >
+                      <span class="pill-dot"></span>
+                      Invalid
+                    </span>
+                  </td>
+
+                  <!-- EMP_ID -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'EMP_ID is required') ||
+                        hasErr(row,'EMP_ID: Invalid format') ||
+                        hasErrLike(row,'Duplicate with row')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        [(ngModel)]="row.empId"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowTextChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                  <!-- EMP_NAME -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'EMP_NAME is required') ||
+                        hasErr(row,'EMP_NAME: Numbers not allowed')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        [(ngModel)]="row.empName"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowTextChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                  <!-- DESIGNATION -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'DESIGNATION is required') ||
+                        hasErr(row,'DESIGNATION: Max 20 characters allowed')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        [(ngModel)]="row.designation"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowTextChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                  <!-- DIVISION -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'DIVISION is required') ||
+                        hasErr(row,'DIVISION: Max 20 characters allowed')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        [(ngModel)]="row.division"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowTextChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                  <!-- ZONE -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'ZONE is required') ||
+                        hasErr(row,'ZONE: Max 20 characters allowed')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        [(ngModel)]="row.zone"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowTextChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                  <!-- BRANCH -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'BRANCH is required') ||
+                        hasErr(row,'BRANCH: Max 20 characters allowed')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        [(ngModel)]="row.branch"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowTextChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                  <!-- DEPARTMENT -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'DEPARTMENT is required') ||
+                        hasErr(row,'DEPARTMENT: Max 20 characters allowed')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        [(ngModel)]="row.department"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowTextChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                  <!-- FUNCTION -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'FUNCTION is required') ||
+                        hasErr(row,'FUNCTION: Max 20 characters allowed')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        [(ngModel)]="row.function"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowTextChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                  <!-- AREA -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'AREA is required') ||
+                        hasErr(row,'AREA: Max 20 characters allowed')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        [(ngModel)]="row.area"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowTextChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                  <!-- SHIFT -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'SHIFT is required') ||
+                        hasErr(row,'SHIFT: Max 20 characters allowed')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        [(ngModel)]="row.shift"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowTextChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                  <!-- SHIFT_TIME -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'SHIFT_TIME is required') ||
+                        hasErr(row,'SHIFT_TIME: Invalid format (HH:mm-HH:mm)')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        placeholder="09:00-18:00"
+                        [(ngModel)]="row.shiftTime"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowShiftTimeChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                  <!-- DATE -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'DATE is required') ||
+                        hasErr(row,'Invalid DATE')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <nz-date-picker
+                        nzFormat="yyyy-MM-dd"
+                        nzSize="small"
+                        [formControl]="row.dateControl"
+                        [nzDisabled]="isLoading"
+                        class="bulk-date-control"
+                        (ngModelChange)="onRowDateChange(row)"
+                      >
+                      </nz-date-picker>
+                    </div>
+                  </td>
+
+                  <!-- IN_TIME -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'IN_TIME is required') ||
+                        hasErr(row,'IN_TIME: Invalid time format (HH:mm)')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        placeholder="HH:mm"
+                        [(ngModel)]="row.inTime"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowInTimeChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                  <!-- OUT_TIME -->
+                  <td
+                    [ngClass]="{
+                      'cell-invalid':
+                        hasErr(row,'OUT_TIME is required') ||
+                        hasErr(row,'OUT_TIME: Invalid time format (HH:mm)')
+                    }"
+                  >
+                    <div class="cell-wrap">
+                      <input
+                        class="form-control form-control-sm bulk-input"
+                        placeholder="HH:mm"
+                        [(ngModel)]="row.outTime"
+                        [disabled]="isLoading"
+                        (ngModelChange)="onRowOutTimeChange(row)"
+                      />
+                    </div>
+                  </td>
+
+                </tr>
+              </ng-container>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-3">
+          <div class="text-muted small">
+            Showing {{ pageStart + 1 }} - {{ pageEnd }} of {{ filteredRows.length }} rows
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              (click)="prevPage()"
+              [disabled]="pageIndex === 1 || isLoading"
+            >
+              Prev
+            </button>
+
+            <span class="fw-semibold">
+              Page {{ pageIndex }} / {{ totalPages }}
+            </span>
+
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              (click)="nextPage()"
+              [disabled]="pageIndex === totalPages || isLoading"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+
+      </nz-spin>
     </div>
+  </div>
 </div>

@@ -43,7 +43,7 @@ export class AttendanceReport implements OnInit {
 
   private suppressChanges = false;
 
-  private readonly REQUIRED_COLUMNS = ['EMP_ID', 'DATE', 'IN_TIME', 'OUT_TIME', 'ISARCHIVED'];
+  private readonly REQUIRED_COLUMNS = ['EMP_ID', 'DATE', 'IN_TIME', 'OUT_TIME'];
 
   private readonly RECOMMENDED_COLUMNS = ['EMP_NAME', 'SHIFT', 'SHIFT_TIME'];
 

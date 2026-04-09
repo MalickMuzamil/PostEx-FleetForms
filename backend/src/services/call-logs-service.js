@@ -54,6 +54,19 @@ class CallLogsService {
        - override by (Customer_Number + Master_No + Time)
     ========================== */
     async bulkImport({ payloads } = {}) {
+        if (!Array.isArray(payloads) || payloads.length === 0) {
+            const err = new Error("payloads array is required and cannot be empty.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+
+        // Rate limiter: Maximum 200,000 rows per import to prevent DB overload and session timeouts
+        if (payloads.length > 200000) {
+            const err = new Error("Maximum 200,000 rows allowed per import operation to ensure system stability.");
+            err.code = "RATE_LIMIT_EXCEEDED";
+            throw err;
+        }
+
         const { valid, invalidRows } = this._validatePayloads(payloads);
 
         if (invalidRows.length) {
@@ -96,7 +109,7 @@ class CallLogsService {
                     request.input("Time", sql.VarChar(19), r.Time);
 
                     request.input("Recording", sql.NVarChar(sql.MAX), r.Recording || "");
-                    request.input("IsArchived", sql.Bit, r.IsArchived ? 1 : 0);
+                    request.input("IsArchived", sql.Bit, 0);
 
                     await request.query(`
             MERGE dbo.CALL_LOGS AS target
@@ -191,9 +204,11 @@ class CallLogsService {
             const Time = this._toSqlDateTime(p.Time);
             const Recording = this._s(p.Recording);
 
-            const IsArchived = this._arch(p.IsArchived);
+            const rawIsArchived = p.IsArchived ?? p.isArchived;
+            const IsArchived = this._arch(rawIsArchived);
 
             if (!Customer_Number) errors.push("Customer_Number is required");
+            else if (!/^\d{10,11}$/.test(Customer_Number)) errors.push("Customer_Number must be 10 or 11 digits");
 
             if (this._rawEmpty(p.Consignee_Cell_Length)) errors.push("Consignee_Cell_Length is required");
             else if (Consignee_Cell_Length === null) errors.push("Consignee_Cell_Length: Invalid number");
@@ -211,8 +226,7 @@ class CallLogsService {
             if (this._rawEmpty(p.Time)) errors.push("Time is required");
             else if (!Time) errors.push("Invalid Time");
 
-            if (this._rawEmpty(p.IsArchived)) errors.push("IsArchived is required");
-            else if (IsArchived === null) errors.push("IsArchived must be 0 or 1");
+            if (!this._rawEmpty(rawIsArchived) && IsArchived === null) errors.push("IsArchived must be 0 or 1");
 
             const MAX = 20;
             if (Customer_Number && Customer_Number.length > MAX) errors.push(`Customer_Number: Max ${MAX} characters allowed`);
@@ -237,7 +251,7 @@ class CallLogsService {
                 Call_Response,
                 Time,
                 Recording: Recording || "",
-                IsArchived,
+                IsArchived: IsArchived === 1 ? 1 : 0,
             });
         });
 
@@ -274,6 +288,7 @@ class CallLogsService {
         if (/^\d+(\.\d+)?$/.test(s)) return true; // seconds
         if (/^\d{1,2}:\d{2}$/.test(s)) return true; // mm:ss
         if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) return true; // HH:mm:ss
+        if (/^\d{1,2} h: \d{1,2} m: \d{1,2} s$/.test(s)) return true; // 00 h: 00 m: 23 s
         return false;
     }
 

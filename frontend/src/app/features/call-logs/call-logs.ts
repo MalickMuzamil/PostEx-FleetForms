@@ -2,7 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
+import { CommonModule } from '@angular/common';
 
+import { AuthService } from '../../core/services/auth-service';
 import { Table } from '../../ui/table/table';
 import { Modal } from '../../ui/modal/modal';
 
@@ -15,7 +17,7 @@ import { CallLogsService } from '../../core/services/call-logs-service';
 @Component({
   selector: 'app-call-logs',
   standalone: true,
-  imports: [Table, Modal, NzModalModule],
+  imports: [CommonModule, Table, Modal, NzModalModule],
   templateUrl: './call-logs.html',
   styleUrl: './call-logs.css',
 })
@@ -45,17 +47,26 @@ export class CallLogs implements OnInit {
     'Call_Response',
     'Time',
     'Recording',
-    'IsArchived',
   ];
 
   constructor(
     private callLogsService: CallLogsService,
     private router: Router,
     private notification: NzNotificationService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private auth: AuthService
   ) { }
 
+  get canAddCallLogs(): boolean {
+    return this.auth.hasRole('ADMIN') || this.auth.hasRole('IT');
+  }
+
   ngOnInit(): void {
+    if (!this.auth.hasRole('ADMIN') && !this.auth.hasRole('IT')) {
+      this.router.navigate(['/']);
+      return;
+    }
+
     this.loadTable();
   }
 
@@ -93,11 +104,6 @@ export class CallLogs implements OnInit {
             timeDisplay: timeStr || '-',
 
             recording: String(r.Recording ?? r.recording ?? ''),
-
-            isArchived: isArchivedVal,
-            isArchivedDisplay:
-              typeof isArchivedVal === 'boolean' ? (isArchivedVal ? '1' : '0') : String(isArchivedVal ?? '-'),
-
           };
         });
 
@@ -169,6 +175,11 @@ export class CallLogs implements OnInit {
 
   // ---------------- MODAL ----------------
   openAddForm() {
+    if (!this.canAddCallLogs) {
+      this.notification.error('Unauthorized', 'Only Admin or IT can add call logs.');
+      return;
+    }
+
     this.isEditMode = false;
     this.editingRow = null;
 

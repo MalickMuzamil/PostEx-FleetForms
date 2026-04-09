@@ -34,6 +34,10 @@ export class SidebarComponent implements OnChanges{
     return this.auth.hasRole('HR');
   }
 
+  get isIT(): boolean {
+    return this.auth.hasRole('IT');
+  }
+
   get isUser(): boolean {
     return this.auth.hasRole('USER');
   }
@@ -44,6 +48,10 @@ export class SidebarComponent implements OnChanges{
 
   get canAccessAttendance(): boolean {
     return this.isAdmin || this.isHR;
+  }
+
+  get canAccessCallLogs(): boolean {
+    return this.isAdmin || this.isIT;
   }
 
   get canAccessCommon(): boolean {

@@ -29,16 +29,16 @@ export const CALL_LOGS_EDIT_FORM: FormConfig = {
         { key: 'time', label: 'Time', type: 'date', required: true },
 
         { key: 'recording', label: 'Recording', type: 'text', required: false },
-        {
-            key: 'isArchived',
-            label: 'IsArchived',
-            type: 'select',
-            required: true,
-            options: [
-                { value: 0, label: '0' },
-                { value: 1, label: '1' },
-            ],
-        },
+        // {
+        //     key: 'isArchived',
+        //     label: 'IsArchived',
+        //     type: 'select',
+        //     required: true,
+        //     options: [
+        //         { value: 0, label: '0' },
+        //         { value: 1, label: '1' },
+        //     ],
+        // },
     ],
 };
 
@@ -95,8 +95,7 @@ export const CALL_LOGS_TABLE: TableConfig = {
       },
     },
 
-    { key: 'recording', title: 'Recording' },
-    { key: 'isArchivedDisplay', title: 'IsArchived' }
+    { key: 'recording', title: 'Recording' }
   ],
 
   pagination: true,
