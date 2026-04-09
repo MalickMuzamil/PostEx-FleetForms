@@ -90,7 +90,13 @@ class CallLogsService {
 
             for (let i = 0; i < valid.length; i += CHUNK) {
                 const batch = valid.slice(i, i + CHUNK);
-                inserted += await this._bulkImportBatch(tx, batch);
+                console.log(`🚀 Processing chunk ${i / CHUNK + 1}`);
+                console.log(`➡️ Rows in chunk: ${batch.length}`);
+
+                const insertedChunk = await this._bulkImportBatch(tx, batch);
+                inserted += insertedChunk;
+
+                console.log(`✅ Chunk ${i / CHUNK + 1} inserted: ${insertedChunk}`);
             }
 
             await tx.commit();
@@ -111,11 +117,20 @@ class CallLogsService {
         // DEDUPLICATE: Keep only the latest occurrence per key (Customer_Number, Master_No, Time)
         // This prevents MERGE "attempted to UPDATE or DELETE the same row more than once" error
         const deduped = new Map();
+        if (!Array.isArray(batch) || batch.length === 0) {
+            console.log("⚠️ Empty batch received");
+            return 0;
+        }
+        console.log(`📦 Incoming batch size: ${batch.length}`);
+
+
         for (const row of batch) {
             const key = `${row.Customer_Number}|${row.Master_No}|${row.Time}`;
             deduped.set(key, row); // Latest occurrence overwrites earlier ones
         }
         const uniqueBatch = Array.from(deduped.values());
+        console.log(`🧹 After dedupe: ${uniqueBatch.length}`);
+
 
         // Accumulate ALL rows in a single table object
         // Let mssql library auto-create the temp table
@@ -149,6 +164,7 @@ class CallLogsService {
 
         // Bulk insert - mssql will create the temp table automatically
         await new sql.Request(tx).bulk(table);
+        console.log("📥 Bulk insert into temp table done");
 
         // After bulk load, merge into main table
         const mergeResult = await new sql.Request(tx).query(`
