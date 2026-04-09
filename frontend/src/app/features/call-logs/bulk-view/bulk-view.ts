@@ -752,7 +752,7 @@ export class CallLogsBulkView {
       .filter((p) => p.Customer_Number && p.Master_No && p.Time);
 
     try {
-      const chunks = this.chunk(payloads, 500);
+      const chunks = this.chunk(payloads, 10000);
 
       let insertedTotal = 0;
       let lastMsg = '';

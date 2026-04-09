@@ -85,88 +85,12 @@ class CallLogsService {
         try {
             await tx.begin();
 
-            const CHUNK = 200;
+            const CHUNK = 10000;
             let inserted = 0;
 
             for (let i = 0; i < valid.length; i += CHUNK) {
                 const batch = valid.slice(i, i + CHUNK);
-
-                for (const r of batch) {
-                    const request = new sql.Request(tx);
-
-                    request.input("Customer_Number", sql.VarChar(20), r.Customer_Number);
-                    request.input("Consignee_Cell_Length", sql.Int, r.Consignee_Cell_Length); // adjust type if DB differs
-                    request.input("Master_No", sql.VarChar(20), r.Master_No);
-
-                    // DB columns have spaces, but params don't
-                    request.input("Agent_Duration", sql.VarChar(20), r.Agent_Duration);
-                    request.input("Total_Duration", sql.VarChar(20), r.Total_Duration);
-
-                    request.input("Extension", sql.VarChar(20), r.Extension || "");
-                    request.input("Call_Response", sql.VarChar(20), r.Call_Response);
-
-                    // you are passing "YYYY-MM-DD HH:mm:ss" string
-                    request.input("Time", sql.VarChar(19), r.Time);
-
-                    request.input("Recording", sql.NVarChar(sql.MAX), r.Recording || "");
-                    request.input("IsArchived", sql.Bit, 0);
-
-                    await request.query(`
-            MERGE dbo.CALL_LOGS AS target
-            USING (SELECT
-              @Customer_Number AS Customer_Number,
-              @Consignee_Cell_Length AS Consignee_Cell_Length,
-              @Master_No AS Master_No,
-              @Agent_Duration AS [Agent Duration],
-              @Total_Duration AS [Total Duration],
-              @Extension AS Extension,
-              @Call_Response AS Call_Response,
-              @Time AS [Time],
-              @Recording AS Recording,
-              @IsArchived AS IsArchived
-            ) AS src
-            ON (target.Customer_Number = src.Customer_Number
-                AND target.Master_No = src.Master_No
-                AND target.[Time] = src.[Time])
-            WHEN MATCHED THEN
-              UPDATE SET
-                target.Consignee_Cell_Length = src.Consignee_Cell_Length,
-                target.[Agent Duration] = src.[Agent Duration],
-                target.[Total Duration] = src.[Total Duration],
-                target.Extension = src.Extension,
-                target.Call_Response = src.Call_Response,
-                target.[Time] = src.[Time],
-                target.Recording = src.Recording,
-                target.IsArchived = src.IsArchived
-            WHEN NOT MATCHED THEN
-              INSERT (
-                Customer_Number,
-                Consignee_Cell_Length,
-                Master_No,
-                [Agent Duration],
-                [Total Duration],
-                Extension,
-                Call_Response,
-                [Time],
-                Recording,
-                IsArchived
-              )
-              VALUES (
-                src.Customer_Number,
-                src.Consignee_Cell_Length,
-                src.Master_No,
-                src.[Agent Duration],
-                src.[Total Duration],
-                src.Extension,
-                src.Call_Response,
-                src.[Time],
-                src.Recording,
-                src.IsArchived
-              );
-          `);
-
-                    inserted += 1;
-                }
+                inserted += await this._bulkImportBatch(tx, batch);
             }
 
             await tx.commit();
@@ -177,6 +101,106 @@ class CallLogsService {
             } catch { }
             throw e;
         }
+    }
+
+    async _bulkImportBatch(tx, batch) {
+        if (!Array.isArray(batch) || batch.length === 0) {
+            return 0;
+        }
+
+        // DEDUPLICATE: Keep only the latest occurrence per key (Customer_Number, Master_No, Time)
+        // This prevents MERGE "attempted to UPDATE or DELETE the same row more than once" error
+        const deduped = new Map();
+        for (const row of batch) {
+            const key = `${row.Customer_Number}|${row.Master_No}|${row.Time}`;
+            deduped.set(key, row); // Latest occurrence overwrites earlier ones
+        }
+        const uniqueBatch = Array.from(deduped.values());
+
+        // Accumulate ALL rows in a single table object
+        // Let mssql library auto-create the temp table
+        const table = new sql.Table('#CallLogsBulk');
+        table.create = true; // Let mssql create the table
+        table.columns.add('Customer_Number', sql.VarChar(20), { nullable: false });
+        table.columns.add('Consignee_Cell_Length', sql.Int, { nullable: false });
+        table.columns.add('Master_No', sql.VarChar(20), { nullable: false });
+        table.columns.add('Agent Duration', sql.VarChar(20), { nullable: true });
+        table.columns.add('Total Duration', sql.VarChar(20), { nullable: true });
+        table.columns.add('Extension', sql.VarChar(20), { nullable: true });
+        table.columns.add('Call_Response', sql.VarChar(20), { nullable: true });
+        table.columns.add('Time', sql.DateTime, { nullable: false });
+        table.columns.add('Recording', sql.NVarChar(sql.MAX), { nullable: true });
+        table.columns.add('IsArchived', sql.Bit, { nullable: false });
+
+        for (const r of uniqueBatch) {
+            table.rows.add(
+                r.Customer_Number,
+                r.Consignee_Cell_Length,
+                r.Master_No,
+                r.Agent_Duration,
+                r.Total_Duration,
+                r.Extension || '',
+                r.Call_Response,
+                r.Time,
+                r.Recording || '',
+                r.IsArchived
+            );
+        }
+
+        // Bulk insert - mssql will create the temp table automatically
+        await new sql.Request(tx).bulk(table);
+
+        // After bulk load, merge into main table
+        const mergeResult = await new sql.Request(tx).query(`
+      DECLARE @OutputActions TABLE (Action NVARCHAR(10));
+
+      MERGE dbo.CALL_LOGS AS target
+      USING #CallLogsBulk AS src
+      ON target.Customer_Number = src.Customer_Number
+         AND target.Master_No = src.Master_No
+         AND target.[Time] = src.[Time]
+      WHEN MATCHED THEN
+        UPDATE SET
+          target.Consignee_Cell_Length = src.Consignee_Cell_Length,
+          target.[Agent Duration] = src.[Agent Duration],
+          target.[Total Duration] = src.[Total Duration],
+          target.Extension = src.Extension,
+          target.Call_Response = src.Call_Response,
+          target.[Time] = src.[Time],
+          target.Recording = src.Recording,
+          target.IsArchived = src.IsArchived
+      WHEN NOT MATCHED THEN
+        INSERT (
+          Customer_Number,
+          Consignee_Cell_Length,
+          Master_No,
+          [Agent Duration],
+          [Total Duration],
+          Extension,
+          Call_Response,
+          [Time],
+          Recording,
+          IsArchived
+        )
+        VALUES (
+          src.Customer_Number,
+          src.Consignee_Cell_Length,
+          src.Master_No,
+          src.[Agent Duration],
+          src.[Total Duration],
+          src.Extension,
+          src.Call_Response,
+          src.[Time],
+          src.Recording,
+          src.IsArchived
+        )
+      OUTPUT $action INTO @OutputActions;
+
+      SELECT SUM(CASE WHEN Action = 'INSERT' THEN 1 ELSE 0 END) AS InsertedCount
+      FROM @OutputActions;
+    `);
+
+        return Number(mergeResult?.recordset?.[0]?.InsertedCount ?? 0);
     }
 
     // =============================
