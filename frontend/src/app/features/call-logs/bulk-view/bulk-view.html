@@ -3,9 +3,8 @@
     <div class="card-body">
 
       <!-- TOP BAR -->
-      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-
-        <div class="d-flex gap-2">
+      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
           <button class="btn btn-outline-secondary bulk-top-btn" routerLink="/call-logs">
             ← Back
           </button>
@@ -24,14 +23,38 @@
         <h4 class="bulk-title mb-0">Call Logs Bulk Preview</h4>
       </div>
 
-      <!-- LOADER -->
       <nz-spin [nzSpinning]="isLoading" [nzTip]="loadingText">
 
-        <!-- TABLE -->
-        <div class="bulk-table-wrap">
-          <table class="table bulk-table">
+        <!-- TOOLBAR -->
+        <div class="row g-2 align-items-center mb-3">
+          <div class="col-12 col-lg">
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="searchTerm"
+              (ngModelChange)="onSearchOrFilterChange()"
+              placeholder="Search in table..."
+            />
+          </div>
 
-            <!-- HEADER -->
+          <div class="col-12 col-sm-6 col-lg-auto">
+            <select
+              class="form-select"
+              [(ngModel)]="statusFilter"
+              (ngModelChange)="onSearchOrFilterChange()"
+            >
+              <option value="all">Status</option>
+              <option value="valid">Valid</option>
+              <option value="invalid">Invalid</option>
+              <option value="selected">Selected</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="bulk-table-wrap table-responsive">
+          <table class="table bulk-table align-middle mb-0">
+
             <thead>
               <tr>
                 <th class="col-check">
@@ -56,18 +79,15 @@
                 <th>Call_Response</th>
                 <th>Time</th>
                 <th>Recording</th>
-                <th>IsArchived</th>
               </tr>
             </thead>
 
-            <!-- BODY -->
             <tbody>
               <tr
-                *ngFor="let row of rows; trackBy: trackByRow"
+                *ngFor="let row of pagedRows; trackBy: trackByRow"
                 [class.row-selected]="row.checked"
+                [class.table-danger-soft]="!row.isValid && (row.errors?.length ?? 0) > 0"
               >
-
-                <!-- CHECKBOX -->
                 <td>
                   <input
                     type="checkbox"
@@ -78,10 +98,8 @@
                   />
                 </td>
 
-                <!-- INDEX -->
                 <td>{{ row.rowNo }}</td>
 
-                <!-- STATUS -->
                 <td>
                   <button
                     class="status-pill"
@@ -93,124 +111,139 @@
                   </button>
                 </td>
 
-                <!-- Customer -->
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Customer_Number')">
                     <input
-                      class="form-control"
+                      class="form-control form-control-sm"
                       [(ngModel)]="row.customerNumber"
+                      [disabled]="isLoading"
                       (ngModelChange)="onRowTextChange(row)"
                     />
                   </div>
                 </td>
 
-                <!-- Consignee -->
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Consignee_Cell_Length')">
                     <input
-                      class="form-control"
+                      class="form-control form-control-sm"
                       [(ngModel)]="row.consigneeCellLength"
+                      [disabled]="isLoading"
                       (ngModelChange)="onRowTextChange(row)"
                     />
                   </div>
                 </td>
 
-                <!-- Master -->
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Master_No')">
                     <input
-                      class="form-control"
+                      class="form-control form-control-sm"
                       [(ngModel)]="row.masterNo"
+                      [disabled]="isLoading"
                       (ngModelChange)="onRowTextChange(row)"
                     />
                   </div>
                 </td>
 
-                <!-- Agent Duration -->
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Agent Duration')">
                     <input
-                      class="form-control"
+                      class="form-control form-control-sm"
                       [(ngModel)]="row.agentDuration"
+                      [disabled]="isLoading"
                       (ngModelChange)="onRowTextChange(row)"
                     />
                   </div>
                 </td>
 
-                <!-- Total Duration -->
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Total Duration')">
                     <input
-                      class="form-control"
+                      class="form-control form-control-sm"
                       [(ngModel)]="row.totalDuration"
+                      [disabled]="isLoading"
                       (ngModelChange)="onRowTextChange(row)"
                     />
                   </div>
                 </td>
 
-                <!-- Extension -->
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Extension')">
                     <input
-                      class="form-control"
+                      class="form-control form-control-sm"
                       [(ngModel)]="row.extension"
+                      [disabled]="isLoading"
                       (ngModelChange)="onRowTextChange(row)"
                     />
                   </div>
                 </td>
 
-                <!-- Response -->
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Call_Response')">
                     <input
-                      class="form-control"
+                      class="form-control form-control-sm"
                       [(ngModel)]="row.callResponse"
+                      [disabled]="isLoading"
                       (ngModelChange)="onRowTextChange(row)"
                     />
                   </div>
                 </td>
 
-                <!-- TIME -->
                 <td>
                   <div class="cell-wrap bulk-date-control" [class.cell-invalid]="hasErrLike(row,'Time')">
                     <nz-date-picker
                       [formControl]="row.timeControl"
                       [nzShowTime]="{ nzFormat: 'HH:mm:ss' }"
                       nzFormat="yyyy-MM-dd HH:mm:ss"
+                      [nzDisabled]="isLoading"
                       (ngModelChange)="onRowTimeChange(row)"
                     >
                     </nz-date-picker>
                   </div>
                 </td>
 
-                <!-- RECORDING -->
                 <td>
                   <div class="cell-wrap">
                     <input
-                      class="form-control"
+                      class="form-control form-control-sm"
                       [(ngModel)]="row.recording"
+                      [disabled]="isLoading"
                       (ngModelChange)="onRowTextChange(row)"
                     />
                   </div>
                 </td>
 
-                <!-- ARCHIVED -->
-                <td>
-                  <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'IsArchived')">
-                    <select
-                      class="form-select"
-                      [(ngModel)]="row.isArchived"
-                      (ngModelChange)="onRowArchivedChange(row)"
-                    >
-                      <option [ngValue]="0">0</option>
-                      <option [ngValue]="1">1</option>
-                    </select>
-                  </div>
-                </td>
-
-              </tr>
+                </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- PAGINATION -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-3">
+          <div class="text-muted small">
+            Showing {{ pageStart + 1 }} - {{ pageEnd }} of {{ filteredRows.length }} rows
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              (click)="prevPage()"
+              [disabled]="pageIndex === 1 || isLoading"
+            >
+              Prev
+            </button>
+
+            <span class="fw-semibold">
+              Page {{ pageIndex }} / {{ totalPages }}
+            </span>
+
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              (click)="nextPage()"
+              [disabled]="pageIndex === totalPages || isLoading"
+            >
+              Next
+            </button>
+          </div>
         </div>
 
       </nz-spin>

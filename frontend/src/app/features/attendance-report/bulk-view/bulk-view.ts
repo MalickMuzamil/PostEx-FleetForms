@@ -36,8 +36,6 @@ interface BulkAttendanceRow {
   inTime: string | null;
   outTime: string | null;
 
-  isArchived: number;
-
   checked: boolean;
   saving?: boolean;
   errors?: string[];
@@ -59,7 +57,7 @@ interface BulkAttendanceRow {
   rawDate?: string;
   rawInTime?: string;
   rawOutTime?: string;
-  rawIsArchived?: string;
+  
 }
 
 @Component({
@@ -78,8 +76,12 @@ interface BulkAttendanceRow {
   styleUrl: './bulk-view.css',
 })
 export class BulkView implements OnInit {
+  pageSize = 100;
+  pageIndex = 1;
+
   file!: File;
   private uidCounter = 0;
+  filteredRows: BulkAttendanceRow[] = [];
 
   // ---------- errors ----------
   private readonly EMP_REQUIRED = 'EMP_ID is required';
@@ -92,9 +94,6 @@ export class BulkView implements OnInit {
   private readonly OUT_REQUIRED = 'OUT_TIME is required';
   private readonly INVALID_TIME = 'Invalid time format (HH:mm)';
 
-  private readonly ARCH_REQUIRED = 'IsArchived is required';
-  private readonly INVALID_ARCH = 'IsArchived must be 0 or 1';
-
   private readonly EMP_NAME_REQUIRED = 'EMP_NAME is required';
   private readonly DESIGNATION_REQUIRED = 'DESIGNATION is required';
   private readonly DIVISION_REQUIRED = 'DIVISION is required';
@@ -106,12 +105,10 @@ export class BulkView implements OnInit {
   private readonly SHIFT_REQUIRED = 'SHIFT is required';
   private readonly SHIFT_TIME_REQUIRED = 'SHIFT_TIME is required';
 
-  // text fields errors
   private readonly NO_NUM = (label: string) => `${label}: Numbers not allowed`;
   private readonly SHIFT_TIME_INVALID = 'SHIFT_TIME: Invalid format (HH:mm-HH:mm)';
 
-  // required columns (strict)
-  readonly REQUIRED_COLUMNS = ['EMP_ID', 'DATE', 'IN_TIME', 'OUT_TIME', 'IsArchived'];
+  readonly REQUIRED_COLUMNS = ['EMP_ID', 'DATE', 'IN_TIME', 'OUT_TIME'];
 
   rows: BulkAttendanceRow[] = [];
   checkAll = false;
@@ -135,7 +132,7 @@ export class BulkView implements OnInit {
     private attendanceService: AttendanceService,
     private notification: NzNotificationService,
     private modal: NzModalService
-  ) { }
+  ) {}
 
   async ngOnInit(): Promise<void> {
     const state = history.state;
@@ -149,6 +146,7 @@ export class BulkView implements OnInit {
 
     this.isLoading = true;
     this.loadingText = 'Reading file & validating...';
+    this.refreshFilteredRows();
     this.parseFile(this.file);
   }
 
@@ -199,9 +197,10 @@ export class BulkView implements OnInit {
 
   parseExcel(file: File) {
     const reader = new FileReader();
+
     reader.onload = (e: any) => {
       try {
-        const wb = XLSX.read(e.target.result, { type: 'binary' });
+        const wb = XLSX.read(e.target.result, { type: 'binary', cellDates: true });
         const sheetName = wb.SheetNames?.[0];
         const sheet = wb.Sheets?.[sheetName];
 
@@ -211,7 +210,10 @@ export class BulkView implements OnInit {
           return;
         }
 
-        const rowsHeader: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
+        const rowsHeader: any[][] = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          raw: true,
+        });
 
         if (!rowsHeader?.length || !rowsHeader[0]?.length) {
           this.toast('error', 'Invalid File', 'Excel file is empty or missing header row.');
@@ -229,8 +231,72 @@ export class BulkView implements OnInit {
           return;
         }
 
-        const json: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
-        this.handleHeaderValidation(json || []);
+        const json: any[] = XLSX.utils.sheet_to_json(sheet, {
+          defval: '',
+          raw: true,
+        });
+
+        if (!json.length) {
+          this.toast('error', 'Invalid File', 'Excel has no data rows.');
+          this.isLoading = false;
+          return;
+        }
+
+        const headerSet = new Set(this.fileHeaders.map((h) => this.normHeader(h)));
+        const required = this.REQUIRED_COLUMNS.map((c) => this.normHeader(c));
+        const missing = required.filter((c) => !headerSet.has(c));
+
+        if (missing.length) {
+          this.toast('error', 'Invalid File', `Missing required columns: ${missing.join(', ')}`);
+          this.isLoading = false;
+          return;
+        }
+
+        this.autoMapColumns();
+
+        this.rows = [];
+        this.uidCounter = Date.now();
+
+        const CHUNK_SIZE = 500;
+        const total = json.length;
+        let index = 0;
+
+        const processChunk = () => {
+          const slice = json.slice(index, index + CHUNK_SIZE);
+
+          const sanitizedChunk = slice.map((row: any) => {
+            const clean: any = {};
+
+            for (const key of Object.keys(row)) {
+              const val = row[key];
+
+              if (val instanceof Date) {
+                clean[key] = this.toYMD(val);
+              } else {
+                clean[key] = String(val ?? '').trim();
+              }
+            }
+
+            return clean;
+          });
+
+          const newRows = this.appendRowsChunk(sanitizedChunk);
+
+          setTimeout(() => {
+            this.validateChunk(newRows);
+          }, 0);
+
+          index += CHUNK_SIZE;
+          this.loadingText = `Processing ${Math.min(index, total)} / ${total} rows...`;
+
+          if (index < total) {
+            setTimeout(processChunk, 0);
+          } else {
+            this.finishProcessing();
+          }
+        };
+
+        processChunk();
       } catch {
         this.toast('error', 'Invalid File', 'Unable to read Excel file.');
         this.isLoading = false;
@@ -243,6 +309,142 @@ export class BulkView implements OnInit {
     };
 
     reader.readAsBinaryString(file);
+  }
+
+  private appendRowsChunk(data: any[]) {
+    const startIndex = this.rows.length;
+    const getVal = (rowObj: any, key: string) => rowObj?.[this.columnMap[key]];
+
+    const newRows = data.map((r, i) => {
+      const rawEmpId = String(getVal(r, 'EMP_ID') ?? '').trim();
+      const rawDate = String(getVal(r, 'DATE') ?? '').trim();
+      const rawInTime = String(getVal(r, 'IN_TIME') ?? '').trim();
+      const rawOutTime = String(getVal(r, 'OUT_TIME') ?? '').trim();
+
+      const rawEmpName = String(getVal(r, 'EMP_NAME') ?? '').trim();
+      const rawDesignation = String(getVal(r, 'DESIGNATION') ?? '').trim();
+      const rawDivision = String(getVal(r, 'DIVISION') ?? '').trim();
+      const rawZone = String(getVal(r, 'ZONE') ?? '').trim();
+      const rawBranch = String(getVal(r, 'BRANCH') ?? '').trim();
+      const rawDepartment = String(getVal(r, 'DEPARTMENT') ?? '').trim();
+      const rawFunction = String(getVal(r, 'FUNCTION') ?? '').trim();
+      const rawArea = String(getVal(r, 'AREA') ?? '').trim();
+      const rawShift = String(getVal(r, 'SHIFT') ?? '').trim();
+      const rawShiftTime = String(getVal(r, 'SHIFT_TIME') ?? '').trim();
+
+      return {
+        uid: ++this.uidCounter,
+        rowNo: startIndex + i + 1,
+
+        rawEmpId,
+        rawEmpName,
+        rawDesignation,
+        rawDivision,
+        rawZone,
+        rawBranch,
+        rawDepartment,
+        rawFunction,
+        rawArea,
+        rawShift,
+        rawShiftTime,
+        rawDate,
+        rawInTime,
+        rawOutTime,
+
+        empId: rawEmpId || null,
+        empName: rawEmpName || null,
+
+        designation: rawDesignation || null,
+        division: rawDivision || null,
+        zone: rawZone || null,
+        branch: rawBranch || null,
+        function: rawFunction || null,
+        area: rawArea || null,
+        shift: rawShift || null,
+        shiftTime: rawShiftTime || null,
+
+        date: this.parseAnyDate(rawDate),
+        dateControl: new FormControl<Date | null>(this.parseAnyDate(rawDate)),
+
+        inTime: rawInTime || null,
+        outTime: rawOutTime || null,
+
+        checked: false,
+        errors: [],
+        isValid: false,
+      } as BulkAttendanceRow;
+    });
+
+    this.rows = [...this.rows, ...newRows];
+    this.refreshFilteredRows();
+    return newRows;
+  }
+
+  private validateChunk(rows: BulkAttendanceRow[]) {
+    for (const row of rows) {
+      this.clearManagedErrors(row);
+
+      const emp = String(row.empId ?? '').trim();
+      if (!emp) this.addErr(row, this.EMP_REQUIRED);
+      else if (!this.isEmpIdValid(emp)) this.addErr(row, this.EMP_INVALID);
+
+      const dt = row.dateControl?.value;
+      if (!dt) {
+        if (!String(row.rawDate ?? '').trim()) this.addErr(row, this.DATE_REQUIRED);
+        else this.addErr(row, this.INVALID_DATE);
+      }
+
+      const it = String(row.inTime ?? '').trim();
+      if (!it) this.addErr(row, this.IN_REQUIRED);
+      else if (!this.isValidHHmm(it)) this.addErr(row, `IN_TIME: ${this.INVALID_TIME}`);
+
+      const ot = String(row.outTime ?? '').trim();
+      if (!ot) this.addErr(row, this.OUT_REQUIRED);
+      else if (!this.isValidHHmm(ot)) this.addErr(row, `OUT_TIME: ${this.INVALID_TIME}`);
+
+      if (!String(row.empName ?? '').trim()) this.addErr(row, this.EMP_NAME_REQUIRED);
+      if (!String(row.designation ?? '').trim()) this.addErr(row, this.DESIGNATION_REQUIRED);
+      if (!String(row.division ?? '').trim()) this.addErr(row, this.DIVISION_REQUIRED);
+      if (!String(row.zone ?? '').trim()) this.addErr(row, this.ZONE_REQUIRED);
+      if (!String(row.branch ?? '').trim()) this.addErr(row, this.BRANCH_REQUIRED);
+      if (!String(row.department ?? '').trim()) this.addErr(row, this.DEPARTMENT_REQUIRED);
+      if (!String(row.function ?? '').trim()) this.addErr(row, this.FUNCTION_REQUIRED);
+      if (!String(row.area ?? '').trim()) this.addErr(row, this.AREA_REQUIRED);
+      if (!String(row.shift ?? '').trim()) this.addErr(row, this.SHIFT_REQUIRED);
+      if (!String(row.shiftTime ?? '').trim()) this.addErr(row, this.SHIFT_TIME_REQUIRED);
+
+      this.validateNoNumber(row, row.empName, 'EMP_NAME');
+
+      if (String(row.shiftTime ?? '').trim() && !this.isValidShiftTime(String(row.shiftTime))) {
+        this.addErr(row, this.SHIFT_TIME_INVALID);
+      }
+
+      this.validateMaxLen(row, row.empId, 'EMP_ID');
+      this.validateMaxLen(row, row.empName, 'EMP_NAME');
+      this.validateMaxLen(row, row.designation, 'DESIGNATION');
+      this.validateMaxLen(row, row.division, 'DIVISION');
+      this.validateMaxLen(row, row.zone, 'ZONE');
+      this.validateMaxLen(row, row.branch, 'BRANCH');
+      this.validateMaxLen(row, row.department, 'DEPARTMENT');
+      this.validateMaxLen(row, row.function, 'FUNCTION');
+      this.validateMaxLen(row, row.area, 'AREA');
+      this.validateMaxLen(row, row.shift, 'SHIFT');
+      this.validateMaxLen(row, row.shiftTime, 'SHIFT_TIME');
+      this.validateMaxLen(row, row.inTime, 'IN_TIME');
+      this.validateMaxLen(row, row.outTime, 'OUT_TIME');
+
+      row.isValid = this.isRowValid(row);
+    }
+  }
+
+  private finishProcessing() {
+    setTimeout(() => {
+      this.checkDuplicateInFile();
+      this.updateHasValidRow();
+      this.refreshFilteredRows();
+      this.isLoading = false;
+      this.loadingText = '';
+    }, 0);
   }
 
   // ---------------- HEADER VALIDATION & MAPPING ----------------
@@ -269,7 +471,7 @@ export class BulkView implements OnInit {
 
     this.autoMapColumns();
     this.mapRows(data);
-
+    this.refreshFilteredRows();
     this.isLoading = false;
   }
 
@@ -285,14 +487,11 @@ export class BulkView implements OnInit {
       return null;
     };
 
-    // required
     this.columnMap['EMP_ID'] = pick(['EMP_ID', 'EMPID', 'EMP ID']);
     this.columnMap['DATE'] = pick(['DATE']);
     this.columnMap['IN_TIME'] = pick(['IN_TIME', 'IN TIME']);
     this.columnMap['OUT_TIME'] = pick(['OUT_TIME', 'OUT TIME']);
-    this.columnMap['IsArchived'] = pick(['IsArchived', 'ISARCHIVED', 'Is_Archived']);
 
-    // optional
     this.columnMap['EMP_NAME'] = pick(['EMP_NAME', 'EMP NAME']);
     this.columnMap['DESIGNATION'] = pick(['DESIGNATION']);
     this.columnMap['DIVISION'] = pick(['DIVISION']);
@@ -300,7 +499,6 @@ export class BulkView implements OnInit {
     this.columnMap['BRANCH'] = pick(['BRANCH']);
     this.columnMap['DEPARTMENT'] = pick(['DEPARTMENT']);
     this.columnMap['FUNCTION'] = pick(['FUNCTION']);
-    this.columnMap['AREA'] = pick(['AREA']);
     this.columnMap['SHIFT'] = pick(['SHIFT']);
     this.columnMap['SHIFT_TIME'] = pick(['SHIFT_TIME', 'SHIFT TIME']);
   }
@@ -318,7 +516,6 @@ export class BulkView implements OnInit {
       const rawDate = String(getVal(r, 'DATE') ?? '').trim();
       const rawInTime = String(getVal(r, 'IN_TIME') ?? '').trim();
       const rawOutTime = String(getVal(r, 'OUT_TIME') ?? '').trim();
-      const rawIsArchived = String(getVal(r, 'IsArchived') ?? '').trim();
 
       const rawEmpName = String(getVal(r, 'EMP_NAME') ?? '').trim();
       const rawDesignation = String(getVal(r, 'DESIGNATION') ?? '').trim();
@@ -331,17 +528,14 @@ export class BulkView implements OnInit {
       const rawShift = String(getVal(r, 'SHIFT') ?? '').trim();
       const rawShiftTime = String(getVal(r, 'SHIFT_TIME') ?? '').trim();
 
-      // EMP_ID
       const empId = rawEmpId || null;
       if (!empId) errors.push(this.EMP_REQUIRED);
       else if (!this.isEmpIdValid(empId)) errors.push(this.EMP_INVALID);
 
-      // DATE
       const date = this.parseAnyDate(rawDate);
       if (!rawDate) errors.push(this.DATE_REQUIRED);
       else if (!date) errors.push(this.INVALID_DATE);
 
-      // TIME
       const inTime = rawInTime || null;
       const outTime = rawOutTime || null;
 
@@ -351,25 +545,37 @@ export class BulkView implements OnInit {
       if (!outTime) errors.push(this.OUT_REQUIRED);
       else if (!this.isValidHHmm(outTime)) errors.push(`OUT_TIME: ${this.INVALID_TIME}`);
 
-      // IsArchived
-      let isArchivedNum: number | null = null;
-      if (rawIsArchived === '') errors.push(this.ARCH_REQUIRED);
-      else {
-        const n = Number(rawIsArchived);
-        if (n === 0 || n === 1) isArchivedNum = n;
-        else errors.push(this.INVALID_ARCH);
-      }
+      const empName = rawEmpName || null;
+      const designation = rawDesignation || null;
+      const division = rawDivision || null;
+      const zone = rawZone || null;
+      const branch = rawBranch || null;
+      const department = rawDepartment || null;
+      const func = rawFunction || null;
+      const area = rawArea || null;
+      const shift = rawShift || null;
+      const shiftTime = rawShiftTime || null;
 
-      // ✅ ONLY EMP_NAME: numbers not allowed (baqi fields me allowed)
+      if (!empName) errors.push(this.EMP_NAME_REQUIRED);
+      if (!designation) errors.push(this.DESIGNATION_REQUIRED);
+      if (!division) errors.push(this.DIVISION_REQUIRED);
+      if (!zone) errors.push(this.ZONE_REQUIRED);
+      if (!branch) errors.push(this.BRANCH_REQUIRED);
+      if (!department) errors.push(this.DEPARTMENT_REQUIRED);
+      if (!func) errors.push(this.FUNCTION_REQUIRED);
+      if (!area) errors.push(this.AREA_REQUIRED);
+      if (!shift) errors.push(this.SHIFT_REQUIRED);
+      if (!shiftTime) errors.push(this.SHIFT_TIME_REQUIRED);
+
       const checkNoNum = (val: string, label: string) => {
         if (val && /\d/.test(val)) errors.push(this.NO_NUM(label));
       };
       checkNoNum(rawEmpName, 'EMP_NAME');
 
-      // SHIFT_TIME (optional strict format if provided)
-      if (rawShiftTime && !this.isValidShiftTime(rawShiftTime)) errors.push(this.SHIFT_TIME_INVALID);
+      if (rawShiftTime && !this.isValidShiftTime(rawShiftTime)) {
+        errors.push(this.SHIFT_TIME_INVALID);
+      }
 
-      // ✅ Max length = 20 (initial validation on raw values)
       const checkMax = (val: string, label: string) => {
         if (val && val.length > this.MAX_LEN) errors.push(this.TOO_LONG(label));
       };
@@ -387,9 +593,8 @@ export class BulkView implements OnInit {
       checkMax(rawShiftTime, 'SHIFT_TIME');
       checkMax(rawInTime, 'IN_TIME');
       checkMax(rawOutTime, 'OUT_TIME');
-      checkMax(rawIsArchived, 'IsArchived');
 
-      const row: BulkAttendanceRow = {
+      return {
         uid: ++this.uidCounter,
         rowNo: i + 1,
 
@@ -407,39 +612,35 @@ export class BulkView implements OnInit {
         rawDate,
         rawInTime,
         rawOutTime,
-        rawIsArchived,
 
         empId,
-        empName: rawEmpName || null,
+        empName,
 
-        designation: rawDesignation || null,
-        division: rawDivision || null,
-        zone: rawZone || null,
-        branch: rawBranch || null,
-        department: rawDepartment || null,
-        function: rawFunction || null,
-        area: rawArea || null,
-        shift: rawShift || null,
-        shiftTime: rawShiftTime || null,
+        designation,
+        division,
+        zone,
+        branch,
+        department,
+        function: func,
+        area,
+        shift,
+        shiftTime,
 
-        date: date,
+        date,
         dateControl: new FormControl<Date | null>(date),
 
         inTime,
         outTime,
 
-        isArchived: isArchivedNum ?? 0,
-
         checked: false,
         errors,
         isValid: false,
-      };
-
-      return row;
+      } as BulkAttendanceRow;
     });
 
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
+    this.checkDuplicateInFile();
   }
 
   // ---------------- ERROR HELPERS ----------------
@@ -460,8 +661,6 @@ export class BulkView implements OnInit {
       this.INVALID_DATE,
       this.IN_REQUIRED,
       this.OUT_REQUIRED,
-      this.ARCH_REQUIRED,
-      this.INVALID_ARCH,
       this.SHIFT_TIME_INVALID,
 
       this.EMP_NAME_REQUIRED,
@@ -481,6 +680,7 @@ export class BulkView implements OnInit {
     row.errors = (row.errors ?? []).filter((e) => !/IN_TIME: Invalid time format/i.test(e));
     row.errors = (row.errors ?? []).filter((e) => !/OUT_TIME: Invalid time format/i.test(e));
     row.errors = (row.errors ?? []).filter((e) => !/Max 20 characters allowed/i.test(e));
+    row.errors = (row.errors ?? []).filter((e) => !e.startsWith('Duplicate with row'));
   }
 
   // ---------------- VALIDATIONS ----------------
@@ -506,9 +706,6 @@ export class BulkView implements OnInit {
       if (!ot) this.addErr(row, this.OUT_REQUIRED);
       else if (!this.isValidHHmm(ot)) this.addErr(row, `OUT_TIME: ${this.INVALID_TIME}`);
 
-      const arch = Number(row.isArchived);
-      if (!(arch === 0 || arch === 1)) this.addErr(row, this.INVALID_ARCH);
-
       if (!String(row.empName ?? '').trim()) this.addErr(row, this.EMP_NAME_REQUIRED);
       if (!String(row.designation ?? '').trim()) this.addErr(row, this.DESIGNATION_REQUIRED);
       if (!String(row.division ?? '').trim()) this.addErr(row, this.DIVISION_REQUIRED);
@@ -520,21 +717,16 @@ export class BulkView implements OnInit {
       if (!String(row.shift ?? '').trim()) this.addErr(row, this.SHIFT_REQUIRED);
       if (!String(row.shiftTime ?? '').trim()) this.addErr(row, this.SHIFT_TIME_REQUIRED);
 
-
-      // ✅ ONLY EMP_NAME: no numbers
       this.validateNoNumber(row, row.empName, 'EMP_NAME');
 
-      // shift time format (optional)
       if (String(row.shiftTime ?? '').trim() && !this.isValidShiftTime(String(row.shiftTime))) {
         this.addErr(row, this.SHIFT_TIME_INVALID);
       } else {
         this.removeErr(row, this.SHIFT_TIME_INVALID);
       }
 
-      // ✅ Max length = 20 for all columns/inputs
       this.validateMaxLen(row, row.empId, 'EMP_ID');
       this.validateMaxLen(row, row.empName, 'EMP_NAME');
-
       this.validateMaxLen(row, row.designation, 'DESIGNATION');
       this.validateMaxLen(row, row.division, 'DIVISION');
       this.validateMaxLen(row, row.zone, 'ZONE');
@@ -543,15 +735,14 @@ export class BulkView implements OnInit {
       this.validateMaxLen(row, row.function, 'FUNCTION');
       this.validateMaxLen(row, row.area, 'AREA');
       this.validateMaxLen(row, row.shift, 'SHIFT');
-
       this.validateMaxLen(row, row.shiftTime, 'SHIFT_TIME');
       this.validateMaxLen(row, row.inTime, 'IN_TIME');
       this.validateMaxLen(row, row.outTime, 'OUT_TIME');
-      this.validateMaxLen(row, String(row.isArchived ?? ''), 'IsArchived');
     }
 
-    this.updateHasValidRow();
     this.checkDuplicateInFile();
+    this.updateHasValidRow();
+    this.refreshFilteredRows();
   }
 
   private applyLocalValidationsSafe() {
@@ -578,7 +769,7 @@ export class BulkView implements OnInit {
       !!row.dateControl?.value &&
       !!String(row.inTime ?? '').trim() &&
       !!String(row.outTime ?? '').trim() &&
-      (Number(row.isArchived) === 0 || Number(row.isArchived) === 1);
+      !this.hasErrLike(row, 'Duplicate with row');
   }
 
   updateHasValidRow() {
@@ -588,55 +779,67 @@ export class BulkView implements OnInit {
     }
 
     this.hasValidRow = this.rows.some((r) => r.isValid === true);
-    this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+
+    const validRows = this.rows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    this.checkAll = validRows.length > 0 && validRows.every((r) => r.checked);
   }
 
   // ---------------- UI EVENTS ----------------
   onToggleAll(checked: boolean) {
     this.checkAll = checked;
-    this.rows.forEach((r) => (r.checked = checked ? !!r.isValid : false));
-    this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+    this.rows.forEach((r) => {
+      const canSelect = !!r.isValid && !this.hasErrLike(r, 'Duplicate with row');
+      r.checked = checked ? canSelect : false;
+    });
+
+    const validRows = this.rows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    this.checkAll = validRows.length > 0 && validRows.every((r) => r.checked);
+    this.refreshFilteredRows();
   }
 
   onRowToggle(row: BulkAttendanceRow, checked: boolean) {
-    row.checked = checked && !!row.isValid;
-    this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+    const canSelect = !!row.isValid && !this.hasErrLike(row, 'Duplicate with row');
+    row.checked = checked && canSelect;
+
+    const validRows = this.rows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    this.checkAll = validRows.length > 0 && validRows.every((r) => r.checked);
+
+    this.refreshFilteredRows();
   }
 
   onRowDateChange(row: BulkAttendanceRow) {
     row.checked = false;
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
+    this.refreshFilteredRows();
   }
 
   onRowInTimeChange(row: BulkAttendanceRow) {
     row.checked = false;
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
+    this.refreshFilteredRows();
   }
 
   onRowOutTimeChange(row: BulkAttendanceRow) {
     row.checked = false;
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
-  }
-
-  onRowArchivedChange(row: BulkAttendanceRow) {
-    row.checked = false;
-    this.applyLocalValidationsSafe();
-    this.updateHasValidRow();
+    this.refreshFilteredRows();
   }
 
   onRowTextChange(row: BulkAttendanceRow) {
     row.checked = false;
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
+    this.refreshFilteredRows();
   }
 
   onRowShiftTimeChange(row: BulkAttendanceRow) {
     row.checked = false;
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
+    this.refreshFilteredRows();
   }
 
   // ---------------- BULK PROCEED ----------------
@@ -661,9 +864,8 @@ export class BulkView implements OnInit {
         date: r.dateControl.value ? this.toYMD(r.dateControl.value) : null,
         inTime: String(r.inTime || '').trim(),
         outTime: String(r.outTime || '').trim(),
-        isArchived: Number(r.isArchived),
+        isArchived: 0,
 
-        // optional
         empName: String(r.empName || '').trim() || null,
         designation: String(r.designation || '').trim() || null,
         division: String(r.division || '').trim() || null,
@@ -679,6 +881,7 @@ export class BulkView implements OnInit {
 
     try {
       const chunks = this.chunk(payloads, 200);
+
       for (const ch of chunks) {
         await new Promise<void>((resolve, reject) => {
           this.attendanceService.importBulk(ch).subscribe({
@@ -705,6 +908,7 @@ export class BulkView implements OnInit {
 
     this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
     this.updateHasValidRow();
+    this.refreshFilteredRows();
   }
 
   private chunk<T>(arr: T[], size: number): T[][] {
@@ -758,13 +962,14 @@ export class BulkView implements OnInit {
   }
 
   private isValidShiftTime(v: string): boolean {
-    // 09:00-18:00 or 09:00 - 18:00
     const s = String(v ?? '').trim();
     const m = s.match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
     if (!m) return false;
 
-    const h1 = Number(m[1]), m1 = Number(m[2]);
-    const h2 = Number(m[3]), m2 = Number(m[4]);
+    const h1 = Number(m[1]);
+    const m1 = Number(m[2]);
+    const h2 = Number(m[3]);
+    const m2 = Number(m[4]);
 
     const ok1 = h1 >= 0 && h1 <= 23 && m1 >= 0 && m1 <= 59;
     const ok2 = h2 >= 0 && h2 <= 23 && m2 >= 0 && m2 <= 59;
@@ -785,14 +990,8 @@ export class BulkView implements OnInit {
   private isEmpIdValid(v: any): boolean {
     const s = String(v ?? '').trim();
     if (!s) return false;
-
-    // no spaces
     if (/\s/.test(s)) return false;
-
-    // must contain at least one digit (so "Ali" won't pass)
     if (!/\d/.test(s)) return false;
-
-    // allow only these chars
     return /^[A-Za-z0-9_-]+$/.test(s);
   }
 
@@ -811,32 +1010,28 @@ export class BulkView implements OnInit {
       map.set(key, arr);
     }
 
-    // clear old duplicate errors
     for (const row of this.rows) {
-      row.errors = (row.errors ?? []).filter(e => !e.startsWith('Duplicate with row'));
+      row.errors = (row.errors ?? []).filter((e) => !e.startsWith('Duplicate with row'));
     }
 
-    // apply duplicate errors
     map.forEach((rows) => {
       if (rows.length > 1) {
-        const rowNos = rows.map(r => r.rowNo).join(', ');
-        rows.forEach(r => {
+        const rowNos = rows.map((r) => r.rowNo).join(', ');
+        rows.forEach((r) => {
           this.addErr(r, `Duplicate with row(s): ${rowNos}`);
-          r.checked = false;   // prevent selection
+          r.checked = false;
         });
       }
     });
   }
 
   hasErrLike(row: BulkAttendanceRow, prefix: string): boolean {
-    return (row.errors ?? []).some(e => String(e).startsWith(prefix));
+    return (row.errors ?? []).some((e) => String(e).startsWith(prefix));
   }
 
   getErrLike(row: BulkAttendanceRow, prefix: string): string | null {
-    return (row.errors ?? []).find(e => String(e).startsWith(prefix)) ?? null;
+    return (row.errors ?? []).find((e) => String(e).startsWith(prefix)) ?? null;
   }
-
-
 
   private validateMaxLen(row: BulkAttendanceRow, value: any, label: string) {
     const msg = this.TOO_LONG(label);
@@ -845,13 +1040,12 @@ export class BulkView implements OnInit {
     else this.removeErr(row, msg);
   }
 
-  get filteredRows() {
+  private refreshFilteredRows() {
     let list = [...this.rows];
-
     const term = this.searchTerm.trim().toLowerCase();
 
     if (term) {
-      list = list.filter((row: any) => {
+      list = list.filter((row: BulkAttendanceRow) => {
         const text = [
           row.rowNo,
           row.empId,
@@ -881,9 +1075,8 @@ export class BulkView implements OnInit {
           row.rawDate,
           row.rawInTime,
           row.rawOutTime,
-          row.rawIsArchived,
-          row.isValid ? 'valid' : 'invalid',
-          ...(row.errors ?? [])
+              row.isValid ? 'valid' : 'invalid',
+          ...(row.errors ?? []),
         ]
           .join(' ')
           .toLowerCase();
@@ -893,17 +1086,21 @@ export class BulkView implements OnInit {
     }
 
     if (this.statusFilter === 'valid') {
-      list = list.filter((r: any) => !!r.isValid);
+      list = list.filter((r) => !!r.isValid);
     } else if (this.statusFilter === 'invalid') {
-      list = list.filter((r: any) => !r.isValid);
+      list = list.filter((r) => !r.isValid);
     } else if (this.statusFilter === 'selected') {
-      list = list.filter((r: any) => !!r.checked);
+      list = list.filter((r) => !!r.checked);
     }
 
-    return list;
+    this.filteredRows = list;
+
+    if (this.pageIndex > this.totalPages) {
+      this.pageIndex = this.totalPages;
+    }
   }
 
-  showRowErrors(row: any) {
+  showRowErrors(row: BulkAttendanceRow) {
     const errors = row.errors ?? [];
     const messages = errors.length
       ? errors.map((err: string) => `<li>${err}</li>`).join('')
@@ -916,4 +1113,35 @@ export class BulkView implements OnInit {
       nzWidth: 420,
     });
   }
-}
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredRows.length / this.pageSize));
+  }
+
+  get pageStart(): number {
+    return (this.pageIndex - 1) * this.pageSize;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.pageStart + this.pageSize, this.filteredRows.length);
+  }
+
+  get pagedRows() {
+    const start = this.pageStart;
+    const end = start + this.pageSize;
+    return this.filteredRows.slice(start, end);
+  }
+
+  nextPage() {
+    if (this.pageIndex < this.totalPages) this.pageIndex++;
+  }
+
+  prevPage() {
+    if (this.pageIndex > 1) this.pageIndex--;
+  }
+
+  onSearchOrFilterChange() {
+    this.pageIndex = 1;
+    this.refreshFilteredRows();
+  }
+} 

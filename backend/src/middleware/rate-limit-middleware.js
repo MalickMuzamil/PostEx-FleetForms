@@ -9,7 +9,7 @@ const generalRateLimiter = rateLimit({
         success: false,
         message: 'Too many requests, please try again later.'
     },
-    skip: (req) => req.path === '/health'
+    skip: (req) => req.path === '/health' || req.path.endsWith('/bulk-import')
 });
 
 const authRateLimiter = rateLimit({

@@ -66,8 +66,7 @@ class AttendanceService {
         if (!outTime) reasons.push("OUT_TIME is required");
         else if (!this.isValidHHmm(outTime)) reasons.push("OUT_TIME must be HH:mm");
 
-        if (isArchivedRaw === "" || isArchivedRaw == null) reasons.push("IsArchived is required");
-        else {
+        if (isArchivedRaw != null && String(isArchivedRaw).trim() !== "") {
             const n = Number(isArchivedRaw);
             if (!(n === 0 || n === 1)) reasons.push("IsArchived must be 0 or 1");
         }
