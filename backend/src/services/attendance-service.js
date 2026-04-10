@@ -199,15 +199,19 @@ class AttendanceService {
             IsArchived: Number(p.IsArchived ?? p.isArchived ?? 0) === 1 ? 1 : 0,
         }));
 
-        // Deduplicate
+        // Deduplicate - ensure unique by primary key (EMP_ID + DATE)
         const deduped = new Map();
         for (const row of normalized) {
-            const key = `${row.EMP_ID}|${this.toYMD(row.DATE)}`;
-            deduped.set(key, row);
+            // Normalize key components to ensure consistency
+            const empId = String(row.EMP_ID || '').trim().toLowerCase();
+            const dateStr = this.toYMD(row.DATE) || '';
+
+            const key = `${empId}|${dateStr}`;
+            deduped.set(key, row); // Keep the last occurrence (latest data)
         }
 
         const uniqueBatch = Array.from(deduped.values());
-        console.log(`🧹 After dedupe: ${uniqueBatch.length}`);
+        console.log(`🧹 After dedupe: ${uniqueBatch.length} (from ${normalized.length})`);
 
         // Temp table
         const table = new sql.Table('#AttendanceBulk');
@@ -263,12 +267,20 @@ class AttendanceService {
         await new sql.Request(tx).bulk(table);
         console.log("📥 Bulk insert into temp table done");
 
-        // Merge
+        // Merge - use CTE to ensure no duplicates in source
         const mergeResult = await new sql.Request(tx).query(`
         DECLARE @OutputActions TABLE (Action NVARCHAR(10));
 
+        WITH SourceData AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY EMP_ID, [DATE]
+                       ORDER BY (SELECT NULL)
+                   ) AS rn
+            FROM #AttendanceBulk
+        )
         MERGE dbo.DAILY_ATTENDANCE_REPORT AS target
-        USING #AttendanceBulk AS src
+        USING (SELECT * FROM SourceData WHERE rn = 1) AS src
         ON target.EMP_ID = src.EMP_ID
            AND target.[DATE] = src.[DATE]
 

@@ -208,15 +208,20 @@ class CourierFakeAttemptsService {
             CreatedBy: this.normalizeCreatedBy(p.CreatedBy ?? p.createdBy) || "User",
         }));
 
-        // Deduplicate
+        // Deduplicate - ensure unique by primary key (CNNo + CourierID + Date)
         const deduped = new Map();
         for (const row of normalized) {
-            const key = `${row.CNNo}|${row.CourierID}|${this.toYMD(row.Date)}`;
-            deduped.set(key, row);
+            // Normalize key components to ensure consistency
+            const cnNo = String(row.CNNo || '').trim().toLowerCase();
+            const courierId = String(row.CourierID || '').trim().toLowerCase();
+            const dateStr = this.toYMD(row.Date) || '';
+
+            const key = `${cnNo}|${courierId}|${dateStr}`;
+            deduped.set(key, row); // Keep the last occurrence (latest data)
         }
 
         const uniqueBatch = Array.from(deduped.values());
-        console.log(`🧹 After dedupe: ${uniqueBatch.length}`);
+        console.log(`🧹 After dedupe: ${uniqueBatch.length} (from ${normalized.length})`);
 
         // Temp table
         const table = new sql.Table('#CourierFakeBulk');
@@ -250,12 +255,20 @@ class CourierFakeAttemptsService {
         await new sql.Request(tx).bulk(table);
         console.log("📥 Bulk insert into temp table done");
 
-        // Merge
+        // Merge - use CTE to ensure no duplicates in source
         const mergeResult = await new sql.Request(tx).query(`
         DECLARE @OutputActions TABLE (Action NVARCHAR(10));
 
+        WITH SourceData AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY CNNo, CourierID, [Date]
+                       ORDER BY (SELECT NULL)
+                   ) AS rn
+            FROM #CourierFakeBulk
+        )
         MERGE dbo.CourierFakeAttempts AS target
-        USING #CourierFakeBulk AS src
+        USING (SELECT * FROM SourceData WHERE rn = 1) AS src
         ON target.CNNo = src.CNNo
            AND target.CourierID = src.CourierID
            AND target.[Date] = src.[Date]

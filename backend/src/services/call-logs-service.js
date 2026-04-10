@@ -9,8 +9,8 @@ class CallLogsService {
        LIST
     ========================== */
     async list({ top } = {}) {
-        const limit = Math.min(Number(top || 0) || 0, 20000);
-        const topVal = limit || 20000;
+        const limit = Math.min(Number(top || 0) || 0, 1000);
+        const topVal = limit || 1000;
 
         const pool = await getPool();
         const request = pool.request();
@@ -125,15 +125,20 @@ class CallLogsService {
 
         console.log(`📦 Incoming batch size: ${batch.length}`);
 
-        // Deduplicate
+        // Deduplicate - ensure unique by primary key (Customer_Number + Master_No + Time)
         const deduped = new Map();
         for (const row of batch) {
-            const key = `${row.Customer_Number}|${row.Master_No}|${row.Time}`;
-            deduped.set(key, row);
+            // Normalize key components to ensure consistency
+            const customerNum = String(row.Customer_Number || '').trim().toLowerCase();
+            const masterNo = String(row.Master_No || '').trim().toLowerCase();
+            const timeStr = String(row.Time || '').trim();
+
+            const key = `${customerNum}|${masterNo}|${timeStr}`;
+            deduped.set(key, row); // Keep the last occurrence (latest data)
         }
 
         const uniqueBatch = Array.from(deduped.values());
-        console.log(`🧹 After dedupe: ${uniqueBatch.length}`);
+        console.log(`🧹 After dedupe: ${uniqueBatch.length} (from ${batch.length})`);
 
         // Temp table
         const table = new sql.Table('#CallLogsBulk');
@@ -169,12 +174,20 @@ class CallLogsService {
         await new sql.Request(tx).bulk(table);
         console.log("📥 Bulk insert into temp table done");
 
-        // Merge
+        // Merge - use CTE to ensure no duplicates in source
         const mergeResult = await new sql.Request(tx).query(`
         DECLARE @OutputActions TABLE (Action NVARCHAR(10));
 
+        WITH SourceData AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY Customer_Number, Master_No, [Time]
+                       ORDER BY (SELECT NULL)
+                   ) AS rn
+            FROM #CallLogsBulk
+        )
         MERGE dbo.CALL_LOGS AS target
-        USING #CallLogsBulk AS src
+        USING (SELECT * FROM SourceData WHERE rn = 1) AS src
         ON target.Customer_Number = src.Customer_Number
            AND target.Master_No = src.Master_No
            AND target.[Time] = src.[Time]
