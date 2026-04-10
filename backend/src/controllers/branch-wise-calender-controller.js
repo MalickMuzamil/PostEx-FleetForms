@@ -40,6 +40,16 @@ class BranchWiseCalenderController {
                 data,
             });
         } catch (err) {
+            console.error("BULK IMPORT ERROR DETAILS:", JSON.stringify({
+                message: err?.message,
+                code: err?.code,
+                number: err?.number,
+                state: err?.state,
+                class: err?.class,
+                originalError: err?.originalError?.message,
+                precedingErrors: err?.precedingErrors?.map(e => e?.message),
+            }, null, 2));
+
             if (err?.code === "BULK_VALIDATION_FAILED") {
                 return res.status(400).json({
                     message: err.message || "Bulk validation failed.",

@@ -9,8 +9,8 @@ class CallLogsService {
        LIST
     ========================== */
     async list({ top } = {}) {
-        const limit = Math.min(Number(top || 0) || 0, 5000);
-        const topVal = limit || 5000;
+        const limit = Math.min(Number(top || 0) || 0, 20000);
+        const topVal = limit || 20000;
 
         const pool = await getPool();
         const request = pool.request();
@@ -264,7 +264,7 @@ class CallLogsService {
             const IsArchived = this._arch(rawIsArchived);
 
             if (!Customer_Number) errors.push("Customer_Number is required");
-            else if (!/^\d{10,11}$/.test(Customer_Number)) errors.push("Customer_Number must be 10 or 11 digits");
+            else if (!/^[0-9]+$/.test(Customer_Number)) errors.push("Customer_Number must contain digits only");
 
             if (this._rawEmpty(p.Consignee_Cell_Length)) errors.push("Consignee_Cell_Length is required");
             else if (Consignee_Cell_Length === null) errors.push("Consignee_Cell_Length: Invalid number");

@@ -1,4 +1,12 @@
 <div class="bulk-page container-fluid mt-3">
+
+  <div class="page-loader-overlay" *ngIf="bulkSaving">
+    <div class="page-loader-box">
+      <div class="spinner-border text-light" role="status"></div>
+      <div class="mt-3 loader-text">Saving data to database...</div>
+    </div>
+  </div>
+
   <div class="bulk-card shadow-sm">
     <div class="card-body">
 
@@ -9,12 +17,8 @@
             ← Back
           </button>
 
-          <button
-            class="btn btn-success bulk-top-btn px-4"
-            *ngIf="selectedValidCount >= 1"
-            [disabled]="!canProceed"
-            (click)="proceedBulkImport()"
-          >
+          <button class="btn btn-success bulk-top-btn px-4" *ngIf="selectedValidCount >= 1" [disabled]="!canProceed"
+            (click)="proceedBulkImport()">
             <span *ngIf="bulkSaving" class="spinner-border spinner-border-sm me-2"></span>
             {{ bulkSaving ? 'Processing...' : 'Proceed' }}
           </button>
@@ -28,21 +32,12 @@
         <!-- TOOLBAR -->
         <div class="row g-2 align-items-center mb-3">
           <div class="col-12 col-lg">
-            <input
-              type="text"
-              class="form-control"
-              [(ngModel)]="searchTerm"
-              (ngModelChange)="onSearchOrFilterChange()"
-              placeholder="Search in table..."
-            />
+            <input type="text" class="form-control" [(ngModel)]="searchTerm" (ngModelChange)="onSearchOrFilterChange()"
+              placeholder="Search in table..." />
           </div>
 
           <div class="col-12 col-sm-6 col-lg-auto">
-            <select
-              class="form-select"
-              [(ngModel)]="statusFilter"
-              (ngModelChange)="onSearchOrFilterChange()"
-            >
+            <select class="form-select" [(ngModel)]="statusFilter" (ngModelChange)="onSearchOrFilterChange()">
               <option value="all">Status</option>
               <option value="valid">Valid</option>
               <option value="invalid">Invalid</option>
@@ -58,13 +53,8 @@
             <thead>
               <tr>
                 <th class="col-check">
-                  <input
-                    type="checkbox"
-                    class="form-check-input"
-                    [ngModel]="checkAll"
-                    (ngModelChange)="onToggleAll($event)"
-                    [disabled]="isLoading"
-                  />
+                  <input type="checkbox" class="form-check-input" [ngModel]="checkAll"
+                    (ngModelChange)="onToggleAll($event)" [disabled]="isLoading" />
                 </th>
 
                 <th class="col-index">#</th>
@@ -83,29 +73,18 @@
             </thead>
 
             <tbody>
-              <tr
-                *ngFor="let row of pagedRows; trackBy: trackByRow"
-                [class.row-selected]="row.checked"
-                [class.table-danger-soft]="!row.isValid && (row.errors?.length ?? 0) > 0"
-              >
+              <tr *ngFor="let row of pagedRows; trackBy: trackByRow" [class.row-selected]="row.checked"
+                [class.table-danger-soft]="!row.isValid && (row.errors?.length ?? 0) > 0">
                 <td>
-                  <input
-                    type="checkbox"
-                    class="form-check-input"
-                    [(ngModel)]="row.checked"
-                    (change)="onRowToggle(row, row.checked)"
-                    [disabled]="isLoading || !row.isValid"
-                  />
+                  <input type="checkbox" class="form-check-input" [(ngModel)]="row.checked"
+                    (change)="onRowToggle(row, row.checked)" [disabled]="isLoading || !row.isValid" />
                 </td>
 
                 <td>{{ row.rowNo }}</td>
 
                 <td>
-                  <button
-                    class="status-pill"
-                    [ngClass]="row.isValid ? 'status-valid' : 'status-invalid'"
-                    (click)="!row.isValid && showRowErrors(row)"
-                  >
+                  <button class="status-pill" [ngClass]="row.isValid ? 'status-valid' : 'status-invalid'"
+                    (click)="!row.isValid && showRowErrors(row)">
                     <span class="pill-dot"></span>
                     {{ row.isValid ? 'Valid' : (row.errors?.length || 0) + ' Errors' }}
                   </button>
@@ -113,106 +92,69 @@
 
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Customer_Number')">
-                    <input
-                      class="form-control form-control-sm"
-                      [(ngModel)]="row.customerNumber"
-                      [disabled]="isLoading"
-                      (ngModelChange)="onRowTextChange(row)"
-                    />
+                    <input class="form-control form-control-sm" [(ngModel)]="row.customerNumber" [disabled]="isLoading"
+                      (ngModelChange)="onRowTextChange(row)" />
                   </div>
                 </td>
 
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Consignee_Cell_Length')">
-                    <input
-                      class="form-control form-control-sm"
-                      [(ngModel)]="row.consigneeCellLength"
-                      [disabled]="isLoading"
-                      (ngModelChange)="onRowTextChange(row)"
-                    />
+                    <input class="form-control form-control-sm" [(ngModel)]="row.consigneeCellLength"
+                      [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
                   </div>
                 </td>
 
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Master_No')">
-                    <input
-                      class="form-control form-control-sm"
-                      [(ngModel)]="row.masterNo"
-                      [disabled]="isLoading"
-                      (ngModelChange)="onRowTextChange(row)"
-                    />
+                    <input class="form-control form-control-sm" [(ngModel)]="row.masterNo" [disabled]="isLoading"
+                      (ngModelChange)="onRowTextChange(row)" />
                   </div>
                 </td>
 
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Agent Duration')">
-                    <input
-                      class="form-control form-control-sm"
-                      [(ngModel)]="row.agentDuration"
-                      [disabled]="isLoading"
-                      (ngModelChange)="onRowTextChange(row)"
-                    />
+                    <input class="form-control form-control-sm" [(ngModel)]="row.agentDuration" [disabled]="isLoading"
+                      (ngModelChange)="onRowTextChange(row)" />
                   </div>
                 </td>
 
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Total Duration')">
-                    <input
-                      class="form-control form-control-sm"
-                      [(ngModel)]="row.totalDuration"
-                      [disabled]="isLoading"
-                      (ngModelChange)="onRowTextChange(row)"
-                    />
+                    <input class="form-control form-control-sm" [(ngModel)]="row.totalDuration" [disabled]="isLoading"
+                      (ngModelChange)="onRowTextChange(row)" />
                   </div>
                 </td>
 
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Extension')">
-                    <input
-                      class="form-control form-control-sm"
-                      [(ngModel)]="row.extension"
-                      [disabled]="isLoading"
-                      (ngModelChange)="onRowTextChange(row)"
-                    />
+                    <input class="form-control form-control-sm" [(ngModel)]="row.extension" [disabled]="isLoading"
+                      (ngModelChange)="onRowTextChange(row)" />
                   </div>
                 </td>
 
                 <td>
                   <div class="cell-wrap" [class.cell-invalid]="hasErrLike(row,'Call_Response')">
-                    <input
-                      class="form-control form-control-sm"
-                      [(ngModel)]="row.callResponse"
-                      [disabled]="isLoading"
-                      (ngModelChange)="onRowTextChange(row)"
-                    />
+                    <input class="form-control form-control-sm" [(ngModel)]="row.callResponse" [disabled]="isLoading"
+                      (ngModelChange)="onRowTextChange(row)" />
                   </div>
                 </td>
 
                 <td>
                   <div class="cell-wrap bulk-date-control" [class.cell-invalid]="hasErrLike(row,'Time')">
-                    <nz-date-picker
-                      [formControl]="row.timeControl"
-                      [nzShowTime]="{ nzFormat: 'HH:mm:ss' }"
-                      nzFormat="yyyy-MM-dd HH:mm:ss"
-                      [nzDisabled]="isLoading"
-                      (ngModelChange)="onRowTimeChange(row)"
-                    >
+                    <nz-date-picker [formControl]="row.timeControl" [nzShowTime]="{ nzFormat: 'HH:mm:ss' }"
+                      nzFormat="yyyy-MM-dd HH:mm:ss" [nzDisabled]="isLoading" (ngModelChange)="onRowTimeChange(row)">
                     </nz-date-picker>
                   </div>
                 </td>
 
                 <td>
                   <div class="cell-wrap">
-                    <input
-                      class="form-control form-control-sm"
-                      [(ngModel)]="row.recording"
-                      [disabled]="isLoading"
-                      (ngModelChange)="onRowTextChange(row)"
-                    />
+                    <input class="form-control form-control-sm" [(ngModel)]="row.recording" [disabled]="isLoading"
+                      (ngModelChange)="onRowTextChange(row)" />
                   </div>
                 </td>
 
-                </tr>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -224,11 +166,8 @@
           </div>
 
           <div class="d-flex align-items-center gap-2">
-            <button
-              class="btn btn-outline-secondary btn-sm"
-              (click)="prevPage()"
-              [disabled]="pageIndex === 1 || isLoading"
-            >
+            <button class="btn btn-outline-secondary btn-sm" (click)="prevPage()"
+              [disabled]="pageIndex === 1 || isLoading">
               Prev
             </button>
 
@@ -236,11 +175,8 @@
               Page {{ pageIndex }} / {{ totalPages }}
             </span>
 
-            <button
-              class="btn btn-outline-secondary btn-sm"
-              (click)="nextPage()"
-              [disabled]="pageIndex === totalPages || isLoading"
-            >
+            <button class="btn btn-outline-secondary btn-sm" (click)="nextPage()"
+              [disabled]="pageIndex === totalPages || isLoading">
               Next
             </button>
           </div>
@@ -249,4 +185,6 @@
       </nz-spin>
     </div>
   </div>
+
+
 </div>

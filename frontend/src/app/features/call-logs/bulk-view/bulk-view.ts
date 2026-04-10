@@ -364,8 +364,8 @@ export class CallLogsBulkView {
       const cust = String(row.customerNumber ?? '').trim();
       if (!cust) {
         this.addErr(row, this.CUST_REQUIRED);
-      } else if (!/^\d{10,11}$/.test(cust)) {
-        this.addErr(row, 'Customer_Number must be 10 or 11 digits');
+      } else if (!/^[0-9]+$/.test(cust)) {
+        this.addErr(row, 'Customer_Number must contain digits only');
       }
 
       if (!row.rawConsigneeCellLength) this.addErr(row, this.CONS_REQUIRED);
@@ -484,7 +484,7 @@ export class CallLogsBulkView {
 
       const customerNumber = rawCustomerNumber || null;
       if (!customerNumber) errors.push(this.CUST_REQUIRED);
-      else if (!/^\d{10,11}$/.test(rawCustomerNumber)) errors.push('Customer_Number must be 10 or 11 digits');
+      else if (!/^[0-9]+$/.test(rawCustomerNumber)) errors.push('Customer_Number must contain digits only');
 
       const consigneeCellLength = this.toNumberOrNull(rawConsigneeCellLength);
       if (rawConsigneeCellLength === '') errors.push(this.CONS_REQUIRED);
@@ -569,7 +569,7 @@ export class CallLogsBulkView {
   private clearManagedErrors(row: BulkCallLogsRow) {
     [
       this.CUST_REQUIRED,
-      'Customer_Number must be 10 or 11 digits',
+      'Customer_Number must contain digits only',
       this.CONS_REQUIRED,
       this.CONS_INVALID,
       this.MASTER_REQUIRED,
@@ -592,8 +592,8 @@ export class CallLogsBulkView {
       const cust = String(row.customerNumber ?? '').trim();
       if (!cust) {
         this.addErr(row, this.CUST_REQUIRED);
-      } else if (!/^\d{10,11}$/.test(cust)) {
-        this.addErr(row, 'Customer_Number must be 10 or 11 digits');
+      } else if (!/^[0-9]+$/.test(cust)) {
+        this.addErr(row, 'Customer_Number must contain digits only');
       }
 
       const consRaw = String(row.consigneeCellLength ?? '').trim();
@@ -667,7 +667,7 @@ export class CallLogsBulkView {
     return (
       (row.errors?.length ?? 0) === 0 &&
       !!cust &&
-      /^\d{10,11}$/.test(cust) &&
+      /^[0-9]+$/.test(cust) &&
       !!cons &&
       row.consigneeCellLength !== null &&
       row.consigneeCellLength !== undefined &&

@@ -116,73 +116,34 @@ class CourierFakeAttemptsService {
             else validRows.push(v);
         });
 
-        // ✅ duplicate inside file: CNNo + Date
-        const keyMap = new Map();
-        validRows.forEach((r) => {
-            const k = `${r.cnNo}|${r.courierId}|${r.date}`;
-            const arr = keyMap.get(k) ?? [];
-            arr.push(r);
-            keyMap.set(k, arr);
-        });
-
-        keyMap.forEach((arr) => {
-            if (arr.length > 1) {
-                arr.forEach((r) => {
-                    invalidRows.push({
-                        rowNo: r.rowNo,
-                        cnNo: r.cnNo,
-                        courierId: r.courierId,
-                        date: r.date,
-                        reasons: ["Duplicate in file: CNNo + CourierID + Date must be unique"],
-                        isValid: false,
-                    });
-                });
-            }
-        });
-
         return { invalidRows };
     }
 
     /* =========================
        BULK IMPORT (UPSERT)
-       - if exists (CNNo + Date) => UPDATE
-       - else INSERT
+       - override by (CNNo + CourierID + Date)
     ========================== */
-    async bulkImport({ payloads = [] } = {}) {
+    async bulkImport({ payloads } = {}) {
         if (!Array.isArray(payloads) || payloads.length === 0) {
-            const err = new Error("payloads array is required.");
+            const err = new Error("payloads array is required and cannot be empty.");
             err.code = "VALIDATION_ERROR";
             throw err;
         }
 
-        // ✅ 1) validate first
+        if (payloads.length > 200000) {
+            const err = new Error("Maximum 200,000 rows allowed per import operation.");
+            err.code = "RATE_LIMIT_EXCEEDED";
+            throw err;
+        }
+
         const { invalidRows } = await this.validateBulk(payloads);
+
         if (invalidRows.length) {
-            const err = new Error("Validation failed for one or more rows.");
+            const err = new Error("Bulk validation failed.");
             err.code = "BULK_VALIDATION_FAILED";
             err.invalidRows = invalidRows;
             throw err;
         }
-
-        // ✅ 2) normalize payloads for DB schema
-        const normalized = payloads.map((p) => ({
-            CNNo: this.cleanStr(p.CNNo ?? p.cnNo),
-            BranchName: this.cleanStr(p.BranchName ?? p.branchName),
-
-            Attempts: this.toTinyIntOrNull(p.Attempts ?? p.attempts),
-            CourierID: this.normalizeCourierId(p.CourierID ?? p.courierId),
-
-            Rider: this.cleanStr(p.Rider ?? p.rider),
-
-            // DB: nvarchar
-            Fake_Attempts: String(p.Fake_Attempts ?? p.fakeAttempts ?? p.FAKE_ATTEMPTS ?? "").trim(),
-
-            Date: this.parseDateOnly(p.Date ?? p.date ?? p.DATE),
-
-            IsArchived: 0,
-
-            CreatedBy: this.normalizeCreatedBy(p.CreatedBy ?? p.createdBy) || "User",
-        }));
 
         const pool = await getPool();
         const tx = new sql.Transaction(pool);
@@ -190,122 +151,168 @@ class CourierFakeAttemptsService {
         try {
             await tx.begin();
 
-            // ✅ temp table matches your DB schema types
-            await new sql.Request(tx).batch(`
-        IF OBJECT_ID('tempdb..#CourierFakeBulk') IS NOT NULL DROP TABLE #CourierFakeBulk;
+            const CHUNK = 10000;
+            let inserted = 0;
+            let updated = 0;
 
-        CREATE TABLE #CourierFakeBulk (
-          CNNo varchar(20) NOT NULL,
-          BranchName nvarchar(100) NOT NULL,
-          Attempts tinyint NOT NULL,
-          CourierID int NOT NULL,
-          Rider nvarchar(100) NOT NULL,
-          Fake_Attempts nvarchar(50) NOT NULL,
-          [Date] date NOT NULL,
-          IsArchived bit NOT NULL,
-          CreatedBy varchar(10) NOT NULL
-        );
-      `);
+            for (let i = 0; i < payloads.length; i += CHUNK) {
+                const batch = payloads.slice(i, i + CHUNK);
 
-            // ✅ bulk into temp
-            const table = new sql.Table("#CourierFakeBulk");
-            table.create = false;
+                console.log(`🚀 Processing chunk ${i / CHUNK + 1}`);
+                console.log(`➡️ Rows in chunk: ${batch.length}`);
 
-            table.columns.add("CNNo", sql.VarChar(20), { nullable: false });
-            table.columns.add("BranchName", sql.NVarChar(100), { nullable: false });
-            table.columns.add("Attempts", sql.TinyInt, { nullable: false });
-            table.columns.add("CourierID", sql.Int, { nullable: false });
-            table.columns.add("Rider", sql.NVarChar(100), { nullable: false });
-            table.columns.add("Fake_Attempts", sql.NVarChar(50), { nullable: false });
-            table.columns.add("Date", sql.Date, { nullable: false });
-            table.columns.add("IsArchived", sql.Bit, { nullable: false });
-            table.columns.add("CreatedBy", sql.VarChar(10), { nullable: false });
+                const chunkResult = await this._bulkImportBatch(tx, batch);
 
-            for (const r of normalized) {
-                // safety guards (avoid "Invalid string.")
-                if (!r.CNNo || !r.BranchName || !r.Rider || !r.Fake_Attempts || !r.Date) {
-                    const err = new Error("One or more required fields are missing/invalid.");
-                    err.code = "VALIDATION_ERROR";
-                    throw err;
-                }
-                if (r.Attempts == null) {
-                    const err = new Error("Attempts invalid (expected 0-255).");
-                    err.code = "VALIDATION_ERROR";
-                    throw err;
-                }
-                if (r.CourierID == null) {
-                    const err = new Error("CourierID invalid (expected 4 or C004).");
-                    err.code = "VALIDATION_ERROR";
-                    throw err;
-                }
+                inserted += chunkResult.inserted;
+                updated += chunkResult.updated;
 
-                table.rows.add(
-                    r.CNNo,
-                    r.BranchName,
-                    r.Attempts,
-                    r.CourierID,
-                    r.Rider,
-                    r.Fake_Attempts,
-                    r.Date,
-                    r.IsArchived ? 1 : 0,
-                    r.CreatedBy
+                console.log(
+                    `✅ Chunk ${i / CHUNK + 1} inserted: ${chunkResult.inserted}, updated: ${chunkResult.updated}`
                 );
             }
 
-            await new sql.Request(tx).bulk(table);
-
-            // ✅ UPDATE existing (CNNo + Date)
-            const upd = await new sql.Request(tx).query(`
-        UPDATE T
-          SET
-            T.BranchName = S.BranchName,
-            T.Attempts = S.Attempts,
-            T.CourierID = S.CourierID,
-            T.Rider = S.Rider,
-            T.Fake_Attempts = S.Fake_Attempts,
-            T.IsArchived = S.IsArchived,
-            T.CreatedBy = S.CreatedBy,
-            T.CreatedOn = GETDATE()
-        FROM dbo.CourierFakeAttempts T
-        INNER JOIN #CourierFakeBulk S
-          ON T.CNNo = S.CNNo
-            AND T.CourierID = S.CourierID
-            AND CAST(T.[Date] AS date) = CAST(S.[Date] AS date);
-
-        SELECT @@ROWCOUNT AS UpdatedCount;
-      `);
-
-            const updated = Number(upd?.recordset?.[0]?.UpdatedCount ?? 0);
-
-            // ✅ INSERT missing
-            const ins = await new sql.Request(tx).query(`
-        INSERT INTO dbo.CourierFakeAttempts (
-          CNNo, BranchName, Attempts, CourierID, Rider, Fake_Attempts,
-          [Date], IsArchived, CreatedBy, CreatedOn
-        )
-        SELECT
-          S.CNNo, S.BranchName, S.Attempts, S.CourierID, S.Rider, S.Fake_Attempts,
-          S.[Date], S.IsArchived, S.CreatedBy, GETDATE()
-        FROM #CourierFakeBulk S
-        WHERE NOT EXISTS (
-          SELECT 1
-          FROM dbo.CourierFakeAttempts T
-          WHERE T.CNNo = S.CNNo
-            AND T.CourierID = S.CourierID
-            AND CAST(T.[Date] AS date) = CAST(S.[Date] AS date)
-        );
-
-        SELECT @@ROWCOUNT AS InsertedCount;
-      `);
-
-            const inserted = Number(ins?.recordset?.[0]?.InsertedCount ?? 0);
-
             await tx.commit();
-            return { inserted, updated };
-        } catch (err) {
-            try { await tx.rollback(); } catch { }
-            throw err;
+
+            return {
+                inserted,
+                updated,
+                invalidCount: 0
+            };
+
+        } catch (e) {
+            try {
+                await tx.rollback();
+            } catch { }
+            throw e;
         }
+    }
+
+    async _bulkImportBatch(tx, batch) {
+        if (!Array.isArray(batch) || batch.length === 0) {
+            console.log("⚠️ Empty batch received");
+            return { inserted: 0, updated: 0 };
+        }
+
+        console.log(`📦 Incoming batch size: ${batch.length}`);
+
+        // Normalize payloads
+        const normalized = batch.map((p) => ({
+            CNNo: this.cleanStr(p.CNNo ?? p.cnNo),
+            BranchName: this.cleanStr(p.BranchName ?? p.branchName),
+            Attempts: this.toTinyIntOrNull(p.Attempts ?? p.attempts),
+            CourierID: this.normalizeCourierId(p.CourierID ?? p.courierId),
+            Rider: this.cleanStr(p.Rider ?? p.rider),
+            Fake_Attempts: String(p.Fake_Attempts ?? p.fakeAttempts ?? p.FAKE_ATTEMPTS ?? "").trim(),
+            Date: this.parseDateOnly(p.Date ?? p.date ?? p.DATE),
+            IsArchived: 0,
+            CreatedBy: this.normalizeCreatedBy(p.CreatedBy ?? p.createdBy) || "User",
+        }));
+
+        // Deduplicate
+        const deduped = new Map();
+        for (const row of normalized) {
+            const key = `${row.CNNo}|${row.CourierID}|${this.toYMD(row.Date)}`;
+            deduped.set(key, row);
+        }
+
+        const uniqueBatch = Array.from(deduped.values());
+        console.log(`🧹 After dedupe: ${uniqueBatch.length}`);
+
+        // Temp table
+        const table = new sql.Table('#CourierFakeBulk');
+        table.create = true;
+
+        table.columns.add('CNNo', sql.VarChar(20), { nullable: false });
+        table.columns.add('BranchName', sql.NVarChar(100), { nullable: false });
+        table.columns.add('Attempts', sql.TinyInt, { nullable: false });
+        table.columns.add('CourierID', sql.Int, { nullable: false });
+        table.columns.add('Rider', sql.NVarChar(100), { nullable: false });
+        table.columns.add('Fake_Attempts', sql.NVarChar(50), { nullable: false });
+        table.columns.add('Date', sql.Date, { nullable: false });
+        table.columns.add('IsArchived', sql.Bit, { nullable: false });
+        table.columns.add('CreatedBy', sql.VarChar(10), { nullable: false });
+
+        for (const r of uniqueBatch) {
+            table.rows.add(
+                r.CNNo,
+                r.BranchName,
+                r.Attempts,
+                r.CourierID,
+                r.Rider,
+                r.Fake_Attempts,
+                r.Date,
+                r.IsArchived,
+                r.CreatedBy
+            );
+        }
+
+        // Bulk insert temp table
+        await new sql.Request(tx).bulk(table);
+        console.log("📥 Bulk insert into temp table done");
+
+        // Merge
+        const mergeResult = await new sql.Request(tx).query(`
+        DECLARE @OutputActions TABLE (Action NVARCHAR(10));
+
+        MERGE dbo.CourierFakeAttempts AS target
+        USING #CourierFakeBulk AS src
+        ON target.CNNo = src.CNNo
+           AND target.CourierID = src.CourierID
+           AND target.[Date] = src.[Date]
+
+        WHEN MATCHED THEN
+          UPDATE SET
+            target.BranchName = src.BranchName,
+            target.Attempts = src.Attempts,
+            target.Rider = src.Rider,
+            target.Fake_Attempts = src.Fake_Attempts,
+            target.IsArchived = src.IsArchived,
+            target.CreatedBy = src.CreatedBy,
+            target.CreatedOn = GETDATE()
+
+        WHEN NOT MATCHED THEN
+          INSERT (
+            CNNo,
+            BranchName,
+            Attempts,
+            CourierID,
+            Rider,
+            Fake_Attempts,
+            [Date],
+            IsArchived,
+            CreatedBy,
+            CreatedOn
+          )
+          VALUES (
+            src.CNNo,
+            src.BranchName,
+            src.Attempts,
+            src.CourierID,
+            src.Rider,
+            src.Fake_Attempts,
+            src.[Date],
+            src.IsArchived,
+            src.CreatedBy,
+            GETDATE()
+          )
+
+        OUTPUT $action INTO @OutputActions;
+
+        SELECT
+          SUM(CASE WHEN Action = 'INSERT' THEN 1 ELSE 0 END) AS InsertedCount,
+          SUM(CASE WHEN Action = 'UPDATE' THEN 1 ELSE 0 END) AS UpdatedCount
+        FROM @OutputActions;
+    `);
+
+        const insertedCount = Number(mergeResult?.recordset?.[0]?.InsertedCount ?? 0);
+        const updatedCount = Number(mergeResult?.recordset?.[0]?.UpdatedCount ?? 0);
+
+        console.log(`🧾 Merge completed. Inserted: ${insertedCount}, Updated: ${updatedCount}`);
+
+        return {
+            inserted: insertedCount,
+            updated: updatedCount
+        };
     }
 
     /* =========================

@@ -724,7 +724,7 @@ export class BulkView {
       .filter((p) => p.CNNo && p.Date);
 
     try {
-      const chunks = this.chunk(payloads, 200);
+      const chunks = this.chunk(payloads, 10000);
 
       let totalInserted = 0;
       let totalUpdated = 0;
