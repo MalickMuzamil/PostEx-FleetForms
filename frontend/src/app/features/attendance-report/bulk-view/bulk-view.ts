@@ -880,7 +880,7 @@ export class BulkView implements OnInit {
       .filter((p) => p.empId && p.date);
 
     try {
-      const chunks = this.chunk(payloads, 10000);
+      const chunks = this.chunk(payloads, 20000);
 
       for (const ch of chunks) {
         await new Promise<void>((resolve, reject) => {

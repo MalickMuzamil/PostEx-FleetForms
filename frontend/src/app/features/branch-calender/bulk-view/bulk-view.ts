@@ -418,7 +418,7 @@ export class BulkView {
       .filter((p) => p.Branch && p.Calender_Date);
 
     try {
-      const chunks = this.chunk(payloads, 10000);
+      const chunks = this.chunk(payloads, 20000);
 
       let totalInserted = 0;
       let totalUpdated = 0;
