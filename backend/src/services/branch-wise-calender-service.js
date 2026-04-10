@@ -181,15 +181,19 @@ class BranchWiseCalenderService {
             });
         }
 
-        // Deduplicate
+        // Deduplicate - ensure unique by primary key (BRANCHID + CALENDER_DATE)
         const deduped = new Map();
         for (const row of normalized) {
-            const key = `${row.BRANCHID}|${this.toYMD(row.CALENDER_DATE)}`;
-            deduped.set(key, row);
+            // Normalize key components to ensure consistency
+            const branchId = String(row.BRANCHID || '').trim().toLowerCase();
+            const dateStr = this.toYMD(row.CALENDER_DATE) || '';
+
+            const key = `${branchId}|${dateStr}`;
+            deduped.set(key, row); // Keep the last occurrence (latest data)
         }
 
         const uniqueBatch = Array.from(deduped.values());
-        console.log(`🧹 After dedupe: ${uniqueBatch.length}`);
+        console.log(`🧹 After dedupe: ${uniqueBatch.length} (from ${normalized.length})`);
 
         // Temp table
         const table = new sql.Table('#TempCalender');
@@ -215,12 +219,20 @@ class BranchWiseCalenderService {
         await new sql.Request(tx).bulk(table);
         console.log("📥 Bulk insert into temp table done");
 
-        // Merge
+        // Merge - use CTE to ensure no duplicates in source
         const mergeResult = await new sql.Request(tx).query(`
         DECLARE @OutputActions TABLE (Action NVARCHAR(10));
 
+        WITH SourceData AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY BRANCHID, CALENDER_DATE
+                       ORDER BY (SELECT NULL)
+                   ) AS rn
+            FROM #TempCalender
+        )
         MERGE dbo.tblBranchWiseCalender AS target
-        USING #TempCalender AS src
+        USING (SELECT * FROM SourceData WHERE rn = 1) AS src
         ON target.BRANCHID = src.BRANCHID
            AND target.CALENDER_DATE = src.CALENDER_DATE
 
