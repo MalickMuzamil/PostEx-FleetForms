@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { BulkView } from './bulk-view';
+import { CallLogsBulkView } from './bulk-view';
 
-describe('BulkView', () => {
-  let component: BulkView;
-  let fixture: ComponentFixture<BulkView>;
+describe('CallLogsBulkView', () => {
+  let component: CallLogsBulkView;
+  let fixture: ComponentFixture<CallLogsBulkView>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [BulkView]
+      imports: [CallLogsBulkView]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(BulkView);
+    fixture = TestBed.createComponent(CallLogsBulkView);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

@@ -84,6 +84,17 @@ class BranchWiseCalenderService {
        BULK IMPORT (SMART UPSERT)
     ========================== */
     async bulkImport({ payloads = [] } = {}) {
+        if (!Array.isArray(payloads) || payloads.length === 0) {
+            const err = new Error("payloads array is required and cannot be empty.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+
+        if (payloads.length > 200000) {
+            const err = new Error("Maximum 200,000 rows allowed per import operation.");
+            err.code = "RATE_LIMIT_EXCEEDED";
+            throw err;
+        }
 
         const { invalidRows } = await this.validateBulk(payloads);
         if (invalidRows.length) {
@@ -99,109 +110,159 @@ class BranchWiseCalenderService {
         try {
             await tx.begin();
 
-            await new sql.Request(tx).batch(`
-        IF OBJECT_ID('tempdb..#TempCalender') IS NOT NULL
-          DROP TABLE #TempCalender;
+            const CHUNK = 10000;
+            let inserted = 0;
+            let updated = 0;
 
-        CREATE TABLE #TempCalender (
-          BRANCHID INT NOT NULL,
-          CALENDER_DATE DATE NOT NULL,
-          ISNOTWORKINGDAY BIT NOT NULL,
-          NOTWORKINGDAYDESC NVARCHAR(200) NOT NULL,
-          IsArchived BIT NOT NULL
-        );
-      `);
+            for (let i = 0; i < payloads.length; i += CHUNK) {
+                const batch = payloads.slice(i, i + CHUNK);
 
-            const table = new sql.Table("#TempCalender");
-            table.create = false;
+                console.log(`🚀 Processing chunk ${i / CHUNK + 1}`);
+                console.log(`➡️ Rows in chunk: ${batch.length}`);
 
-            table.columns.add("BRANCHID", sql.Int, { nullable: false });
-            table.columns.add("CALENDER_DATE", sql.Date, { nullable: false });
-            table.columns.add("ISNOTWORKINGDAY", sql.Bit, { nullable: false });
-            table.columns.add("NOTWORKINGDAYDESC", sql.NVarChar(200), { nullable: false });
-            table.columns.add("IsArchived", sql.Bit, { nullable: false });
+                const chunkResult = await this._bulkImportBatch(tx, batch);
 
-            for (const p of payloads) {
+                inserted += chunkResult.inserted;
+                updated += chunkResult.updated;
 
-                const branchRaw = this.cleanStr(
-                    p.Branch ?? p.BRANCH ?? p.BRANCHID ?? p.BranchId ?? p.BranchName
-                );
-
-                const branchId = await this.resolveBranchId(tx, branchRaw);
-                if (branchId == null) throw new Error(`Invalid BRANCH: ${branchRaw}`);
-
-                const calDate = this.parseDateOnly(
-                    p.Calender_Date ?? p.CALENDER_DATE ?? p.Date ?? p.date
-                );
-
-                const isNotWorkingDay = this.parse01(p.IsNotWorkingDay ?? p.ISNOTWORKINGDAY);
-                const desc = String(p.NotWorkingDayDesc ?? p.NOTWORKINGDAYDESC ?? "").trim();
-                const isArchived = this.parse01(p.IsArchived ?? p.ISARCHIVED ?? p.isArchived);
-
-                table.rows.add(
-                    branchId,
-                    calDate,
-                    isNotWorkingDay,
-                    desc,
-                    isArchived
+                console.log(
+                    `✅ Chunk ${i / CHUNK + 1} inserted: ${chunkResult.inserted}, updated: ${chunkResult.updated}`
                 );
             }
-
-            await new sql.Request(tx).bulk(table);
-
-            // 🔁 UPDATE only if data changed
-            const upd = await new sql.Request(tx).query(`
-        UPDATE T
-        SET
-          T.ISNOTWORKINGDAY = S.ISNOTWORKINGDAY,
-          T.NOTWORKINGDAYDESC = S.NOTWORKINGDAYDESC,
-          T.IsArchived = S.IsArchived
-        FROM dbo.tblBranchWiseCalender T
-        INNER JOIN #TempCalender S
-          ON T.BRANCHID = S.BRANCHID
-          AND T.CALENDER_DATE = S.CALENDER_DATE
-        WHERE
-          T.ISNOTWORKINGDAY <> S.ISNOTWORKINGDAY
-          OR T.NOTWORKINGDAYDESC <> S.NOTWORKINGDAYDESC
-          OR T.IsArchived <> S.IsArchived;
-
-        SELECT @@ROWCOUNT AS UpdatedCount;
-      `);
-
-            const updated = upd.recordset[0]?.UpdatedCount ?? 0;
-
-            // ➕ INSERT if not exists (TRAN_ID auto generated)
-            const ins = await new sql.Request(tx).query(`
-        INSERT INTO dbo.tblBranchWiseCalender (
-          BRANCHID, CALENDER_DATE, ISNOTWORKINGDAY, NOTWORKINGDAYDESC, IsArchived
-        )
-        SELECT
-          S.BRANCHID, S.CALENDER_DATE, S.ISNOTWORKINGDAY, S.NOTWORKINGDAYDESC, S.IsArchived
-        FROM #TempCalender S
-        WHERE NOT EXISTS (
-          SELECT 1
-          FROM dbo.tblBranchWiseCalender T
-          WHERE T.BRANCHID = S.BRANCHID
-            AND T.CALENDER_DATE = S.CALENDER_DATE
-        );
-
-        SELECT @@ROWCOUNT AS InsertedCount;
-      `);
-
-            const inserted = ins.recordset[0]?.InsertedCount ?? 0;
 
             await tx.commit();
 
             return {
                 inserted,
                 updated,
-                skipped: payloads.length - inserted - updated
+                invalidCount: 0
             };
 
-        } catch (err) {
-            await tx.rollback();
-            throw err;
+        } catch (e) {
+            try {
+                await tx.rollback();
+            } catch { }
+            throw e;
         }
+    }
+
+    async _bulkImportBatch(tx, batch) {
+        if (!Array.isArray(batch) || batch.length === 0) {
+            console.log("⚠️ Empty batch received");
+            return { inserted: 0, updated: 0 };
+        }
+
+        console.log(`📦 Incoming batch size: ${batch.length}`);
+
+        // Normalize payloads
+        const normalized = [];
+        for (const p of batch) {
+            const branchRaw = this.cleanStr(
+                p.Branch ?? p.BRANCH ?? p.BRANCHID ?? p.BranchId ?? p.BranchName
+            );
+
+            const branchId = await this.resolveBranchId(tx, branchRaw);
+            if (branchId == null) throw new Error(`Invalid BRANCH: ${branchRaw}`);
+
+            const calDate = this.parseDateOnly(
+                p.Calender_Date ?? p.CALENDER_DATE ?? p.Date ?? p.date
+            );
+
+            const isNotWorkingDay = this.parse01(p.IsNotWorkingDay ?? p.ISNOTWORKINGDAY);
+            const desc = String(p.NotWorkingDayDesc ?? p.NOTWORKINGDAYDESC ?? "").trim();
+            const isArchived = this.parse01(p.IsArchived ?? p.ISARCHIVED ?? p.isArchived);
+
+            normalized.push({
+                BRANCHID: branchId,
+                CALENDER_DATE: calDate,
+                ISNOTWORKINGDAY: isNotWorkingDay,
+                NOTWORKINGDAYDESC: desc,
+                IsArchived: isArchived
+            });
+        }
+
+        // Deduplicate
+        const deduped = new Map();
+        for (const row of normalized) {
+            const key = `${row.BRANCHID}|${this.toYMD(row.CALENDER_DATE)}`;
+            deduped.set(key, row);
+        }
+
+        const uniqueBatch = Array.from(deduped.values());
+        console.log(`🧹 After dedupe: ${uniqueBatch.length}`);
+
+        // Temp table
+        const table = new sql.Table('#TempCalender');
+        table.create = true;
+
+        table.columns.add('BRANCHID', sql.Int, { nullable: false });
+        table.columns.add('CALENDER_DATE', sql.Date, { nullable: false });
+        table.columns.add('ISNOTWORKINGDAY', sql.Bit, { nullable: false });
+        table.columns.add('NOTWORKINGDAYDESC', sql.NVarChar(200), { nullable: false });
+        table.columns.add('IsArchived', sql.Bit, { nullable: false });
+
+        for (const r of uniqueBatch) {
+            table.rows.add(
+                r.BRANCHID,
+                r.CALENDER_DATE,
+                r.ISNOTWORKINGDAY,
+                r.NOTWORKINGDAYDESC,
+                r.IsArchived
+            );
+        }
+
+        // Bulk insert temp table
+        await new sql.Request(tx).bulk(table);
+        console.log("📥 Bulk insert into temp table done");
+
+        // Merge
+        const mergeResult = await new sql.Request(tx).query(`
+        DECLARE @OutputActions TABLE (Action NVARCHAR(10));
+
+        MERGE dbo.tblBranchWiseCalender AS target
+        USING #TempCalender AS src
+        ON target.BRANCHID = src.BRANCHID
+           AND target.CALENDER_DATE = src.CALENDER_DATE
+
+        WHEN MATCHED THEN
+          UPDATE SET
+            target.ISNOTWORKINGDAY = src.ISNOTWORKINGDAY,
+            target.NOTWORKINGDAYDESC = src.NOTWORKINGDAYDESC,
+            target.IsArchived = src.IsArchived
+
+        WHEN NOT MATCHED THEN
+          INSERT (
+            BRANCHID,
+            CALENDER_DATE,
+            ISNOTWORKINGDAY,
+            NOTWORKINGDAYDESC,
+            IsArchived
+          )
+          VALUES (
+            src.BRANCHID,
+            src.CALENDER_DATE,
+            src.ISNOTWORKINGDAY,
+            src.NOTWORKINGDAYDESC,
+            src.IsArchived
+          )
+
+        OUTPUT $action INTO @OutputActions;
+
+        SELECT
+          SUM(CASE WHEN Action = 'INSERT' THEN 1 ELSE 0 END) AS InsertedCount,
+          SUM(CASE WHEN Action = 'UPDATE' THEN 1 ELSE 0 END) AS UpdatedCount
+        FROM @OutputActions;
+    `);
+
+        const insertedCount = Number(mergeResult?.recordset?.[0]?.InsertedCount ?? 0);
+        const updatedCount = Number(mergeResult?.recordset?.[0]?.UpdatedCount ?? 0);
+
+        console.log(`🧾 Merge completed. Inserted: ${insertedCount}, Updated: ${updatedCount}`);
+
+        return {
+            inserted: insertedCount,
+            updated: updatedCount
+        };
     }
 
     /* =========================

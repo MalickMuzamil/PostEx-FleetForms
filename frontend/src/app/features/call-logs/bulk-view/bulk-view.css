@@ -2,11 +2,6 @@
   display: block;
 }
 
-/* page */
-.bulk-page {
-  padding-inline: 4px;
-}
-
 /* card */
 .bulk-card {
   border: 1px solid #e9ecef;
@@ -253,4 +248,51 @@ button.status-pill {
   .bulk-card .card-body {
     padding: 12px;
   }
+}
+
+
+.bulk-page {
+  padding-inline: 4px;
+  position: relative;
+}
+
+.page-loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 99999;
+}
+
+.page-loader-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 240px;
+  padding: 24px 32px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.75);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.page-loader-box .spinner-border {
+  width: 3rem;
+  height: 3rem;
+  border-width: 0.35em;
+  color: #fff;
+}
+
+.loader-text {
+  margin-top: 12px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
 }

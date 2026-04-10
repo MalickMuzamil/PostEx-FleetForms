@@ -116,7 +116,7 @@ export class ManagementPage implements OnInit {
     if (r === 'postex-auth-admin') return 'ADMIN';
     if (r === 'postex-auth-cs' || r === 'cs') return 'CS';
     if (r === 'postex-auth-hr' || r === 'hr') return 'HR';
-    if (r === 'postex-auth-it' || r === 'it') return 'IT';
+    if (r === 'it') return 'IT';
     return 'USER';
   }
 
@@ -125,7 +125,7 @@ export class ManagementPage implements OnInit {
     if (uiRole === 'ADMIN') return 'postex-auth-admin';
     if (uiRole === 'CS') return 'CS';
     if (uiRole === 'HR') return 'HR';
-    if (uiRole === 'IT') return 'postex-auth-it';
+    if (uiRole === 'IT') return 'IT';
     return 'USER';
   }
 
