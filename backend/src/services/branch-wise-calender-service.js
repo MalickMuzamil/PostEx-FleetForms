@@ -110,7 +110,7 @@ class BranchWiseCalenderService {
         try {
             await tx.begin();
 
-            const CHUNK = 10000;
+            const CHUNK = 20000;
             let inserted = 0;
             let updated = 0;
 
