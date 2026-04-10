@@ -1,5 +1,5 @@
-# Use Node 22 (matches your runtime)
-FROM node:22-alpine
+# Use Node 20 (matches your runtime)
+FROM node:20
 
 # App directory inside container
 WORKDIR /app
