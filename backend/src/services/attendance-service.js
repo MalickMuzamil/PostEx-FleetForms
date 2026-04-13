@@ -416,6 +416,15 @@ class AttendanceService {
 
     isValidHHmm(v) {
         const s = String(v ?? "").trim();
+        
+        // HH:mm:ss format (e.g., 09:30:00, 00:00:00)
+        const msec = s.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
+        if (msec) {
+            const hh = Number(msec[1]), mm = Number(msec[2]), ss = Number(msec[3]);
+            return hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59 && ss >= 0 && ss <= 59;
+        }
+
+        // HH:mm format (e.g., 09:30)
         const m = s.match(/^(\d{1,2}):(\d{2})$/);
         if (!m) return false;
         const hh = Number(m[1]), mm = Number(m[2]);

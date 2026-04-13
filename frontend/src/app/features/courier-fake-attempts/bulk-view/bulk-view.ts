@@ -102,6 +102,10 @@ export class BulkView {
   isLoading = true;
   loadingText = 'Reading file & validating...';
 
+  savingProgress = 0;
+  savingTotal = 0;
+  savingText = 'Saving data to database...';
+
   private localValidateTimer: any = null;
   private readonly MAX_LEN = 50;
   private readonly TOO_LONG = (label: string) => `${label}: Max ${this.MAX_LEN} characters allowed`;
@@ -708,6 +712,7 @@ export class BulkView {
     if (!selected.length) return;
 
     this.bulkSaving = true;
+    this.savingProgress = 0;
 
     const payloads = selected
       .map((r) => ({
@@ -725,12 +730,17 @@ export class BulkView {
 
     try {
       const chunks = this.chunk(payloads, 20000);
+      this.savingTotal = chunks.length;
 
       let totalInserted = 0;
       let totalUpdated = 0;
       let serverMessage = '';
 
-      for (const ch of chunks) {
+      for (let i = 0; i < chunks.length; i++) {
+        this.savingProgress = i + 1;
+        this.savingText = `Saving ${this.savingProgress} of ${this.savingTotal} batch...`;
+
+        const ch = chunks[i];
         const res: any = await new Promise((resolve, reject) => {
           this.fakeService.importBulk(ch).subscribe({
             next: (response) => resolve(response),
@@ -760,6 +770,9 @@ export class BulkView {
       this.toast('error', 'Error', e?.error?.message || e?.message || 'Bulk import failed');
     } finally {
       this.bulkSaving = false;
+      this.savingProgress = 0;
+      this.savingTotal = 0;
+      this.savingText = 'Saving data to database...';
     }
   }
 
@@ -789,21 +802,44 @@ export class BulkView {
     return `${y}-${m}-${day}`;
   }
 
-  private parseAnyDate(raw: string): Date | null {
+  private parseAnyDate(raw: any): Date | null {
+    if (raw === null || raw === undefined) return null;
+
+    // Excel serial date number (e.g., 45372 = 2026-02-02)
+    if (typeof raw === 'number' && raw > 0) {
+      const excelEpoch = new Date(1899, 11, 30);
+      const d = new Date(excelEpoch.getTime() + raw * 24 * 60 * 60 * 1000);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
     const s = String(raw ?? '').trim();
     if (!s) return null;
 
-    // yyyy-MM-dd  (Excel sanitized + ISO)
+    // yyyy-MM-dd  (Excel sanitized + ISO) - 2 digits each
     const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (iso) {
       const d = new Date(+iso[1], +iso[2] - 1, +iso[3]);
       return isNaN(d.getTime()) ? null : d;
     }
 
-    // ✅ M/D/YYYY or MM/DD/YYYY  (CSV se aye to)
-    const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (mdy) {
-      const d = new Date(+mdy[3], +mdy[1] - 1, +mdy[2]);
+    // ✅ YYYY-M-DD or YYYY-MM-D or YYYY-M-D (flexible 1-2 digits)
+    const isoFlex = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (isoFlex) {
+      const d = new Date(+isoFlex[1], +isoFlex[2] - 1, +isoFlex[3]);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // ✅ YYYY/MM/DD or YYYY/M/D (slash separator)
+    const slashFlex = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+    if (slashFlex) {
+      const d = new Date(+slashFlex[1], +slashFlex[2] - 1, +slashFlex[3]);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // ✅ DD/MM/YYYY or D/M/YYYY (common in attendance files)
+    const ddmmyyyy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (ddmmyyyy) {
+      const d = new Date(+ddmmyyyy[3], +ddmmyyyy[2] - 1, +ddmmyyyy[1]);
       return isNaN(d.getTime()) ? null : d;
     }
 
@@ -814,7 +850,7 @@ export class BulkView {
       return isNaN(d.getTime()) ? null : d;
     }
 
-    return null; // new Date(s) hata do — unreliable hai
+    return null;
   }
 
   private toNumberOrNull(v: any): number | null {
