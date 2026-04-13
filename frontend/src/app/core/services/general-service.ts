@@ -46,8 +46,9 @@ export class GeneralService {
     );
   }
 
-  delete<T>(endpoint: string): Observable<T> {
-    return this.http.delete<T>(`${this.baseUrl}${endpoint}`).pipe(
+  delete<T>(endpoint: string, body?: any): Observable<T> {
+    const options = body ? { body } : {};
+    return this.http.delete<T>(`${this.baseUrl}${endpoint}`, options).pipe(
       tap(() => this.clearCacheByEndpoint(endpoint))
     );
   }

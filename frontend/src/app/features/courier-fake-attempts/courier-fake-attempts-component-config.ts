@@ -84,6 +84,15 @@ export const COURIER_FAKE_ATTEMPTS_TABLE: TableConfig = {
 
     { key: 'createdBy', title: 'CreatedBy' },
     { key: 'createdOnDisplay', title: 'CreatedOn' },
+
+    {
+      key: 'actions',
+      title: 'Actions',
+    },
+  ],
+
+  actions: [
+    { label: 'Remove', action: 'delete' },
   ],
 
   pagination: true,

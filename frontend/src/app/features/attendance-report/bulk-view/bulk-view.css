@@ -159,6 +159,11 @@
   width: 46px;
 }
 
+.col-action {
+  min-width: 70px;
+  width: 70px;
+}
+
 .col-index {
   min-width: 50px;
 }
@@ -193,6 +198,19 @@
 
 .col-archive {
   min-width: 130px;
+}
+
+/* action button */
+.btn-outline-danger {
+  border-color: #dc3545;
+  color: #dc3545;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.btn-outline-danger:hover {
+  background: #dc3545;
+  color: #fff;
 }
 
 /* status */

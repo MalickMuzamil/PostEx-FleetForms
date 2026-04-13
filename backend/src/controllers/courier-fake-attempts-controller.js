@@ -64,6 +64,19 @@ class CourierFakeAttemptsController {
             next(err);
         }
     };
+
+    delete = async (req, res, next) => {
+        try {
+            const { cnNo, date, courierId } = req.body;
+            const data = await courierFakeAttemptsService.delete({ cnNo, date, courierId });
+            res.json({ data });
+        } catch (err) {
+            if (err?.code === "VALIDATION_ERROR") {
+                return res.status(400).json({ message: err.message || "Validation error." });
+            }
+            next(err);
+        }
+    };
 }
 
 export const courierFakeAttemptsController = new CourierFakeAttemptsController();

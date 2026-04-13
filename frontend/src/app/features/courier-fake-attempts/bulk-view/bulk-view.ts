@@ -9,6 +9,7 @@ import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 
 import { RouterLink } from '@angular/router';
 import { CourierFakeAttemptsService } from '../../../core/services/courier-fake-attempts-service';
@@ -57,6 +58,7 @@ interface BulkFakeAttemptsRow {
     NzDatePickerModule,
     NzModalModule,
     NzSpinModule,
+    NzToolTipModule,
     RouterLink,
   ],
   templateUrl: './bulk-view.html',
@@ -1051,5 +1053,22 @@ export class BulkView {
   onSearchOrFilterChange() {
     this.pageIndex = 1;
     this.refreshFilteredRows();
+  }
+
+  deleteRow(row: BulkFakeAttemptsRow) {
+    this.modal.confirm({
+      nzTitle: 'Delete Row',
+      nzContent: `Are you sure you want to delete row #${row.rowNo}?`,
+      nzOkText: 'Delete',
+      nzOkDanger: true,
+      nzOnOk: () => {
+        this.rows = this.rows.filter((r) => r.uid !== row.uid);
+        this.rows.forEach((r, i) => (r.rowNo = i + 1));
+        this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+        this.checkDuplicateInFile();
+        this.updateHasValidRow();
+        this.refreshFilteredRows();
+      },
+    });
   }
 }

@@ -67,8 +67,8 @@ export const ATTENDANCE_EDIT_FORM: FormConfig = {
 
 export const ATTENDANCE_TABLE: TableConfig = {
   globalSearch: {
-    placeholder: 'Search Employee, Department, Division, Branch, Zone',
-    keys: ['employeeId', 'employeeName', 'department', 'division', 'branch', 'zone'],
+    placeholder: 'Search Employee, Department, Division, Branch, Zone, Remarks',
+    keys: ['employeeId', 'employeeName', 'department', 'division', 'branch', 'zone', 'remarks'],
     rules: {
       mode: 'alphanumeric',
       maxLength: 20,
@@ -135,6 +135,21 @@ export const ATTENDANCE_TABLE: TableConfig = {
 
     { key: 'inTime', title: 'In Time' },
     { key: 'outTime', title: 'Out Time' },
+    {
+      key: 'remarks',
+      title: 'TIMETRAX_REMARKS',
+      filter: {
+        type: 'select',
+        placeholder: 'Remarks',
+        options: [
+          { value: 'Present', label: 'Present' },
+          { value: 'Absent', label: 'Absent' },
+          { value: 'Leave', label: 'Leave' },
+          { value: 'Holiday', label: 'Holiday' },
+          { value: 'Off Day', label: 'Off Day' },
+        ],
+      },
+    },
   ],
 
   pagination: true,

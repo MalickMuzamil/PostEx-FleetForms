@@ -30,6 +30,32 @@ class CourierFakeAttemptsService {
     }
 
     /* =========================
+       DELETE
+    ========================== */
+    async delete({ cnNo, date, courierId }) {
+        if (!cnNo || !date || !courierId) {
+            const err = new Error("CNNo, Date, and CourierID are required for deletion.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+
+        const pool = await getPool();
+        const request = pool.request();
+        request.input("cnNo", sql.VarChar, this.cleanStr(cnNo));
+        request.input("date", sql.Date, new Date(date));
+        request.input("courierId", sql.Int, Number(courierId));
+
+        const result = await request.query(`
+            DELETE FROM dbo.CourierFakeAttempts
+            WHERE CNNo = @cnNo
+              AND [Date] = @date
+              AND CourierID = @courierId;
+        `);
+
+        return { deletedRows: result.rowsAffected[0] };
+    }
+
+    /* =========================
        VALIDATION (BULK)
        - returns invalidRows for frontend preview
     ========================== */
