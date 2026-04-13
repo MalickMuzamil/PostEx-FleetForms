@@ -328,4 +328,39 @@ export class CourierFakeAttempts implements OnInit {
     if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.replace('T', ' ').slice(0, 19);
     return s || '';
   }
+
+  // ================= DELETE =================
+  onDelete(row: any) {
+    const cnNo = row.cnNo;
+    const date = row.dateDisplay; // assuming it's yyyy-mm-dd
+    const courierId = row.courierId;
+
+    if (!cnNo || !date || !courierId) {
+      this.notification.error('Error', 'Invalid row data for deletion.');
+      return;
+    }
+
+    this.modal.confirm({
+      nzTitle: 'Confirm Deletion',
+      nzContent: `Are you sure you want to remove this fake attempt record? CNNo: ${cnNo}, Date: ${date}`,
+      nzOkText: 'Yes, Remove',
+      nzCancelText: 'Cancel',
+      nzOnOk: () => {
+        this.fakeService.delete(cnNo, date, courierId).subscribe({
+          next: (res: any) => {
+            if (res?.data?.deletedRows > 0) {
+              this.notification.success('Success', 'Record removed successfully.');
+              this.loadTable(); // reload the table
+            } else {
+              this.notification.warning('Warning', 'No record was removed. It may have already been deleted.');
+            }
+          },
+          error: (err: any) => {
+            const msg = err?.error?.message || 'Failed to remove record.';
+            this.notification.error('Error', msg);
+          },
+        });
+      },
+    });
+  }
 }

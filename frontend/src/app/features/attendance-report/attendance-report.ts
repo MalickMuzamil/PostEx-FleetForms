@@ -43,9 +43,11 @@ export class AttendanceReport implements OnInit {
 
   private suppressChanges = false;
 
-  private readonly REQUIRED_COLUMNS = ['EMP_ID', 'DATE', 'IN_TIME', 'OUT_TIME'];
+  private readonly REQUIRED_COLUMNS = ['EMP_ID', 'DATE', 'EMP_NAME', 'DEPARTMENT', 'DIVISION', 'ZONE', 'BRANCH', 'SHIFT', 'SHIFT_TIME', 'IN_TIME', 'OUT_TIME', 'TIMETRAX_REMARKS'];
 
-  private readonly RECOMMENDED_COLUMNS = ['EMP_NAME', 'SHIFT', 'SHIFT_TIME'];
+  private readonly RECOMMENDED_COLUMNS = ['EMP_NAME', 'SHIFT', 'SHIFT_TIME', 'TIMETRAX_REMARKS'];
+
+  private readonly VALID_REMARKS = ['Present', 'present', 'Absent', 'absent', 'Leave', 'leave', 'Holiday', 'holiday', 'Off Day', 'OFF DAY'];
 
   constructor(
     private attendanceService: AttendanceService,

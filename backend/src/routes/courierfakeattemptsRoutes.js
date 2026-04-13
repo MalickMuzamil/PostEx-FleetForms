@@ -6,5 +6,6 @@ const router = express.Router();
 router.get("/", courierFakeAttemptsController.getAll);
 router.post("/validate-bulk", courierFakeAttemptsController.validateBulk);
 router.post("/bulk-import", courierFakeAttemptsController.bulkImport);
+router.delete("/", courierFakeAttemptsController.delete);
 
 export default router;

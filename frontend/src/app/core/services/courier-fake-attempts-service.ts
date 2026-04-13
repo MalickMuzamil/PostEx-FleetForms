@@ -21,4 +21,9 @@ export class CourierFakeAttemptsService {
     importBulk(payloads: any[]): Observable<any> {
         return this.api.post<any>(`${this.baseUrl}/bulk-import`, { payloads });
     }
+
+    // ----------------- DELETE -----------------
+    delete(cnNo: string, date: string, courierId: string): Observable<any> {
+        return this.api.delete<any>(this.baseUrl, { cnNo, date, courierId });
+    }
 }

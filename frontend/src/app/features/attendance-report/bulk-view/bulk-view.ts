@@ -9,6 +9,7 @@ import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 
 import { RouterLink } from '@angular/router';
 import { AttendanceService } from '../../../core/services/attendance-service';
@@ -30,6 +31,7 @@ interface BulkAttendanceRow {
   shift?: string | null;
   shiftTime?: string | null;
 
+
   date: Date | null;
   dateControl: FormControl<Date | null>;
 
@@ -41,6 +43,11 @@ interface BulkAttendanceRow {
   inTime: string | null;
   outTime: string | null;
   totalTime: string | null;
+
+  remarks: string | null;
+  rawRemarks?: string;
+  finalRemarks?: string | null;
+  rawFinalRemarks?: string;
 
   checked: boolean;
   saving?: boolean;
@@ -78,6 +85,7 @@ interface BulkAttendanceRow {
     NzDatePickerModule,
     NzModalModule,
     NzSpinModule,
+    NzToolTipModule,
     RouterLink,
   ],
   templateUrl: './bulk-view.html',
@@ -97,13 +105,26 @@ export class BulkView implements OnInit {
   private readonly DATE_REQUIRED = 'DATE is required';
   private readonly INVALID_DATE = 'Invalid DATE';
 
+  private readonly EMP_NAME_REQUIRED = 'EMP_NAME is required';
+  private readonly DEPARTMENT_REQUIRED = 'DEPARTMENT is required';
+  private readonly DIVISION_REQUIRED = 'DIVISION is required';
+  private readonly ZONE_REQUIRED = 'ZONE is required';
+  private readonly BRANCH_REQUIRED = 'BRANCH is required';
+  private readonly SHIFT_REQUIRED = 'SHIFT is required';
+  private readonly SHIFT_TIME_REQUIRED = 'SHIFT_TIME is required';
+  private readonly IN_TIME_REQUIRED = 'IN_TIME is required';
+  private readonly OUT_TIME_REQUIRED = 'OUT_TIME is required';
+
   private readonly IN_TIME_INVALID = 'Invalid IN_TIME format (HH:mm or HH:mm:ss)';
   private readonly OUT_TIME_INVALID = 'Invalid OUT_TIME format (HH:mm or HH:mm:ss)';
   private readonly TOTAL_TIME_INVALID = 'Invalid TOTAL_TIME format';
 
   private readonly SHIFT_TIME_INVALID = 'SHIFT_TIME: Invalid format (HH:mm-HH:mm or HH:mm:ss-HH:mm:ss)';
 
-  readonly REQUIRED_COLUMNS = ['EMP_ID', 'DATE'];
+  private readonly REMARKS_REQUIRED = 'TIMETRAX_REMARKS is required';
+  private readonly REMARKS_INVALID = 'TIMETRAX_REMARKS: Invalid value (Present, Absent, Leave, Holiday, Off Day)';
+
+  private readonly VALID_REMARKS = ['Present', 'present', 'Absent', 'absent', 'Leave', 'leave', 'Holiday', 'holiday', 'Off Day', 'OFF DAY'];
 
   rows: BulkAttendanceRow[] = [];
   checkAll = false;
@@ -124,7 +145,9 @@ export class BulkView implements OnInit {
   private readonly MAX_LEN = 50;
   private readonly TOO_LONG = (label: string) => `${label}: Max ${this.MAX_LEN} characters allowed`;
 
-  private readonly REQUIRED_FIELDS = ['EMP_ID', 'DATE'];
+  private readonly REQUIRED_FIELDS = ['EMP_ID', 'DATE', 'EMP_NAME', 'DEPARTMENT', 'DIVISION', 'ZONE', 'BRANCH', 'SHIFT', 'SHIFT_TIME', 'IN_TIME', 'OUT_TIME', 'TIMETRAX_REMARKS'];
+
+  readonly REQUIRED_COLUMNS = this.REQUIRED_FIELDS;
 
   searchTerm = '';
   statusFilter: 'all' | 'valid' | 'invalid' | 'selected' = 'all';
@@ -133,7 +156,7 @@ export class BulkView implements OnInit {
     private attendanceService: AttendanceService,
     private notification: NzNotificationService,
     private modal: NzModalService
-  ) {}
+  ) { }
 
   async ngOnInit(): Promise<void> {
     const state = history.state;
@@ -225,6 +248,8 @@ export class BulkView implements OnInit {
           .map((h) => String(h ?? '').trim())
           .filter(Boolean);
 
+        console.log('HEADERS:', this.fileHeaders);
+
         if (!this.fileHeaders.length) {
           this.toast('error', 'Invalid File', 'Excel header row is empty.');
           this.isLoading = false;
@@ -243,8 +268,8 @@ export class BulkView implements OnInit {
         }
 
         const headerSet = new Set(this.fileHeaders.map((h) => this.normHeader(h)));
-        const required = this.REQUIRED_COLUMNS.map((c) => this.normHeader(c));
-        const missing = required.filter((c) => !headerSet.has(c));
+        const required: string[] = this.REQUIRED_COLUMNS.map((c) => this.normHeader(c));
+        const missing = required.filter((c: string) => !headerSet.has(c));
 
         if (missing.length) {
           this.toast('error', 'Invalid File', `Missing required columns: ${missing.join(', ')}`);
@@ -334,6 +359,8 @@ export class BulkView implements OnInit {
       const rawArea = String(getVal(r, 'AREA') ?? '').trim();
       const rawShift = String(getVal(r, 'SHIFT') ?? '').trim();
       const rawShiftTime = String(getVal(r, 'SHIFT_TIME') ?? '').trim();
+      const rawRemarks = String(getVal(r, 'TIMETRAX_REMARKS') ?? '').trim();
+      const rawFinalRemarks = String(getVal(r, 'FINAL_REMARKS') ?? '').trim(); // ✅ NEW
 
       const date = this.parseAnyDate(rawDate);
       const inDate = this.parseAnyDate(rawInDate);
@@ -360,6 +387,8 @@ export class BulkView implements OnInit {
         rawInTime,
         rawOutTime,
         rawTotalTime,
+        rawRemarks,
+        rawFinalRemarks, // ✅ NEW
 
         empId: rawEmpId || null,
         empName: rawEmpName || null,
@@ -368,6 +397,7 @@ export class BulkView implements OnInit {
         division: rawDivision || null,
         zone: rawZone || null,
         branch: rawBranch || null,
+        department: rawDepartment || null,
         function: rawFunction || null,
         area: rawArea || null,
         shift: rawShift || null,
@@ -384,6 +414,9 @@ export class BulkView implements OnInit {
         inTime: rawInTime || null,
         outTime: rawOutTime || null,
         totalTime: rawTotalTime || null,
+
+        remarks: rawRemarks || null,
+        finalRemarks: rawFinalRemarks || null, // ✅ NEW
 
         checked: false,
         errors: [],
@@ -410,6 +443,16 @@ export class BulkView implements OnInit {
         else this.addErr(row, this.INVALID_DATE);
       }
 
+      if (!row.empName || !String(row.empName).trim()) this.addErr(row, this.EMP_NAME_REQUIRED);
+      if (!row.department || !String(row.department).trim()) this.addErr(row, this.DEPARTMENT_REQUIRED);
+      if (!row.division || !String(row.division).trim()) this.addErr(row, this.DIVISION_REQUIRED);
+      if (!row.zone || !String(row.zone).trim()) this.addErr(row, this.ZONE_REQUIRED);
+      if (!row.branch || !String(row.branch).trim()) this.addErr(row, this.BRANCH_REQUIRED);
+      if (!row.shift || !String(row.shift).trim()) this.addErr(row, this.SHIFT_REQUIRED);
+      if (!row.shiftTime || !String(row.shiftTime).trim()) this.addErr(row, this.SHIFT_TIME_REQUIRED);
+      if (!row.inTime || !String(row.inTime).trim()) this.addErr(row, this.IN_TIME_REQUIRED);
+      if (!row.outTime || !String(row.outTime).trim()) this.addErr(row, this.OUT_TIME_REQUIRED);
+
       if (row.inTime && !this.isValidHHmm(row.inTime)) {
         this.addErr(row, `IN_TIME: ${this.IN_TIME_INVALID}`);
       }
@@ -424,6 +467,12 @@ export class BulkView implements OnInit {
 
       if (row.shiftTime && !this.isValidShiftTime(row.shiftTime)) {
         this.addErr(row, this.SHIFT_TIME_INVALID);
+      }
+
+      if (!row.remarks || !String(row.remarks).trim()) {
+        this.addErr(row, this.REMARKS_REQUIRED);
+      } else if (!this.isValidRemarks(row.remarks)) {
+        this.addErr(row, this.REMARKS_INVALID);
       }
 
       this.validateMaxLen(row, row.empId, 'EMP_ID');
@@ -467,8 +516,8 @@ export class BulkView implements OnInit {
 
   private handleHeaderValidation(data: any[]) {
     const headerSet = new Set(this.fileHeaders.map((h) => this.normHeader(h)));
-    const required = this.REQUIRED_COLUMNS.map((c) => this.normHeader(c));
-    const missing = required.filter((c) => !headerSet.has(c));
+    const required: string[] = this.REQUIRED_COLUMNS.map((c) => this.normHeader(c));
+    const missing = required.filter((c: string) => !headerSet.has(c));
 
     if (missing.length) {
       this.toast('error', 'Invalid File', `Missing required columns: ${missing.join(', ')}`);
@@ -512,6 +561,8 @@ export class BulkView implements OnInit {
     this.columnMap['AREA'] = pick(['AREA', 'LOCATION']);
     this.columnMap['SHIFT'] = pick(['SHIFT']);
     this.columnMap['SHIFT_TIME'] = pick(['SHIFT_TIME', 'SHIFT TIME', 'SHIFT_HOURS', 'SHIFT HOURS']);
+    this.columnMap['TIMETRAX_REMARKS'] = pick(['TIMETRAX_REMARKS', 'REMARKS', 'REMARK']);
+    this.columnMap['FINAL_REMARKS'] = pick(['FINAL_REMARKS', 'FINAL REMARKS', 'FINALREMARKS']); // ✅ NEW
   }
 
   private mapRows(data: any[]) {
@@ -540,6 +591,8 @@ export class BulkView implements OnInit {
       const rawArea = String(getVal(r, 'AREA') ?? '').trim();
       const rawShift = String(getVal(r, 'SHIFT') ?? '').trim();
       const rawShiftTime = String(getVal(r, 'SHIFT_TIME') ?? '').trim();
+      const rawRemarks = String(getVal(r, 'TIMETRAX_REMARKS') ?? '').trim();
+      const rawFinalRemarks = String(getVal(r, 'FINAL_REMARKS') ?? '').trim(); // ✅ NEW
 
       const empId = rawEmpId || null;
       if (!empId) errors.push(this.EMP_REQUIRED);
@@ -551,6 +604,16 @@ export class BulkView implements OnInit {
 
       if (!rawDate) errors.push(this.DATE_REQUIRED);
       else if (!date) errors.push(this.INVALID_DATE);
+
+      if (!rawEmpName) errors.push(this.EMP_NAME_REQUIRED);
+      if (!rawDepartment) errors.push(this.DEPARTMENT_REQUIRED);
+      if (!rawDivision) errors.push(this.DIVISION_REQUIRED);
+      if (!rawZone) errors.push(this.ZONE_REQUIRED);
+      if (!rawBranch) errors.push(this.BRANCH_REQUIRED);
+      if (!rawShift) errors.push(this.SHIFT_REQUIRED);
+      if (!rawShiftTime) errors.push(this.SHIFT_TIME_REQUIRED);
+      if (!rawInTime) errors.push(this.IN_TIME_REQUIRED);
+      if (!rawOutTime) errors.push(this.OUT_TIME_REQUIRED);
 
       if (rawInTime && !this.isValidHHmm(rawInTime)) {
         errors.push(`IN_TIME: ${this.IN_TIME_INVALID}`);
@@ -566,6 +629,12 @@ export class BulkView implements OnInit {
 
       if (rawShiftTime && !this.isValidShiftTime(rawShiftTime)) {
         errors.push(this.SHIFT_TIME_INVALID);
+      }
+
+      if (!rawRemarks || !String(rawRemarks).trim()) {
+        errors.push(this.REMARKS_REQUIRED);
+      } else if (!this.isValidRemarks(rawRemarks)) {
+        errors.push(this.REMARKS_INVALID);
       }
 
       const checkMax = (val: string, label: string) => {
@@ -586,6 +655,7 @@ export class BulkView implements OnInit {
       checkMax(rawInTime, 'IN_TIME');
       checkMax(rawOutTime, 'OUT_TIME');
       checkMax(rawTotalTime, 'TOTAL_TIME');
+      checkMax(rawFinalRemarks, 'FINAL_REMARKS'); // ✅ NEW
 
       return {
         uid: ++this.uidCounter,
@@ -608,6 +678,8 @@ export class BulkView implements OnInit {
         rawInTime,
         rawOutTime,
         rawTotalTime,
+        rawRemarks,
+        rawFinalRemarks, // ✅ NEW
 
         empId,
         empName: rawEmpName || null,
@@ -633,6 +705,9 @@ export class BulkView implements OnInit {
         inTime: rawInTime || null,
         outTime: rawOutTime || null,
         totalTime: rawTotalTime || null,
+
+        remarks: rawRemarks || null,
+        finalRemarks: rawFinalRemarks || null, // ✅ NEW
 
         checked: false,
         errors,
@@ -660,10 +735,21 @@ export class BulkView implements OnInit {
       this.EMP_INVALID,
       this.DATE_REQUIRED,
       this.INVALID_DATE,
+      this.EMP_NAME_REQUIRED,
+      this.DEPARTMENT_REQUIRED,
+      this.DIVISION_REQUIRED,
+      this.ZONE_REQUIRED,
+      this.BRANCH_REQUIRED,
+      this.SHIFT_REQUIRED,
+      this.SHIFT_TIME_REQUIRED,
+      this.IN_TIME_REQUIRED,
+      this.OUT_TIME_REQUIRED,
       this.IN_TIME_INVALID,
       this.OUT_TIME_INVALID,
       this.TOTAL_TIME_INVALID,
       this.SHIFT_TIME_INVALID,
+      this.REMARKS_REQUIRED,
+      this.REMARKS_INVALID,
     ].forEach((m) => this.removeErr(row, m));
 
     row.errors = (row.errors ?? []).filter((e) => !/Max 20 characters allowed/i.test(e));
@@ -682,6 +768,63 @@ export class BulkView implements OnInit {
       if (!dt) {
         if (!String(row.rawDate ?? '').trim()) this.addErr(row, this.DATE_REQUIRED);
         else this.addErr(row, this.INVALID_DATE);
+      } else {
+        this.removeErr(row, this.DATE_REQUIRED);
+        this.removeErr(row, this.INVALID_DATE);
+      }
+
+      if (!row.empName || !String(row.empName).trim()) {
+        this.addErr(row, this.EMP_NAME_REQUIRED);
+      } else {
+        this.removeErr(row, this.EMP_NAME_REQUIRED);
+      }
+
+      if (!row.department || !String(row.department).trim()) {
+        this.addErr(row, this.DEPARTMENT_REQUIRED);
+      } else {
+        this.removeErr(row, this.DEPARTMENT_REQUIRED);
+      }
+
+      if (!row.division || !String(row.division).trim()) {
+        this.addErr(row, this.DIVISION_REQUIRED);
+      } else {
+        this.removeErr(row, this.DIVISION_REQUIRED);
+      }
+
+      if (!row.zone || !String(row.zone).trim()) {
+        this.addErr(row, this.ZONE_REQUIRED);
+      } else {
+        this.removeErr(row, this.ZONE_REQUIRED);
+      }
+
+      if (!row.branch || !String(row.branch).trim()) {
+        this.addErr(row, this.BRANCH_REQUIRED);
+      } else {
+        this.removeErr(row, this.BRANCH_REQUIRED);
+      }
+
+      if (!row.shift || !String(row.shift).trim()) {
+        this.addErr(row, this.SHIFT_REQUIRED);
+      } else {
+        this.removeErr(row, this.SHIFT_REQUIRED);
+      }
+
+      if (!row.shiftTime || !String(row.shiftTime).trim()) {
+        this.addErr(row, this.SHIFT_TIME_REQUIRED);
+      } else {
+        this.removeErr(row, this.SHIFT_TIME_REQUIRED);
+      }
+
+      if (!row.inTime || !String(row.inTime).trim()) {
+        this.addErr(row, this.IN_TIME_REQUIRED);
+      } else {
+        this.removeErr(row, this.IN_TIME_REQUIRED);
+      }
+
+      if (!row.outTime || !String(row.outTime).trim()) {
+        this.addErr(row, this.OUT_TIME_REQUIRED);
+      } else {
+        this.removeErr(row, this.OUT_TIME_REQUIRED);
       }
 
       if (row.inTime && !this.isValidHHmm(row.inTime)) {
@@ -706,6 +849,15 @@ export class BulkView implements OnInit {
         this.addErr(row, this.SHIFT_TIME_INVALID);
       } else {
         this.removeErr(row, this.SHIFT_TIME_INVALID);
+      }
+
+      if (!row.remarks || !String(row.remarks).trim()) {
+        this.addErr(row, this.REMARKS_REQUIRED);
+      } else if (!this.isValidRemarks(row.remarks)) {
+        this.addErr(row, this.REMARKS_INVALID);
+      } else {
+        this.removeErr(row, this.REMARKS_REQUIRED);
+        this.removeErr(row, this.REMARKS_INVALID);
       }
 
       this.validateMaxLen(row, row.empId, 'EMP_ID');
@@ -850,6 +1002,8 @@ export class BulkView implements OnInit {
         area: String(r.area || '').trim() || null,
         shift: String(r.shift || '').trim() || null,
         shiftTime: String(r.shiftTime || '').trim() || null,
+        TIMETRAX_REMARKS: String(r.remarks || '').trim() || null,
+        FINAL_REMARKS: String(r.finalRemarks || '').trim() || null, // ✅ NEW
       }))
       .filter((p) => p.empId && p.date);
 
@@ -919,7 +1073,7 @@ export class BulkView implements OnInit {
     if (typeof raw === 'number' && raw > 0) {
       const excelEpoch = new Date(1899, 11, 30);
       const d = new Date(excelEpoch.getTime() + raw * 24 * 60 * 60 * 1000);
-      
+
       if (this.is1900Date(d)) return null;
       return isNaN(d.getTime()) ? null : d;
     }
@@ -967,7 +1121,7 @@ export class BulkView implements OnInit {
 
   private isValidHHmm(v: string): boolean {
     const s = String(v ?? '').trim();
-    
+
     const msec = s.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
     if (msec) {
       const hh = Number(msec[1]);
@@ -985,7 +1139,7 @@ export class BulkView implements OnInit {
 
   private isValidTotalTime(v: string): boolean {
     const s = String(v ?? '').trim();
-    
+
     const hms = s.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
     if (hms) {
       const hh = Number(hms[1]);
@@ -1006,7 +1160,7 @@ export class BulkView implements OnInit {
 
   private isValidShiftTime(v: string): boolean {
     const s = String(v ?? '').trim();
-    
+
     const msecRange = s.match(/^(\d{1,2}):(\d{2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2}):(\d{2})$/);
     if (msecRange) {
       const h1 = Number(msecRange[1]);
@@ -1032,6 +1186,12 @@ export class BulkView implements OnInit {
     const ok2 = h2 >= 0 && h2 <= 23 && m2 >= 0 && m2 <= 59;
 
     return ok1 && ok2;
+  }
+
+  private isValidRemarks(v: string): boolean {
+    const s = String(v ?? '').trim();
+    if (!s) return false; // empty not allowed
+    return this.VALID_REMARKS.includes(s);
   }
 
   private isEmpIdValid(v: any): boolean {
@@ -1109,6 +1269,8 @@ export class BulkView implements OnInit {
           row.inTime,
           row.outTime,
           row.totalTime,
+          row.remarks,
+          row.finalRemarks,       // ✅ NEW
           row.rawEmpId,
           row.rawEmpName,
           row.rawDesignation,
@@ -1124,6 +1286,8 @@ export class BulkView implements OnInit {
           row.rawInTime,
           row.rawOutTime,
           row.rawTotalTime,
+          row.rawRemarks,
+          row.rawFinalRemarks,    // ✅ NEW
           row.isValid ? 'valid' : 'invalid',
           ...(row.errors ?? []),
         ]
@@ -1192,5 +1356,22 @@ export class BulkView implements OnInit {
   onSearchOrFilterChange() {
     this.pageIndex = 1;
     this.refreshFilteredRows();
+  }
+
+  deleteRow(row: BulkAttendanceRow) {
+    this.modal.confirm({
+      nzTitle: 'Delete Row',
+      nzContent: `Are you sure you want to delete row #${row.rowNo}?`,
+      nzOkText: 'Delete',
+      nzOkDanger: true,
+      nzOnOk: () => {
+        this.rows = this.rows.filter((r) => r.uid !== row.uid);
+        this.rows.forEach((r, i) => (r.rowNo = i + 1));
+        this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+        this.checkDuplicateInFile();
+        this.updateHasValidRow();
+        this.refreshFilteredRows();
+      },
+    });
   }
 }
