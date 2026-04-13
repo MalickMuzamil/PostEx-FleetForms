@@ -112,6 +112,10 @@ export class CallLogsBulkView {
   isLoading = true;
   loadingText = 'Reading file & validating...';
 
+  savingProgress = 0;
+  savingTotal = 0;
+  savingText = 'Saving data to database...';
+
   private localValidateTimer: any = null;
   private readonly MAX_LEN = 20;
   private readonly TOO_LONG = (label: string) => `${label}: Max ${this.MAX_LEN} characters allowed`;
@@ -735,6 +739,7 @@ export class CallLogsBulkView {
     if (!selected.length) return;
 
     this.bulkSaving = true;
+    this.savingProgress = 0;
 
     const payloads = selected
       .map((r) => ({
@@ -753,11 +758,16 @@ export class CallLogsBulkView {
 
     try {
       const chunks = this.chunk(payloads, 20000);
+      this.savingTotal = chunks.length;
 
       let insertedTotal = 0;
       let lastMsg = '';
 
-      for (const ch of chunks) {
+      for (let i = 0; i < chunks.length; i++) {
+        this.savingProgress = i + 1;
+        this.savingText = `Saving ${this.savingProgress} of ${this.savingTotal} batch...`;
+
+        const ch = chunks[i];
         const res: any = await new Promise((resolve, reject) => {
           this.callLogsService.importBulk(ch).subscribe({
             next: (resp) => resolve(resp),
@@ -775,6 +785,9 @@ export class CallLogsBulkView {
       this.toast('error', 'Error', e?.error?.message || e?.message || 'Bulk import failed');
     } finally {
       this.bulkSaving = false;
+      this.savingProgress = 0;
+      this.savingTotal = 0;
+      this.savingText = 'Saving data to database...';
     }
   }
 
