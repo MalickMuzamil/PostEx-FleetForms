@@ -96,12 +96,11 @@
                 <th class="col-time">IN_TIME</th>
                 <th class="col-time">OUT_TIME</th>
                 <th class="col-text">TIMETRAX_REMARKS</th>
-                <th class="col-text">FINAL_REMARKS</th>
               </tr>
             </thead>
 
             <tbody>
-              <ng-container *ngFor="let row of pagedRows; trackBy: trackByRow">
+              <ng-container *ngFor="let row of rows; trackBy: trackByRow">
                 <tr [class.row-selected]="row.checked" [class.table-danger-soft]="(row.errors?.length ?? 0) > 0">
 
                   <!-- Checkbox -->
@@ -326,14 +325,6 @@
                     </div>
                   </td>
 
-                  <!-- FINAL_REMARKS -->
-                  <td>
-                    <div class="cell-wrap">
-                      <input class="form-control form-control-sm bulk-input" placeholder="Final Remarks"
-                        [(ngModel)]="row.finalRemarks" [disabled]="isLoading" (ngModelChange)="onRowTextChange(row)" />
-                    </div>
-                  </td>
-
                 </tr>
               </ng-container>
             </tbody>
@@ -343,21 +334,22 @@
         <!-- Pagination -->
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-3">
           <div class="text-muted small">
-            Showing {{ pageStart + 1 }} - {{ pageEnd }} of {{ filteredRows.length }} rows
+            Showing {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, totalRows) }} of {{ totalRows.toLocaleString() }} total rows
+            <span class="ms-2 badge bg-info">{{ selectedValidCount }} selected</span>
           </div>
 
           <div class="d-flex align-items-center gap-2">
             <button class="btn btn-outline-secondary btn-sm" (click)="prevPage()"
-              [disabled]="pageIndex === 1 || isLoading">
+              [disabled]="currentPage === 1 || isLoading">
               Prev
             </button>
 
             <span class="fw-semibold">
-              Page {{ pageIndex }} / {{ totalPages }}
+              Page {{ currentPage }} / {{ totalPages }}
             </span>
 
             <button class="btn btn-outline-secondary btn-sm" (click)="nextPage()"
-              [disabled]="pageIndex === totalPages || isLoading">
+              [disabled]="currentPage === totalPages || isLoading">
               Next
             </button>
           </div>

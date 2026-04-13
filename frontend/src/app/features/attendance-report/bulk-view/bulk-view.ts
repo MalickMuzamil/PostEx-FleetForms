@@ -46,8 +46,6 @@ interface BulkAttendanceRow {
 
   remarks: string | null;
   rawRemarks?: string;
-  finalRemarks?: string | null;
-  rawFinalRemarks?: string;
 
   checked: boolean;
   saving?: boolean;
@@ -92,9 +90,6 @@ interface BulkAttendanceRow {
   styleUrl: './bulk-view.css',
 })
 export class BulkView implements OnInit {
-  pageSize = 100;
-  pageIndex = 1;
-
   file!: File;
   private uidCounter = 0;
   filteredRows: BulkAttendanceRow[] = [];
@@ -127,9 +122,16 @@ export class BulkView implements OnInit {
   private readonly VALID_REMARKS = ['Present', 'present', 'Absent', 'absent', 'Leave', 'leave', 'Holiday', 'holiday', 'Off Day', 'OFF DAY'];
 
   rows: BulkAttendanceRow[] = [];
+  allRows: BulkAttendanceRow[] = []; // Store all rows here
+  totalRows = 0;
   checkAll = false;
   bulkSaving = false;
   hasValidRow = false;
+
+  // Pagination for large files
+  currentPage = 1;
+  pageSize = 1000; // Show only 1000 rows at a time
+  totalPages = 1;
 
   fileHeaders: string[] = [];
   columnMap: any = {};
@@ -174,7 +176,38 @@ export class BulkView implements OnInit {
     this.parseFile(this.file);
   }
 
+  private updateCurrentPageRows() {
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    this.rows = this.allRows.slice(startIndex, endIndex);
+    this.refreshFilteredRows();
+  }
+
   trackByRow = (_: number, r: BulkAttendanceRow) => r.uid;
+
+  // Make Math available in template
+  Math = Math;
+
+  nextPage() {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.updateCurrentPageRows();
+    }
+  }
+
+  prevPage() {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.updateCurrentPageRows();
+    }
+  }
+
+  goToPage(page: number) {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.updateCurrentPageRows();
+    }
+  }
 
   toast(type: 'success' | 'error' | 'warning' | 'info', title: string, msg: string) {
     (this.notification as any)[type](title, msg, { nzDuration: 5000 });
@@ -360,7 +393,6 @@ export class BulkView implements OnInit {
       const rawShift = String(getVal(r, 'SHIFT') ?? '').trim();
       const rawShiftTime = String(getVal(r, 'SHIFT_TIME') ?? '').trim();
       const rawRemarks = String(getVal(r, 'TIMETRAX_REMARKS') ?? '').trim();
-      const rawFinalRemarks = String(getVal(r, 'FINAL_REMARKS') ?? '').trim(); // ✅ NEW
 
       const date = this.parseAnyDate(rawDate);
       const inDate = this.parseAnyDate(rawInDate);
@@ -388,7 +420,6 @@ export class BulkView implements OnInit {
         rawOutTime,
         rawTotalTime,
         rawRemarks,
-        rawFinalRemarks, // ✅ NEW
 
         empId: rawEmpId || null,
         empName: rawEmpName || null,
@@ -416,7 +447,6 @@ export class BulkView implements OnInit {
         totalTime: rawTotalTime || null,
 
         remarks: rawRemarks || null,
-        finalRemarks: rawFinalRemarks || null, // ✅ NEW
 
         checked: false,
         errors: [],
@@ -424,8 +454,10 @@ export class BulkView implements OnInit {
       } as BulkAttendanceRow;
     });
 
-    this.rows = [...this.rows, ...newRows];
-    this.refreshFilteredRows();
+    this.allRows = [...this.allRows, ...newRows];
+    this.totalRows = this.allRows.length;
+    this.totalPages = Math.ceil(this.totalRows / this.pageSize);
+    this.updateCurrentPageRows();
     return newRows;
   }
 
@@ -498,9 +530,9 @@ export class BulkView implements OnInit {
     setTimeout(() => {
       this.checkDuplicateInFile();
       this.updateHasValidRow();
-      this.refreshFilteredRows();
       this.isLoading = false;
       this.loadingText = '';
+      this.toast('success', 'File Processed', `Successfully loaded ${this.totalRows.toLocaleString()} rows.`);
     }, 0);
   }
 
@@ -562,7 +594,6 @@ export class BulkView implements OnInit {
     this.columnMap['SHIFT'] = pick(['SHIFT']);
     this.columnMap['SHIFT_TIME'] = pick(['SHIFT_TIME', 'SHIFT TIME', 'SHIFT_HOURS', 'SHIFT HOURS']);
     this.columnMap['TIMETRAX_REMARKS'] = pick(['TIMETRAX_REMARKS', 'REMARKS', 'REMARK']);
-    this.columnMap['FINAL_REMARKS'] = pick(['FINAL_REMARKS', 'FINAL REMARKS', 'FINALREMARKS']); // ✅ NEW
   }
 
   private mapRows(data: any[]) {
@@ -592,7 +623,6 @@ export class BulkView implements OnInit {
       const rawShift = String(getVal(r, 'SHIFT') ?? '').trim();
       const rawShiftTime = String(getVal(r, 'SHIFT_TIME') ?? '').trim();
       const rawRemarks = String(getVal(r, 'TIMETRAX_REMARKS') ?? '').trim();
-      const rawFinalRemarks = String(getVal(r, 'FINAL_REMARKS') ?? '').trim(); // ✅ NEW
 
       const empId = rawEmpId || null;
       if (!empId) errors.push(this.EMP_REQUIRED);
@@ -655,7 +685,6 @@ export class BulkView implements OnInit {
       checkMax(rawInTime, 'IN_TIME');
       checkMax(rawOutTime, 'OUT_TIME');
       checkMax(rawTotalTime, 'TOTAL_TIME');
-      checkMax(rawFinalRemarks, 'FINAL_REMARKS'); // ✅ NEW
 
       return {
         uid: ++this.uidCounter,
@@ -679,7 +708,6 @@ export class BulkView implements OnInit {
         rawOutTime,
         rawTotalTime,
         rawRemarks,
-        rawFinalRemarks, // ✅ NEW
 
         empId,
         empName: rawEmpName || null,
@@ -707,7 +735,6 @@ export class BulkView implements OnInit {
         totalTime: rawTotalTime || null,
 
         remarks: rawRemarks || null,
-        finalRemarks: rawFinalRemarks || null, // ✅ NEW
 
         checked: false,
         errors,
@@ -897,12 +924,19 @@ export class BulkView implements OnInit {
   }
 
   updateHasValidRow() {
+    // Update validation for all rows
+    for (const r of this.allRows) {
+      r.isValid = this.isRowValid(r);
+      if (!r.isValid) r.checked = false;
+    }
+
+    // Update display rows
     for (const r of this.rows) {
       r.isValid = this.isRowValid(r);
       if (!r.isValid) r.checked = false;
     }
 
-    this.hasValidRow = this.rows.some((r) => r.isValid === true);
+    this.hasValidRow = this.allRows.some((r) => r.isValid === true);
 
     const validRows = this.rows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
     this.checkAll = validRows.length > 0 && validRows.every((r) => r.checked);
@@ -966,7 +1000,7 @@ export class BulkView implements OnInit {
   }
 
   get selectedValidCount(): number {
-    return this.rows.filter((r) => r.checked && r.isValid).length;
+    return this.allRows.filter((r) => r.checked && r.isValid).length;
   }
 
   get canProceed(): boolean {
@@ -974,7 +1008,7 @@ export class BulkView implements OnInit {
   }
 
   async proceedBulkImport() {
-    const selected = this.rows.filter((r) => r.checked && r.isValid);
+    const selected = this.allRows.filter((r) => r.checked && r.isValid);
     if (!selected.length) return;
 
     this.bulkSaving = true;
@@ -1003,7 +1037,6 @@ export class BulkView implements OnInit {
         shift: String(r.shift || '').trim() || null,
         shiftTime: String(r.shiftTime || '').trim() || null,
         TIMETRAX_REMARKS: String(r.remarks || '').trim() || null,
-        FINAL_REMARKS: String(r.finalRemarks || '').trim() || null, // ✅ NEW
       }))
       .filter((p) => p.empId && p.date);
 
@@ -1038,12 +1071,17 @@ export class BulkView implements OnInit {
 
   private removeRowsRef(rowsToRemove: BulkAttendanceRow[]) {
     const set = new Set(rowsToRemove);
-    this.rows = this.rows.filter((r) => !set.has(r));
-    this.rows.forEach((r, i) => (r.rowNo = i + 1));
+    this.allRows = this.allRows.filter((r) => !set.has(r));
+    this.totalRows = this.allRows.length;
+    this.totalPages = Math.ceil(this.totalRows / this.pageSize);
 
-    this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+    // Adjust current page if necessary
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = Math.max(1, this.totalPages);
+    }
+
+    this.updateCurrentPageRows();
     this.updateHasValidRow();
-    this.refreshFilteredRows();
   }
 
   private chunk<T>(arr: T[], size: number): T[][] {
@@ -1205,7 +1243,7 @@ export class BulkView implements OnInit {
   private checkDuplicateInFile() {
     const map = new Map<string, BulkAttendanceRow[]>();
 
-    for (const row of this.rows) {
+    for (const row of this.allRows) {
       const emp = String(row.empId ?? '').trim();
       const dt = row.dateControl?.value ? this.toYMD(row.dateControl.value) : '';
 
@@ -1217,7 +1255,7 @@ export class BulkView implements OnInit {
       map.set(key, arr);
     }
 
-    for (const row of this.rows) {
+    for (const row of this.allRows) {
       row.errors = (row.errors ?? []).filter((e) => !e.startsWith('Duplicate with row'));
     }
 
@@ -1270,7 +1308,6 @@ export class BulkView implements OnInit {
           row.outTime,
           row.totalTime,
           row.remarks,
-          row.finalRemarks,       // ✅ NEW
           row.rawEmpId,
           row.rawEmpName,
           row.rawDesignation,
@@ -1287,7 +1324,6 @@ export class BulkView implements OnInit {
           row.rawOutTime,
           row.rawTotalTime,
           row.rawRemarks,
-          row.rawFinalRemarks,    // ✅ NEW
           row.isValid ? 'valid' : 'invalid',
           ...(row.errors ?? []),
         ]
@@ -1308,8 +1344,8 @@ export class BulkView implements OnInit {
 
     this.filteredRows = list;
 
-    if (this.pageIndex > this.totalPages) {
-      this.pageIndex = this.totalPages;
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = this.totalPages;
     }
   }
 
@@ -1327,34 +1363,8 @@ export class BulkView implements OnInit {
     });
   }
 
-  get totalPages(): number {
-    return Math.max(1, Math.ceil(this.filteredRows.length / this.pageSize));
-  }
-
-  get pageStart(): number {
-    return (this.pageIndex - 1) * this.pageSize;
-  }
-
-  get pageEnd(): number {
-    return Math.min(this.pageStart + this.pageSize, this.filteredRows.length);
-  }
-
-  get pagedRows() {
-    const start = this.pageStart;
-    const end = start + this.pageSize;
-    return this.filteredRows.slice(start, end);
-  }
-
-  nextPage() {
-    if (this.pageIndex < this.totalPages) this.pageIndex++;
-  }
-
-  prevPage() {
-    if (this.pageIndex > 1) this.pageIndex--;
-  }
-
   onSearchOrFilterChange() {
-    this.pageIndex = 1;
+    this.currentPage = 1;
     this.refreshFilteredRows();
   }
 
