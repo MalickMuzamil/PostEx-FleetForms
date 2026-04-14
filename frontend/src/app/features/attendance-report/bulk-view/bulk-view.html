@@ -51,13 +51,14 @@
               </span>
 
               <input type="text" class="form-control bulk-search-input" [(ngModel)]="searchTerm"
-                (ngModelChange)="onSearchOrFilterChange()" placeholder="Search in table..." />
+                (ngModelChange)="onSearchOrFilterChange()" placeholder="Search in table..." 
+                [disabled]="isLoading" />
             </div>
           </div>
 
           <div class="col-12 col-sm-6 col-lg-auto">
             <select class="form-select bulk-filter-select" [(ngModel)]="statusFilter"
-              (ngModelChange)="onSearchOrFilterChange()">
+              (ngModelChange)="onSearchOrFilterChange()" [disabled]="isLoading">
               <option value="all">Status</option>
               <option value="valid">Valid</option>
               <option value="invalid">Invalid</option>

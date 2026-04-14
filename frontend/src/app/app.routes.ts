@@ -283,8 +283,15 @@ export const routes: Routes = [
           ).then((m) => m.BulkView),
       },
 
-      
+      {
+        path: 'zongportal',
+        loadComponent: () =>
+          import(
+            './features/zongportal/zongportal'
+          ).then((m) => m.Zongportal),
+      },
 
+      
     ],
   },
 ];

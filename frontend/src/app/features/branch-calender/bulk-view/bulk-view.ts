@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 
@@ -9,6 +9,7 @@ import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 
 import { RouterLink } from '@angular/router';
 import { BranchWiseCalenderService } from '../../../core/services/branch-wise-calender-service';
@@ -48,6 +49,7 @@ interface BulkCalRow {
     NzDatePickerModule,
     NzModalModule,
     NzSpinModule,
+    NzToolTipModule,
     RouterLink,
   ],
   templateUrl: './bulk-view.html',
@@ -85,7 +87,8 @@ export class BulkView {
   constructor(
     private calService: BranchWiseCalenderService,
     private notification: NzNotificationService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   async ngOnInit(): Promise<void> {
@@ -95,10 +98,17 @@ export class BulkView {
     if (!this.file) {
       this.toast('error', 'No File', 'No file received');
       this.isLoading = false;
+      this.cdr.markForCheck();
       return;
     }
 
-    this.parseFile(this.file);
+    this.isLoading = true;
+    this.loadingText = 'Reading file & validating...';
+    this.cdr.detectChanges();
+    
+    setTimeout(() => {
+      this.parseFile(this.file);
+    }, 50);
   }
 
   trackByRow = (_: number, r: BulkCalRow) => r.uid;
@@ -214,12 +224,22 @@ export class BulkView {
     if (missing.length) {
       this.toast('error', 'Invalid File', `Missing required columns: ${missing.join(', ')}`);
       this.isLoading = false;
+      this.cdr.markForCheck();
       return;
     }
 
+    this.isLoading = true;
+    this.loadingText = 'Processing rows...';
+    this.cdr.detectChanges();
+    
     this.autoMapColumns();
     this.mapRows(data);
-    this.isLoading = false;
+    
+    setTimeout(() => {
+      this.isLoading = false;
+      this.loadingText = '';
+      this.cdr.markForCheck();
+    }, 100);
   }
 
   private autoMapColumns() {
@@ -556,6 +576,24 @@ export class BulkView {
       nzTitle: `Row ${row.rowNo} errors`,
       nzContent: `<ul style="padding-left:18px">${messages}</ul>`,
       nzWidth: 420,
+    });
+  }
+
+  deleteRow(row: BulkCalRow) {
+    this.modal.confirm({
+      nzTitle: 'Delete Row',
+      nzContent: `Are you sure you want to delete row #${row.rowNo}?`,
+      nzOkText: 'Delete',
+      nzOkDanger: true,
+      nzOnOk: () => {
+        this.rows = this.rows.filter((r) => r.uid !== row.uid);
+        for (let i = 0; i < this.rows.length; i++) {
+          this.rows[i].rowNo = i + 1;
+        }
+        this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+        this.updateHasValidRow();
+        this.cdr.markForCheck();
+      },
     });
   }
 }

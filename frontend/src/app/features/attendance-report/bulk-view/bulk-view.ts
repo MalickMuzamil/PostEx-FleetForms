@@ -167,13 +167,14 @@ export class BulkView implements OnInit {
     if (!this.file) {
       this.toast('error', 'No File', 'No file received');
       this.isLoading = false;
+      
       return;
     }
 
     this.isLoading = true;
     this.loadingText = 'Reading file & validating...';
-    this.refreshFilteredRows();
     this.parseFile(this.file);
+    
   }
 
   private updateCurrentPageRows() {
@@ -239,7 +240,7 @@ export class BulkView implements OnInit {
         if (!this.fileHeaders.length) {
           this.toast('error', 'Invalid File', 'CSV has no header row.');
           this.isLoading = false;
-          return;
+            return;
         }
 
         this.handleHeaderValidation(res.data || []);
@@ -263,7 +264,7 @@ export class BulkView implements OnInit {
         if (!sheetName || !sheet) {
           this.toast('error', 'Invalid File', 'Excel file has no sheet.');
           this.isLoading = false;
-          return;
+            return;
         }
 
         const rowsHeader: any[][] = XLSX.utils.sheet_to_json(sheet, {
@@ -274,7 +275,7 @@ export class BulkView implements OnInit {
         if (!rowsHeader?.length || !rowsHeader[0]?.length) {
           this.toast('error', 'Invalid File', 'Excel file is empty or missing header row.');
           this.isLoading = false;
-          return;
+            return;
         }
 
         this.fileHeaders = (rowsHeader[0] as any[])
@@ -286,7 +287,7 @@ export class BulkView implements OnInit {
         if (!this.fileHeaders.length) {
           this.toast('error', 'Invalid File', 'Excel header row is empty.');
           this.isLoading = false;
-          return;
+            return;
         }
 
         const json: any[] = XLSX.utils.sheet_to_json(sheet, {
@@ -297,7 +298,7 @@ export class BulkView implements OnInit {
         if (!json.length) {
           this.toast('error', 'Invalid File', 'Excel has no data rows.');
           this.isLoading = false;
-          return;
+            return;
         }
 
         const headerSet = new Set(this.fileHeaders.map((h) => this.normHeader(h)));
@@ -307,15 +308,17 @@ export class BulkView implements OnInit {
         if (missing.length) {
           this.toast('error', 'Invalid File', `Missing required columns: ${missing.join(', ')}`);
           this.isLoading = false;
-          return;
+            return;
         }
 
         this.autoMapColumns();
 
+        // Clear only display rows, keep allRows
         this.rows = [];
         this.uidCounter = Date.now();
 
-        const CHUNK_SIZE = 500;
+        // Use larger chunks for faster processing
+        const CHUNK_SIZE = 2000;
         const total = json.length;
         let index = 0;
 
@@ -340,8 +343,14 @@ export class BulkView implements OnInit {
 
           const newRows = this.appendRowsChunk(sanitizedChunk);
 
+          // Run validation in next tick to keep UI responsive
           setTimeout(() => {
             this.validateChunk(newRows);
+            
+            // Log progress every 20k rows
+            if (index % 20000 === 0) {
+              console.log('Processed:', index, '/', total);
+            }
           }, 0);
 
           index += CHUNK_SIZE;
@@ -358,7 +367,7 @@ export class BulkView implements OnInit {
       } catch {
         this.toast('error', 'Invalid File', 'Unable to read Excel file.');
         this.isLoading = false;
-      }
+        }
     };
 
     reader.onerror = () => {
@@ -370,7 +379,7 @@ export class BulkView implements OnInit {
   }
 
   private appendRowsChunk(data: any[]) {
-    const startIndex = this.rows.length;
+    const startIndex = this.allRows.length;
     const getVal = (rowObj: any, key: string) => rowObj?.[this.columnMap[key]];
 
     const newRows = data.map((r, i) => {
@@ -454,7 +463,7 @@ export class BulkView implements OnInit {
       } as BulkAttendanceRow;
     });
 
-    this.allRows = [...this.allRows, ...newRows];
+    this.allRows.push(...newRows);
     this.totalRows = this.allRows.length;
     this.totalPages = Math.ceil(this.totalRows / this.pageSize);
     this.updateCurrentPageRows();
@@ -527,13 +536,14 @@ export class BulkView implements OnInit {
   }
 
   private finishProcessing() {
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       this.checkDuplicateInFile();
       this.updateHasValidRow();
       this.isLoading = false;
       this.loadingText = '';
+      
       this.toast('success', 'File Processed', `Successfully loaded ${this.totalRows.toLocaleString()} rows.`);
-    }, 0);
+    });
   }
 
   private normHeader(h: any): string {
@@ -924,13 +934,11 @@ export class BulkView implements OnInit {
   }
 
   updateHasValidRow() {
-    // Update validation for all rows
     for (const r of this.allRows) {
       r.isValid = this.isRowValid(r);
       if (!r.isValid) r.checked = false;
     }
 
-    // Update display rows
     for (const r of this.rows) {
       r.isValid = this.isRowValid(r);
       if (!r.isValid) r.checked = false;
@@ -940,28 +948,43 @@ export class BulkView implements OnInit {
 
     const validRows = this.rows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
     this.checkAll = validRows.length > 0 && validRows.every((r) => r.checked);
+    
   }
 
   onToggleAll(checked: boolean) {
     this.checkAll = checked;
+    
+    this.allRows.forEach((r) => {
+      const canSelect = !!r.isValid && !this.hasErrLike(r, 'Duplicate with row');
+      r.checked = checked ? canSelect : false;
+    });
+
     this.rows.forEach((r) => {
       const canSelect = !!r.isValid && !this.hasErrLike(r, 'Duplicate with row');
       r.checked = checked ? canSelect : false;
     });
 
-    const validRows = this.rows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    const validRows = this.allRows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
     this.checkAll = validRows.length > 0 && validRows.every((r) => r.checked);
     this.refreshFilteredRows();
+    
   }
 
   onRowToggle(row: BulkAttendanceRow, checked: boolean) {
     const canSelect = !!row.isValid && !this.hasErrLike(row, 'Duplicate with row');
     row.checked = checked && canSelect;
 
-    const validRows = this.rows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    // Track selection in allRows as well
+    const allRow = this.allRows.find(r => r.uid === row.uid);
+    if (allRow) {
+      allRow.checked = checked && canSelect;
+    }
+
+    const validRows = this.allRows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
     this.checkAll = validRows.length > 0 && validRows.every((r) => r.checked);
 
     this.refreshFilteredRows();
+    
   }
 
   onRowDateChange(row: BulkAttendanceRow) {
@@ -969,6 +992,7 @@ export class BulkView implements OnInit {
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
     this.refreshFilteredRows();
+    
   }
 
   onRowInTimeChange(row: BulkAttendanceRow) {
@@ -976,6 +1000,7 @@ export class BulkView implements OnInit {
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
     this.refreshFilteredRows();
+    
   }
 
   onRowOutTimeChange(row: BulkAttendanceRow) {
@@ -983,6 +1008,7 @@ export class BulkView implements OnInit {
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
     this.refreshFilteredRows();
+    
   }
 
   onRowTextChange(row: BulkAttendanceRow) {
@@ -990,6 +1016,7 @@ export class BulkView implements OnInit {
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
     this.refreshFilteredRows();
+    
   }
 
   onRowShiftTimeChange(row: BulkAttendanceRow) {
@@ -997,6 +1024,7 @@ export class BulkView implements OnInit {
     this.applyLocalValidationsSafe();
     this.updateHasValidRow();
     this.refreshFilteredRows();
+    
   }
 
   get selectedValidCount(): number {
@@ -1075,13 +1103,13 @@ export class BulkView implements OnInit {
     this.totalRows = this.allRows.length;
     this.totalPages = Math.ceil(this.totalRows / this.pageSize);
 
-    // Adjust current page if necessary
     if (this.currentPage > this.totalPages) {
       this.currentPage = Math.max(1, this.totalPages);
     }
 
     this.updateCurrentPageRows();
     this.updateHasValidRow();
+    
   }
 
   private chunk<T>(arr: T[], size: number): T[][] {
@@ -1242,6 +1270,7 @@ export class BulkView implements OnInit {
 
   private checkDuplicateInFile() {
     const map = new Map<string, BulkAttendanceRow[]>();
+    const rowsToRemove: BulkAttendanceRow[] = [];
 
     for (const row of this.allRows) {
       const emp = String(row.empId ?? '').trim();
@@ -1261,13 +1290,29 @@ export class BulkView implements OnInit {
 
     map.forEach((rows) => {
       if (rows.length > 1) {
-        const rowNos = rows.map((r) => r.rowNo).join(', ');
-        rows.forEach((r) => {
-          this.addErr(r, `Duplicate with row(s): ${rowNos}`);
-          r.checked = false;
-        });
+        for (let i = 1; i < rows.length; i++) {
+          rowsToRemove.push(rows[i]);
+        }
       }
     });
+
+    if (rowsToRemove.length > 0) {
+      const removeSet = new Set(rowsToRemove);
+      this.allRows = this.allRows.filter((r) => !removeSet.has(r));
+      this.totalRows = this.allRows.length;
+      this.totalPages = Math.ceil(this.totalRows / this.pageSize);
+
+      if (this.currentPage > this.totalPages) {
+        this.currentPage = Math.max(1, this.totalPages);
+      }
+
+      this.updateCurrentPageRows();
+      this.updateHasValidRow();
+      
+      this.toast('warning', 'Duplicates Removed', `${rowsToRemove.length} duplicate row(s) removed automatically.`);
+    }
+    
+    
   }
 
   hasErrLike(row: BulkAttendanceRow, prefix: string): boolean {
@@ -1286,60 +1331,45 @@ export class BulkView implements OnInit {
   }
 
   private refreshFilteredRows() {
-    let list = [...this.rows];
+    let list: BulkAttendanceRow[];
     const term = this.searchTerm.trim().toLowerCase();
 
-    if (term) {
-      list = list.filter((row: BulkAttendanceRow) => {
-        const text = [
-          row.rowNo,
-          row.empId,
-          row.empName,
-          row.designation,
-          row.division,
-          row.zone,
-          row.branch,
-          row.department,
-          row.function,
-          row.area,
-          row.shift,
-          row.shiftTime,
-          row.inTime,
-          row.outTime,
-          row.totalTime,
-          row.remarks,
-          row.rawEmpId,
-          row.rawEmpName,
-          row.rawDesignation,
-          row.rawDivision,
-          row.rawZone,
-          row.rawBranch,
-          row.rawDepartment,
-          row.rawFunction,
-          row.rawArea,
-          row.rawShift,
-          row.rawShiftTime,
-          row.rawDate,
-          row.rawInTime,
-          row.rawOutTime,
-          row.rawTotalTime,
-          row.rawRemarks,
-          row.isValid ? 'valid' : 'invalid',
-          ...(row.errors ?? []),
-        ]
-          .join(' ')
-          .toLowerCase();
+    if (!term && this.statusFilter === 'all') {
+      list = this.rows;
+    } else {
+      if (term) {
+        list = this.rows.filter((row: BulkAttendanceRow) => {
+          const text = [
+            row.empId,
+            row.empName,
+            row.designation,
+            row.division,
+            row.zone,
+            row.branch,
+            row.department,
+            row.shift,
+            row.shiftTime,
+            row.inTime,
+            row.outTime,
+            row.totalTime,
+            row.remarks,
+            row.isValid ? 'valid' : 'invalid',
+            ...(row.errors ?? [])
+          ].join(' ').toLowerCase();
 
-        return text.includes(term);
-      });
-    }
+          return text.includes(term);
+        });
+      } else {
+        list = this.rows;
+      }
 
-    if (this.statusFilter === 'valid') {
-      list = list.filter((r) => !!r.isValid);
-    } else if (this.statusFilter === 'invalid') {
-      list = list.filter((r) => !r.isValid);
-    } else if (this.statusFilter === 'selected') {
-      list = list.filter((r) => !!r.checked);
+      if (this.statusFilter === 'valid') {
+        list = list.filter((r: BulkAttendanceRow) => !!r.isValid);
+      } else if (this.statusFilter === 'invalid') {
+        list = list.filter((r: BulkAttendanceRow) => !r.isValid);
+      } else if (this.statusFilter === 'selected') {
+        list = list.filter((r: BulkAttendanceRow) => !!r.checked);
+      }
     }
 
     this.filteredRows = list;
@@ -1347,6 +1377,8 @@ export class BulkView implements OnInit {
     if (this.currentPage > this.totalPages) {
       this.currentPage = this.totalPages;
     }
+    
+    
   }
 
   showRowErrors(row: BulkAttendanceRow) {
@@ -1375,12 +1407,19 @@ export class BulkView implements OnInit {
       nzOkText: 'Delete',
       nzOkDanger: true,
       nzOnOk: () => {
-        this.rows = this.rows.filter((r) => r.uid !== row.uid);
-        this.rows.forEach((r, i) => (r.rowNo = i + 1));
-        this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+        this.allRows = this.allRows.filter((r) => r.uid !== row.uid);
+        this.totalRows = this.allRows.length;
+        this.totalPages = Math.ceil(this.totalRows / this.pageSize);
+
+        if (this.currentPage > this.totalPages) {
+          this.currentPage = Math.max(1, this.totalPages);
+        }
+
+        this.updateCurrentPageRows();
         this.checkDuplicateInFile();
         this.updateHasValidRow();
         this.refreshFilteredRows();
+        
       },
     });
   }

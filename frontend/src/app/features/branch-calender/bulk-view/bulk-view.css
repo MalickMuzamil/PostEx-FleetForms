@@ -255,3 +255,22 @@ button.status-pill {
     padding: 12px;
   }
 }
+
+/* delete button */
+.btn-outline-danger {
+  border-color: #dc3545;
+  color: #dc3545;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.btn-outline-danger:hover {
+  background: #dc3545;
+  color: #fff;
+}
+
+/* action column */
+.col-action {
+  min-width: 70px;
+  width: 70px;
+}

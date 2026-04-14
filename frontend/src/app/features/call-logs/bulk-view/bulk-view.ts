@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 
@@ -126,7 +126,8 @@ export class CallLogsBulkView {
   constructor(
     private callLogsService: CallLogsService,
     private notification: NzNotificationService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -136,13 +137,17 @@ export class CallLogsBulkView {
     if (!this.file) {
       this.toast('error', 'No File', 'No file received');
       this.isLoading = false;
+      this.cdr.markForCheck();
       return;
     }
 
     this.isLoading = true;
     this.loadingText = 'Reading file & validating...';
-    this.refreshFilteredRows();
-    this.parseFile(this.file);
+    this.cdr.detectChanges();
+    
+    setTimeout(() => {
+      this.parseFile(this.file);
+    }, 50);
   }
 
   trackByRow = (_: number, r: BulkCallLogsRow) => r.uid;
@@ -177,14 +182,19 @@ export class CallLogsBulkView {
         if (!this.fileHeaders.length) {
           this.toast('error', 'Invalid File', 'CSV has no header row.');
           this.isLoading = false;
+          this.cdr.markForCheck();
           return;
         }
 
+        this.isLoading = false;
+        this.loadingText = '';
+        this.cdr.detectChanges();
         this.handleHeaderValidation(res.data || []);
       },
       error: () => {
         this.toast('error', 'Invalid File', 'Unable to read CSV file.');
         this.isLoading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -282,6 +292,7 @@ export class CallLogsBulkView {
 
           index += CHUNK_SIZE;
           this.loadingText = `Processing ${Math.min(index, total)} / ${total} rows...`;
+          this.cdr.detectChanges();
 
           if (index < total) {
             setTimeout(processChunk, 0);
@@ -407,8 +418,13 @@ export class CallLogsBulkView {
     setTimeout(() => {
       this.updateHasValidRow();
       this.refreshFilteredRows();
-      this.isLoading = false;
       this.loadingText = '';
+      this.cdr.detectChanges();
+      
+      setTimeout(() => {
+        this.isLoading = false;
+        this.cdr.markForCheck();
+      }, 100);
     }, 0);
   }
 
@@ -980,5 +996,23 @@ export class CallLogsBulkView {
   onSearchOrFilterChange() {
     this.pageIndex = 1;
     this.refreshFilteredRows();
+  }
+
+  deleteRow(row: BulkCallLogsRow) {
+    this.modal.confirm({
+      nzTitle: 'Delete Row',
+      nzContent: `Are you sure you want to delete row #${row.rowNo}?`,
+      nzOkText: 'Delete',
+      nzOkDanger: true,
+      nzOnOk: () => {
+        this.filteredRows = this.filteredRows.filter((r) => r.uid !== row.uid);
+        for (let i = 0; i < this.filteredRows.length; i++) {
+          this.filteredRows[i].rowNo = i + 1;
+        }
+        this.checkAll = this.filteredRows.length > 0 && this.filteredRows.every((r) => r.checked || !r.isValid);
+        this.refreshFilteredRows();
+        this.updateHasValidRow();
+      },
+    });
   }
 }
