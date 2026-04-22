@@ -33,6 +33,7 @@ export class SubBranchDefinitionComponent implements OnInit {
 
   data: any = {};
   tableData: any[] = [];
+  loading: boolean = true;
 
   private branchMap = new Map<number, any>();
   private lastBranchId = 0;
@@ -93,6 +94,7 @@ export class SubBranchDefinitionComponent implements OnInit {
       });
 
       this.tableData = mappedRows;
+      this.loading = false;
 
       // ===== build master filter options =====
       const uniqueBranches = [...new Set<string>(

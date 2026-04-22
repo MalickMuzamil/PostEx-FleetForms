@@ -25,6 +25,7 @@ export class DeliveryRouteDefinitionComponent implements OnInit {
   data: any = {};
 
   tableData: any[] = [];
+  loading: boolean = true;
 
   constructor(
     private service: DeliveryRouteDefinitionService,
@@ -43,6 +44,7 @@ export class DeliveryRouteDefinitionComponent implements OnInit {
         Id: r.Id, // shown in table
         CorrectionDescriptionforReports: r.CorrectionDescriptionforReports,
       }));
+      this.loading = false;
     });
   }
 

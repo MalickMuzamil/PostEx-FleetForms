@@ -36,6 +36,7 @@ export class DeliveryRouteBindingComponent implements OnInit {
   showModal = false;
   data: any = {};
   tableData: any[] = [];
+  loading: boolean = true;
 
   // ===== DROPDOWNS =====
   branches: any[] = [];
@@ -137,6 +138,7 @@ export class DeliveryRouteBindingComponent implements OnInit {
       });
 
       this.tableData = mappedRows;
+      this.loading = false;
 
       const routeOptions = [...new Set(
         mappedRows

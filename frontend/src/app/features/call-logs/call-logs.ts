@@ -31,6 +31,7 @@ export class CallLogs implements OnInit {
   showModal = false;
   data: any = {};
   tableData: any[] = [];
+  loading: boolean = true;
 
   isEditMode = false;
   editingRow: any = null;
@@ -77,6 +78,7 @@ export class CallLogs implements OnInit {
         const rows = res?.data ?? res ?? [];
 
         this.tableData = (rows || []).map((r: any) => {
+          this.loading = false;
           const timeStr = this.isoDateTime(r.Time ?? r.time);
 
           const isArchivedVal = r.IsArchived ?? r.isArchived;

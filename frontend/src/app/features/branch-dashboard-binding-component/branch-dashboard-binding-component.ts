@@ -27,6 +27,7 @@ export class BranchDashboardBindingComponent {
 
   data: any = {};
   tableData: any[] = [];
+  loading: boolean = true;
   private branchesCache: any[] = [];
   submitting = false;
 
@@ -103,6 +104,7 @@ export class BranchDashboardBindingComponent {
       });
 
       this.tableData = mappedRows;
+      this.loading = false;
 
       const branchOptions = [...new Set(
         mappedRows

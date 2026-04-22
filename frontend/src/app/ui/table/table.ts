@@ -29,6 +29,7 @@ import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 export class Table implements OnChanges {
   @Input() config!: TableConfig;
   @Input() data: any[] = [];
+  @Input() loading: boolean = false;
 
   @Output() edit = new EventEmitter<any>();
   @Output() delete = new EventEmitter<any>();

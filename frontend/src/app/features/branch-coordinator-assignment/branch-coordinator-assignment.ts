@@ -35,6 +35,7 @@ export class BranchCoordinatorAssignment implements OnInit {
 
   data: any = {};
   tableData: any[] = [];
+  loading: boolean = true;
 
   private branchDetailsMap = new Map<number, BranchDetails>();
   private empMap = new Map<number, string>();
@@ -135,6 +136,7 @@ export class BranchCoordinatorAssignment implements OnInit {
       )
       .subscribe((rows) => {
         console.log('PARENT rows.length =', rows.length);
+        this.loading = false;
         this.tableData = rows;
 
         const branchOptions = [...new Set(

@@ -130,7 +130,7 @@ export class BulkView implements OnInit {
 
   // Pagination for large files
   currentPage = 1;
-  pageSize = 1000; // Show only 1000 rows at a time
+  pageSize = 100;
   totalPages = 1;
 
   fileHeaders: string[] = [];
@@ -938,18 +938,20 @@ export class BulkView implements OnInit {
 
     this.hasValidRow = this.allRows.some((r) => r.isValid === true);
 
-    const validRows = this.rows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    // Check if all valid rows are selected (globally, not just current page)
+    const validRows = this.allRows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
     this.checkAll = validRows.length > 0 && validRows.every((r) => r.checked);
   }
 
   onToggleAll(checked: boolean) {
     this.checkAll = checked;
-    this.rows.forEach((r) => {
+    // Select all rows globally (not just current page)
+    this.allRows.forEach((r) => {
       const canSelect = !!r.isValid && !this.hasErrLike(r, 'Duplicate with row');
       r.checked = checked ? canSelect : false;
     });
 
-    const validRows = this.rows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
+    const validRows = this.allRows.filter((r) => r.isValid && !this.hasErrLike(r, 'Duplicate with row'));
     this.checkAll = validRows.length > 0 && validRows.every((r) => r.checked);
     this.refreshFilteredRows();
   }
@@ -1375,12 +1377,23 @@ export class BulkView implements OnInit {
       nzOkText: 'Delete',
       nzOkDanger: true,
       nzOnOk: () => {
-        this.rows = this.rows.filter((r) => r.uid !== row.uid);
-        this.rows.forEach((r, i) => (r.rowNo = i + 1));
-        this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+        // Delete from all rows globally
+        this.allRows = this.allRows.filter((r) => r.uid !== row.uid);
+        this.totalRows = this.allRows.length;
+        
+        // Re-number all rows
+        this.allRows.forEach((r, i) => (r.rowNo = i + 1));
+        
+        // Update pagination
+        this.totalPages = Math.ceil(this.totalRows / this.pageSize);
+        if (this.currentPage > this.totalPages) {
+          this.currentPage = Math.max(1, this.totalPages);
+        }
+        
+        // Update current page rows
+        this.updateCurrentPageRows();
         this.checkDuplicateInFile();
         this.updateHasValidRow();
-        this.refreshFilteredRows();
       },
     });
   }

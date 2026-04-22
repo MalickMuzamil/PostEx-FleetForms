@@ -216,11 +216,11 @@ class BranchWiseCalenderService {
         }
 
         // Bulk insert temp table
-        await new sql.Request(tx).bulk(table);
+        await new sql.Request(tx).timeout(300000).bulk(table); // 5 min timeout for bulk insert
         console.log("📥 Bulk insert into temp table done");
 
         // Merge - use CTE to ensure no duplicates in source
-        const mergeResult = await new sql.Request(tx).query(`
+        const mergeResult = await new sql.Request(tx).timeout(300000).query(`
         DECLARE @OutputActions TABLE (Action NVARCHAR(10));
 
         WITH SourceData AS (

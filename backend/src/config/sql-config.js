@@ -1,9 +1,10 @@
 import sql from "mssql";
-import { authDbConfig, appDbConfig } from "./db.js";
+import { authDbConfig, appDbConfig, hrmDbConfig } from "./db.js";
 import { logger } from "../loggers/winston.js";
 
 let authPool;
 let appPool;
+let hrmPool;
 
 // 🔐 Auth DB (SecurityCatalog)
 export const getAuthPool = async () => {
@@ -37,6 +38,24 @@ export const getPool = async () => {
     logger.error("❌ App DB connection failed");
     logger.error(error);
     appPool = null;
+    throw error;
+  }
+};
+
+// 🏢 HRM DB
+export const getHrmPool = async () => {
+  try {
+    if (hrmPool) return hrmPool;
+
+    hrmPool = await new sql.ConnectionPool(hrmDbConfig).connect();
+    await hrmPool.request().query("SELECT DB_NAME() AS db");
+    logger.info("✅ HRM DB connected");
+
+    return hrmPool;
+  } catch (error) {
+    logger.error("❌ HRM DB connection failed");
+    logger.error(error);
+    hrmPool = null;
     throw error;
   }
 };

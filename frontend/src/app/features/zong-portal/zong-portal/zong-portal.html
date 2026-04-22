@@ -1,0 +1,14 @@
+<app-table [config]="tableConfig" [data]="tableData" [loading]="loading" (delete)="delete($event)" (edit)="openEditForm($event)">
+    <div table-header class="tbl-card-header">
+        <h5 class="tbl-card-title">Zong Portal</h5>
+
+        <button class="tbl-add-btn" (click)="fetchFromZong()" [disabled]="isFetching">
+            <i class="fa fa-refresh"></i>
+            {{ isFetching ? 'Fetching...' : 'Fetch From Zong' }}
+        </button>
+    </div>
+</app-table>
+
+<app-modal [visible]="showModal" [title]="formConfig.title" [formConfig]="formConfig" [data]="data"
+    (formChange)="onFormChange($any($event))" (submit)="saveEdit($event)" (cancel)="closeModal()">
+</app-modal>

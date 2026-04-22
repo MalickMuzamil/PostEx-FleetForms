@@ -36,6 +36,7 @@ export class CourierFakeAttempts implements OnInit {
   showModal = false;
   data: any = {};
   tableData: any[] = [];
+  loading: boolean = true;
 
   // ===== EDIT MODE (future) =====
   isEditMode = false;
@@ -115,6 +116,7 @@ export class CourierFakeAttempts implements OnInit {
         });
 
         this.tableData = mappedRows;
+        this.loading = false;
 
         const branchValues = mappedRows
           .map((x: any) => x.branchName)

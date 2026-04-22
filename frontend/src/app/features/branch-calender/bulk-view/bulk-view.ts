@@ -558,4 +558,20 @@ export class BulkView {
       nzWidth: 420,
     });
   }
+
+  deleteRow(row: BulkCalRow) {
+    this.modal.confirm({
+      nzTitle: 'Delete Row',
+      nzContent: `Are you sure you want to delete row #${row.rowNo}?`,
+      nzOkText: 'Delete',
+      nzOkDanger: true,
+      nzOnOk: () => {
+        this.rows = this.rows.filter((r) => r.uid !== row.uid);
+        this.rows.forEach((r, i) => (r.rowNo = i + 1));
+        this.checkAll = this.rows.length > 0 && this.rows.every((r) => r.checked || !r.isValid);
+        this.checkDuplicateInFile();
+        this.updateHasValidRow();
+      },
+    });
+  }
 }

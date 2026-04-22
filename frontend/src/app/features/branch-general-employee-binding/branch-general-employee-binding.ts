@@ -26,6 +26,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
   selectedId: number | null = null;
   data: any = {};
   tableData: any[] = [];
+  loading: boolean = true;
 
   private branchesCache: any[] = [];
   private branchDetailsMap = new Map<number, any>();
@@ -157,6 +158,7 @@ export class BranchGeneralEmployeeBinding implements OnInit {
       )
       .subscribe((rows) => {
         this.tableData = rows;
+        this.loading = false;
 
         const branchValues = rows
           .map((x: any) => x.branchName)

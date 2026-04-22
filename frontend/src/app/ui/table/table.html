@@ -80,7 +80,8 @@
     <!-- ===== TABLE ===== -->
     <div class="tbl-scroll">
         <nz-table #table class="app-table" [nzData]="pagedData" [nzFrontPagination]="false"
-            [nzShowPagination]="false" [nzPageIndex]="pageIndex" [nzPageSize]="pageSize">
+            [nzShowPagination]="false" [nzPageIndex]="pageIndex" [nzPageSize]="pageSize"
+            [nzLoading]="loading">
 
             <thead>
                 <tr>

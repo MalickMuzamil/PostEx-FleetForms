@@ -29,6 +29,7 @@ export class SubBranchAssignmentDefinition implements OnInit {
   showModal = false;
   data: any = {};
   tableData: any[] = [];
+  loading: boolean = true;
 
   // ===== DROPDOWNS =====
   branches: any[] = [];
@@ -95,6 +96,7 @@ export class SubBranchAssignmentDefinition implements OnInit {
         });
 
         this.tableData = mappedRows;
+        this.loading = false;
 
         const subBranchOptions = [...new Set(
           mappedRows

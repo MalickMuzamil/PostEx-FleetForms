@@ -429,3 +429,11 @@ button,
 .user-mgmt-modal .ant-modal-footer .ant-btn-primary {
   background: var(--primary);
 }
+
+/* =====================================================
+   TABLE LOADER SPINNER COLOR
+   Makes loader spinner use primary color #56883B
+===================================================== */
+.ant-spin-dot-item {
+  background-color: var(--primary) !important;
+}

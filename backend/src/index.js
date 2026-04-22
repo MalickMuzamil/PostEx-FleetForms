@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 import { logger } from "./loggers/winston.js";
 import { errorHandler } from "./middleware/error-middleware.js";
 import { generalRateLimiter, authRateLimiter } from "./middleware/rate-limit-middleware.js";
-import { getPool, getAuthPool } from "./config/sql-config.js";
+import { getPool, getAuthPool, getHrmPool } from "./config/sql-config.js";
 import authRoutes from "./routes/auth-routes.js";
 
 // import employeesRoutes from "./routes/employees.routes.js";
@@ -45,6 +45,9 @@ import courierFakeAttemptsRoutes from './routes/courierfakeattemptsRoutes.js';
 
 //Call Logs
 import callLogs from './routes/call-log-routes.js';
+
+//Reports
+import reportsRoutes from "./routes/reports-routes.js";
 
 //Branch Wise Calender
 import BranchCalender from './routes/branch-wise-calender-routes.js';
@@ -101,6 +104,7 @@ app.use("/cnc-l5-l6-mapping", Bindingcnclevel5level6);
 app.use("/attendance", Attendance);
 app.use("/courier-fake-attempts", courierFakeAttemptsRoutes);
 app.use("/call-logs", callLogs);
+app.use("/reports", reportsRoutes);
 app.use("/branch-wise-calender", BranchCalender);
 
 
@@ -114,6 +118,7 @@ const PORT = Number(process.env.PORT || 5000);
     try {
         await getPool();
         await getAuthPool();
+        await getHrmPool();
         logger.info("✅ MSSQL connected");
 
         app.listen(PORT, () => {

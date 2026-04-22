@@ -1,5 +1,5 @@
 <div>
-    <app-table [config]="tableConfig" [data]="tableData" (edit)="edit($event)" (delete)="delete($event)">
+    <app-table [config]="tableConfig" [data]="tableData" [loading]="loading" (edit)="edit($event)" (delete)="delete($event)">
         <div table-header class="tbl-card-header">
             <h5 class="tbl-card-title">Branch Coordinators</h5>
             <button class="tbl-add-btn" (click)="openAddForm()">

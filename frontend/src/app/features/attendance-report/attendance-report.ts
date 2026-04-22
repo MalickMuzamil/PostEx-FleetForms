@@ -36,6 +36,7 @@ export class AttendanceReport implements OnInit {
   showModal = false;
   data: any = {};
   tableData: any[] = [];
+  loading: boolean = true;
 
   // ===== EDIT MODE =====
   isEditMode = false;
@@ -125,6 +126,7 @@ export class AttendanceReport implements OnInit {
         });
 
         this.tableData = mappedRows;
+        this.loading = false;
 
         const employeeValues = mappedRows
           .map((x: any) => x.employeeName)

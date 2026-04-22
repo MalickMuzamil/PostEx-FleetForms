@@ -26,6 +26,7 @@ export class BranchCalender implements OnInit {
   showModal = false;
   data: any = {};
   tableData: any[] = [];
+  loading: boolean = true;
 
   // ✅ REQUIRED (backend aligned) - Tran is NOT required now
   private readonly REQUIRED_BASE = ['CALENDER_DATE', 'ISNOTWORKINGDAY', 'NOTWORKINGDAYDESC', 'ISARCHIVED'];
@@ -93,6 +94,7 @@ export class BranchCalender implements OnInit {
         });
 
         this.tableData = mappedRows;
+        this.loading = false;
 
         const workingDayValues = mappedRows
           .map((x: any) => x.isNotWorkingDayDisplay)

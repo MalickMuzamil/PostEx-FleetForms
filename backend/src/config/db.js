@@ -14,6 +14,8 @@ const baseConfig = {
     min: 0,
     idleTimeoutMillis: 30000,
   },
+  requestTimeout: env.dbRequestTimeout,
+  connectionTimeout: env.dbConnectionTimeout,
 };
 
 export const authDbConfig = {
@@ -24,4 +26,9 @@ export const authDbConfig = {
 export const appDbConfig = {
   ...baseConfig,
   database: env.appDbName || "GoGreen",
+};
+
+export const hrmDbConfig = {
+  ...baseConfig,
+  database: env.hrmDbName || "HRM",
 };
