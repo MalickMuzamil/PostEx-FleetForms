@@ -542,10 +542,14 @@ class DeliveryRouteBindingService {
         );
       }
 
-      await new sql.Request(tx).timeout(300000).bulk(t); // 5 min timeout for bulk insert
+      const bulkRequest1 = new sql.Request(tx);
+      bulkRequest1.timeout = 300000; // 5 min timeout for bulk insert
+      await bulkRequest1.bulk(t);
 
       // ✅ 2) Same validation query, just global table name
-      const checkRes = await new sql.Request(tx).timeout(300000).query(`
+      const checkRequest = new sql.Request(tx);
+      checkRequest.timeout = 300000;
+      const checkRes = await checkRequest.query(`
       SELECT
         p.BranchID,
         p.SubBranchID,
@@ -723,10 +727,14 @@ class DeliveryRouteBindingService {
         );
       }
 
-      await new sql.Request(tx).timeout(300000).bulk(t); // 5 min timeout for bulk insert
+      const bulkRequest2 = new sql.Request(tx);
+      bulkRequest2.timeout = 300000; // 5 min timeout for bulk insert
+      await bulkRequest2.bulk(t);
 
       // ✅ 2) Build DISTINCT GLOBAL temp table (same query, just global name)
-      await new sql.Request(tx).timeout(300000).query(`
+      const distinctRequest = new sql.Request(tx);
+      distinctRequest.timeout = 300000;
+      await distinctRequest.query(`
       SET NOCOUNT ON;
 
       IF OBJECT_ID('tempdb..${DISTINCT}') IS NOT NULL DROP TABLE ${DISTINCT};

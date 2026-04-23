@@ -1,5 +1,34 @@
 <app-table [config]="tableConfig" [data]="tableData" [loading]="loading">
     <div table-header class="tbl-card-header">
         <h5 class="tbl-card-title"><i class="fa fa-file-report"></i> Reports</h5>
+        
+        <!-- Branch Dropdown using Table Component's design -->
+        <div class="branch-select-wrapper" *ngIf="branchAccessInfo">
+            <!-- Multiple/Single Branch Access -->
+            <div *ngIf="branchAccessInfo.branches?.length > 0" class="branch-dropdown">
+                <label class="branch-label">Accessible Branches:</label>
+                <nz-select
+                    class="tbl-nz-select"
+                    [(ngModel)]="selectedBranchId"
+                    (ngModelChange)="onBranchChange($event)"
+                    [nzAllowClear]="true"
+                    [nzShowSearch]="true"
+                    nzPlaceHolder="Select Branch"
+                    [nzDropdownMatchSelectWidth]="false"
+                    style="min-width: 200px;"
+                >
+                    <nz-option 
+                        *ngFor="let branch of branchAccessInfo.branches" 
+                        [nzValue]="branch.branchId"
+                        [nzLabel]="branch.branchName"
+                    ></nz-option>
+                </nz-select>
+            </div>
+            
+            <!-- All Branches Access -->
+            <div *ngIf="branchAccessInfo.isAllBranches" class="all-branches-badge">
+                <i class="fa fa-globe"></i> All Branches ({{branchAccessInfo.totalBranches}})
+            </div>
+        </div>
     </div>
 </app-table>

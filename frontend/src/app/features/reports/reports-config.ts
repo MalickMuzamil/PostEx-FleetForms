@@ -2,8 +2,8 @@ import { TableConfig } from '../../shared/form-model/data-table-model';
 
 export const REPORTS_TABLE: TableConfig = {
   globalSearch: {
-    placeholder: 'Search by Email, Name, Role',
-    keys: ['email', 'name', 'role'],
+    placeholder: 'Search by Name, Email, Role',
+    keys: ['name', 'email', 'role'],
     rules: {
       mode: 'alphanumeric',
       maxLength: 50,
@@ -12,14 +12,15 @@ export const REPORTS_TABLE: TableConfig = {
   },
 
   columns: [
+    { key: 'Login_Id', title: 'Login ID' },
     { key: 'name', title: 'Name' },
     { key: 'email', title: 'Email' },
-    { key: 'phone', title: 'Phone' },
     { key: 'role', title: 'Role' },
+    { key: 'u_BranchID', title: 'Branch ID' },
+    { key: 'u_BranchName', title: 'Branch Name' },
     { key: 'verificationStatus', title: 'Status' },
-    { key: 'branchScenario', title: 'Branch Scenario' },
-    { key: 'branchCount', title: 'Branch Count' },
-    { key: 'totalBranches', title: 'Total Branches' },
-    { key: 'isAllBranches', title: 'All Branches' },
+    { key: 'branchScenario', title: 'Access Type' },
+    { key: 'branchCount', title: 'Accessible Branches' },
+    { key: 'isAllBranches', title: 'All Branches Access' },
   ],
 };

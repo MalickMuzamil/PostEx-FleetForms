@@ -278,11 +278,15 @@ class CourierFakeAttemptsService {
         }
 
         // Bulk insert temp table
-        await new sql.Request(tx).timeout(300000).bulk(table); // 5 min timeout for bulk insert
+        const bulkRequest = new sql.Request(tx);
+        bulkRequest.timeout = 300000; // 5 min timeout for bulk insert
+        await bulkRequest.bulk(table);
         console.log("📥 Bulk insert into temp table done");
 
         // Merge - use CTE to ensure no duplicates in source
-        const mergeResult = await new sql.Request(tx).timeout(300000).query(`
+        const mergeRequest = new sql.Request(tx);
+        mergeRequest.timeout = 300000;
+        const mergeResult = await mergeRequest.query(`
         DECLARE @OutputActions TABLE (Action NVARCHAR(10));
 
         WITH SourceData AS (

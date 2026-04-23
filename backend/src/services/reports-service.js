@@ -11,36 +11,22 @@ export default class ReportsService {
 
         const normalizedEmail = String(email).trim().toLowerCase();
 
-        // ============ STEP 1: SecurityCatalog.dbo.Users ============
         const authPool = await getAuthPool();
 
-        const userResult = await authPool.request()
+        const authRequest = authPool.request();
+        authRequest.timeout = 30000;
+        const userResult = await authRequest
             .input("email", sql.VarChar, normalizedEmail)
             .query(`
                 SELECT TOP 1
                     Login_Id,
-                    Login_Password,
                     Login_Name,
                     Login_Role,
                     Login_Blocked,
                     Login_EMail,
                     Emp_ID,
                     u_BranchID,
-                    u_BranchName,
-                    Login_Allowed_Discount,
-                    Login_Allowed_Cost_Management,
-                    FranchiseID,
-                    FranchiseName,
-                    Login_Allowed_Stock_Issuance,
-                    RestrictedGLCodesOnly,
-                    UserImage,
-                    IMEINo,
-                    UserProfilePicture,
-                    AssignedMacAddress,
-                    MobileNo,
-                    OTP,
-                    EnteredOn,
-                    IsArchived
+                    u_BranchName
                 FROM Users
                 WHERE LOWER(Login_EMail) = @email
             `);
@@ -59,26 +45,31 @@ export default class ReportsService {
             return {
                 ok: true,
                 verified: false,
-                user: user,
+                user: {
+                    Login_Id: user.Login_Id,
+                    Login_Name: user.Login_Name,
+                    Login_EMail: user.Login_EMail,
+                    Login_Role: user.Login_Role,
+                },
                 reason: "USER_BLOCKED",
                 message: "User is blocked"
             };
         }
 
         const loginId = user.Login_Id;
-        const empId = user.Emp_ID;
 
         // ============ STEP 2: GoGreen.dbo.UserBranchDetail ============
         const appPool = await getPool();
         const hrmPool = await getHrmPool();
 
-        const branchDetailResult = await appPool.request()
-            .input("userId", sql.VarChar, empId)
+        const appRequest = appPool.request();
+        appRequest.timeout = 30000;
+        const branchDetailResult = await appRequest
+            .input("userId", sql.VarChar, loginId)
             .query(`
-                SELECT 
+                SELECT
                     ubd.BranchID,
-                    b.BranchName,
-                    b.BranchDesc
+                    b.BranchName
                 FROM UserBranchDetail ubd
                 INNER JOIN [HRM].[HR].[Branches] b ON ubd.BranchID = b.BranchID
                 WHERE ubd.UserID = @userId
@@ -87,25 +78,11 @@ export default class ReportsService {
         const branchDetails = branchDetailResult.recordset || [];
         const branchCount = branchDetails.length;
 
-        // Get total branch count from HRM DB
-        const totalBranchesResult = await hrmPool.request().query("SELECT COUNT(*) as TotalBranches FROM [HRM].[HR].[Branches]");
+        // Get total branch count
+        const hrmRequest = hrmPool.request();
+        hrmRequest.timeout = 30000;
+        const totalBranchesResult = await hrmRequest.query("SELECT COUNT(*) as TotalBranches FROM [HRM].[HR].[Branches]");
         const totalBranches = totalBranchesResult.recordset[0]?.TotalBranches || 0;
-
-        // ============ STEP 3: GoGreen.dbo.CMSUsers ============
-        const cmsUserResult = await appPool.request()
-            .input("userId", sql.VarChar, empId)
-            .query(`
-                SELECT 
-                    cu.UserID,
-                    cu.IsAllowAllBranches,
-                    cu.OriginCity,
-                    c.CityName
-                FROM CMSUsers cu
-                LEFT JOIN City c ON cu.OriginCity = c.CityID
-                WHERE cu.UserID = @userId
-            `);
-
-        const cmsUser = cmsUserResult.recordset?.[0];
 
         // ============ DETERMINE BRANCH ACCESS SCENARIO ============
         let branchAccessScenario = {
@@ -116,108 +93,152 @@ export default class ReportsService {
             isAllBranches: false
         };
 
-        // SCENARIO 1: UserBranchDetail me record mila -> more than one branch but not all
-        if (branchCount > 1 && branchCount < totalBranches) {
+        let cmsUser = null;
+
+        // SCENARIO 1: user has branches (any count)
+        if (branchCount >= 1) {
+            let scenario = "SINGLE BRANCH";
+            let description = `User has access to ${branchCount} branch(es)`;
+
+            if (branchCount > 1 && branchCount < totalBranches) {
+                scenario = "MULTIPLE BRANCHES NOT ALL";
+                description = `User has access to ${branchCount} branches (not all)`;
+            } else if (branchCount >= totalBranches) {
+                scenario = "ALL BRANCHES VIA USERBRANCHDETAIL";
+                description = "User has access to all branches via UserBranchDetail";
+            }
+
             branchAccessScenario = {
-                scenario: "MULTIPLE_BRANCHES_NOT_ALL",
-                description: `User has access to ${branchCount} branches (not all)`,
+                scenario: scenario,
+                description: description,
                 branches: branchDetails.map(b => ({
                     branchId: b.BranchID,
-                    branchName: b.BranchName,
-                    branchDesc: b.BranchDesc
+                    branchName: b.BranchName
                 })),
                 totalBranches: totalBranches,
-                isAllBranches: false
+                isAllBranches: branchCount >= totalBranches
             };
         }
-        // SCENARIO 2: If above false -> CMSUsers (IsAllowAllBranches = 1)
-        else if (cmsUser?.IsAllowAllBranches === 1 || branchCount >= totalBranches) {
-            // Get all branches from HRM DB
-            const allBranchesResult = await hrmPool.request()
-                .query("SELECT BranchID, BranchName, BranchDesc FROM [HRM].[HR].[Branches]");
-            
-            const allBranches = allBranchesResult.recordset || [];
-            
-            branchAccessScenario = {
-                scenario: "ALL_BRANCHES",
-                description: "User has access to all branches",
-                branches: allBranches.map(b => ({
-                    branchId: b.BranchID,
-                    branchName: b.BranchName,
-                    branchDesc: b.BranchDesc
-                })),
-                totalBranches: totalBranches,
-                isAllBranches: true
-            };
-        }
-        // SCENARIO 3: If above false -> CMSUsers (OriginCity -> City -> Branches)
-        else if (cmsUser?.OriginCity) {
-            // Get branches for that city from HRM DB
-            const cityBranchesResult = await hrmPool.request()
-                .input("cityId", sql.Int, cmsUser.OriginCity)
+        // SCENARIO 2 & 3: Only check if no branches from UserBranchDetail
+        else {
+            // ============ STEP 3: GoGreen.dbo.CMSUsers ============
+            const cmsRequest = appPool.request();
+            cmsRequest.timeout = 30000;
+            const cmsUserResult = await cmsRequest
+                .input("userId", sql.VarChar, loginId)
                 .query(`
-                    SELECT BranchID, BranchName, BranchDesc 
-                    FROM [HRM].[HR].[Branches] 
-                    WHERE CityID = @cityId
+                    SELECT
+                        cu.IsAllowAllBranches,
+                        cu.OriginCity,
+                        c.CityName
+                    FROM CMSUsers cu
+                    LEFT JOIN City c ON cu.OriginCity = c.CityID
+                    WHERE cu.UserID = @userId
                 `);
-            
-            const cityBranches = cityBranchesResult.recordset || [];
-            const cityBranchCount = cityBranches.length;
 
-            if (cityBranchCount === 1) {
+            cmsUser = cmsUserResult.recordset?.[0];
+
+            // SCENARIO 2: CMSUsers (IsAllowAllBranches = true)
+            if (cmsUser?.IsAllowAllBranches === true || cmsUser?.IsAllowAllBranches === 1) {
+                // Get all branches from HRM
+                const allBranchesResult = await hrmPool.request()
+                    .query("SELECT BranchID, BranchName FROM [HRM].[HR].[Branches]");
+                
+                const allBranches = allBranchesResult.recordset || [];
+
                 branchAccessScenario = {
-                    scenario: "SINGLE_BRANCH_VIA_CITY",
-                    description: `User has access to single branch via city: ${cmsUser.CityName}`,
-                    branches: cityBranches.map(b => ({
+                    scenario: "ALL BRANCHES",
+                    description: "User has access to all branches (IsAllowAllBranches = 1)",
+                    branches: allBranches.map(b => ({
                         branchId: b.BranchID,
-                        branchName: b.BranchName,
-                        branchDesc: b.BranchDesc
+                        branchName: b.BranchName
                     })),
                     totalBranches: totalBranches,
-                    isAllBranches: false
+                    isAllBranches: true
                 };
-            } else if (cityBranchCount > 1) {
+            }
+            // SCENARIO 3: CMSUsers (OriginCity -> City -> Branches)
+            else if (cmsUser?.OriginCity) {
+                // Get branches for that city via City table (City is in GoGreen DB)
+                const cityRequest = appPool.request();
+                cityRequest.timeout = 30000;
+                const cityBranchesResult = await cityRequest
+                    .input("cityId", sql.Int, cmsUser.OriginCity)
+                    .query(`
+                        SELECT b.BranchID, b.BranchName
+                        FROM City c
+                        INNER JOIN [HRM].[HR].[Branches] b ON c.BranchID = b.BranchID
+                        WHERE c.CityID = @cityId
+                    `);
+                
+                const cityBranches = cityBranchesResult.recordset || [];
+                const cityBranchCount = cityBranches.length;
+
+                if (cityBranchCount === 1) {
+                    branchAccessScenario = {
+                        scenario: "SINGLE BRANCH VIA CITY",
+                        description: `User has access to single branch via city: ${cmsUser.CityName}`,
+                        branches: cityBranches.map(b => ({
+                            branchId: b.BranchID,
+                            branchName: b.BranchName
+                        })),
+                        totalBranches: totalBranches,
+                        isAllBranches: false
+                    };
+                } else if (cityBranchCount > 1) {
+                    branchAccessScenario = {
+                        scenario: "MULTIPLE BRANCHES VIA CITY",
+                        description: `User has access to ${cityBranchCount} branches via city: ${cmsUser.CityName}`,
+                        branches: cityBranches.map(b => ({
+                            branchId: b.BranchID,
+                            branchName: b.BranchName
+                        })),
+                        totalBranches: totalBranches,
+                        isAllBranches: false
+                    };
+                } else {
+                    branchAccessScenario = {
+                        scenario: "NO BRANCH ACCESS",
+                        description: "OriginCity set but no branches found",
+                        branches: [],
+                        totalBranches: totalBranches,
+                        isAllBranches: false
+                    };
+                }
+            }
+            // FALLBACK: No branch info anywhere
+            else {
                 branchAccessScenario = {
-                    scenario: "MULTIPLE_BRANCHES_VIA_CITY",
-                    description: `User has access to ${cityBranchCount} branches via city: ${cmsUser.CityName}`,
-                    branches: cityBranches.map(b => ({
-                        branchId: b.BranchID,
-                        branchName: b.BranchName,
-                        branchDesc: b.BranchDesc
-                    })),
-                    totalBranches: totalBranches,
-                    isAllBranches: false
-                };
-            } else {
-                branchAccessScenario = {
-                    scenario: "NO_BRANCH_ACCESS",
-                    description: "OriginCity set but no branches found",
+                    scenario: "NO BRANCH ACCESS",
+                    description: "User has no branch access in any table",
                     branches: [],
                     totalBranches: totalBranches,
                     isAllBranches: false
                 };
             }
         }
-        // FALLBACK: No branch info anywhere
-        else {
-            branchAccessScenario = {
-                scenario: "NO_BRANCH_ACCESS",
-                description: "User has no branch access in any table",
-                branches: [],
-                totalBranches: totalBranches,
-                isAllBranches: false
-            };
-        }
 
         console.log(`✅ User verified: ${user.Login_EMail} (ID: ${user.Login_Id}, Role: ${user.Login_Role})`);
-        console.log(`📍 Branch Access Scenario: ${branchAccessScenario.scenario} - ${branchAccessScenario.description}`);
+        console.log(`📍 Branch Access: ${branchAccessScenario.scenario}`);
 
         return {
             ok: true,
             verified: true,
-            user: user,
+            user: {
+                Login_Id: user.Login_Id,
+                Login_Name: user.Login_Name,
+                Login_EMail: user.Login_EMail,
+                Login_Role: user.Login_Role,
+                Emp_ID: user.Emp_ID,
+                u_BranchID: user.u_BranchID,
+                u_BranchName: user.u_BranchName,
+            },
             branchAccess: branchAccessScenario,
-            cmsUser: cmsUser || null
+            cmsUser: cmsUser ? {
+                IsAllowAllBranches: cmsUser.IsAllowAllBranches,
+                OriginCity: cmsUser.OriginCity,
+                CityName: cmsUser.CityName
+            } : null
         };
     }
 }

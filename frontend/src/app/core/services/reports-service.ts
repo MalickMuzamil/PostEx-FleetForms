@@ -9,6 +9,6 @@ export class ReportsService {
   constructor(private api: GeneralService) {}
 
   verifyUser(email: string): Observable<any> {
-    return this.api.post<any>(`${this.baseUrl}/verify-user`, { email });
+    return this.api.post<any>(`${this.baseUrl}/branch-report`, { email });
   }
 }

@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth-service';
 import { ReportsService } from '../../core/services/reports-service';
 import { Table } from '../../ui/table/table';
@@ -10,7 +12,7 @@ import { REPORTS_TABLE } from './reports-config';
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, Table],
+  imports: [CommonModule, FormsModule, NzSelectModule, Table],
   templateUrl: './reports.html',
   styleUrl: './reports.css',
 })
@@ -20,6 +22,7 @@ export class Reports implements OnInit {
   loading: boolean = true;
   errorMessage: string = '';
   branchAccessInfo: any = null;
+  selectedBranchId: number | null = null;
 
   constructor(
     private reportsService: ReportsService,
@@ -61,15 +64,15 @@ export class Reports implements OnInit {
       next: (res: any) => {
         this.loading = false;
         
-        console.log('User verified:', res);
-        
         // Check if user is blocked
         if (res.user && res.user.Login_Blocked) {
           this.tableData = [{
+            Login_Id: res.user.Login_Id || '-',
             name: res.user.Login_Name || '-',
             email: res.user.Login_EMail || '-',
-            phone: res.user.MobileNo || '-',
             role: res.user.Login_Role || '-',
+            u_BranchID: res.user.u_BranchID || '-',
+            u_BranchName: res.user.u_BranchName || '-',
             verificationStatus: 'Blocked',
             branchScenario: '-',
             branchCount: 0,
@@ -80,15 +83,22 @@ export class Reports implements OnInit {
           return;
         }
 
-        // If verified and has branch access, show in table
+        // If verified and has branch access
         if (res.verified && res.user && res.branchAccess && res.branchAccess.scenario !== 'NO_BRANCH_ACCESS') {
           this.branchAccessInfo = res.branchAccess;
 
+          // Default branch nahi select karein - user khud choose karega
+          // if (this.branchAccessInfo.branches?.length > 0) {
+          //   this.selectedBranchId = this.branchAccessInfo.branches[0].branchId;
+          // }
+
           this.tableData = [{
+            Login_Id: res.user.Login_Id || '-',
             name: res.user.Login_Name || '-',
             email: res.user.Login_EMail || '-',
-            phone: res.user.MobileNo || '-',
             role: res.user.Login_Role || '-',
+            u_BranchID: res.user.u_BranchID || '-',
+            u_BranchName: res.user.u_BranchName || '-',
             verificationStatus: 'Verified',
             branchScenario: res.branchAccess.scenario || '-',
             branchCount: res.branchAccess.branches?.length || 0,
@@ -96,11 +106,10 @@ export class Reports implements OnInit {
             isAllBranches: res.branchAccess.isAllBranches ? 'Yes' : 'No',
           }];
 
-          this.notification.success('Success', 'User is verified with branch access');
+          this.notification.success('Success', 'User verified with branch access');
         } else {
-          // No branch access - don't show in table
           this.tableData = [];
-          this.notification.warning('No Branch Access', 'User has no branch access');
+          this.notification.warning('No Access', 'User has no branch access');
         }
       },
       error: (err) => {
@@ -111,5 +120,11 @@ export class Reports implements OnInit {
         this.notification.error('Error', this.errorMessage);
       },
     });
+  }
+
+  onBranchChange(branchId: number): void {
+    this.selectedBranchId = branchId;
+    console.log('Selected branch ID:', branchId);
+    // TODO: Implement branch-specific reports logic here
   }
 }
