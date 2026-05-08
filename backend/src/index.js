@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import { logger } from "./loggers/winston.js";
 import { errorHandler } from "./middleware/error-middleware.js";
 import { generalRateLimiter, authRateLimiter } from "./middleware/rate-limit-middleware.js";
+import { authMiddleware } from "./middleware/auth-middleware.js";
 import { getPool, getAuthPool } from "./config/sql-config.js";
 import authRoutes from "./routes/auth-routes.js";
 
@@ -75,33 +76,33 @@ app.get("/health", (req, res) => res.json({ ok: true }));
 
 // routes
 app.use("/auth", authRateLimiter, authRoutes);
-app.use("/bindings", bindingRoutes);
-app.use("/branch-general-emp-binding", branchGeneralEmpBindingRoutes);
-app.use("/branch-dashboard-binding", branchDashboardBindingRoutes);
-app.use("/sub-branches", subBranchRoutes);
-app.use("/delivery-routes", deliveryRouteRoutes);
-app.use("/delivery-route-bindings", deliveryRouteBindingRoutes);
-app.use("/branches", branchesRoutes);
-app.use("/sub-branch-assignment-definition", subBranchAssignmentDefinitionRoute);
+app.use("/bindings", authMiddleware, bindingRoutes);
+app.use("/branch-general-emp-binding", authMiddleware, branchGeneralEmpBindingRoutes);
+app.use("/branch-dashboard-binding", authMiddleware, branchDashboardBindingRoutes);
+app.use("/sub-branches", authMiddleware, subBranchRoutes);
+app.use("/delivery-routes", authMiddleware, deliveryRouteRoutes);
+app.use("/delivery-route-bindings", authMiddleware, deliveryRouteBindingRoutes);
+app.use("/branches", authMiddleware, branchesRoutes);
+app.use("/sub-branch-assignment-definition", authMiddleware, subBranchAssignmentDefinitionRoute);
 
-app.use("/cnc-level1", cnclevel1);
-app.use("/cnc-level2", cncL2);
-app.use("/cnc-level3", cncL3);
-app.use("/cnc-level4", cncL4);
-app.use("/cnc-level5", cncL5);
-app.use("/cnc-level6", cncL6);
+app.use("/cnc-level1", authMiddleware, cnclevel1);
+app.use("/cnc-level2", authMiddleware, cncL2);
+app.use("/cnc-level3", authMiddleware, cncL3);
+app.use("/cnc-level4", authMiddleware, cncL4);
+app.use("/cnc-level5", authMiddleware, cncL5);
+app.use("/cnc-level6", authMiddleware, cncL6);
 
-app.use("/cnc-l1-branch-mapping", Bindingcnclevel1);
-app.use("/cnc-l1-l2-mapping", Bindingcnclevel1level2);
-app.use("/cnc-l2-l3-mapping", Bindingcnclevel2level3);
-app.use("/cnc-l3-l4-mapping", Bindingcnclevel3level4);
-app.use("/cnc-l4-l5-mapping", Bindingcnclevel4level5);
-app.use("/cnc-l5-l6-mapping", Bindingcnclevel5level6);
+app.use("/cnc-l1-branch-mapping", authMiddleware, Bindingcnclevel1);
+app.use("/cnc-l1-l2-mapping", authMiddleware, Bindingcnclevel1level2);
+app.use("/cnc-l2-l3-mapping", authMiddleware, Bindingcnclevel2level3);
+app.use("/cnc-l3-l4-mapping", authMiddleware, Bindingcnclevel3level4);
+app.use("/cnc-l4-l5-mapping", authMiddleware, Bindingcnclevel4level5);
+app.use("/cnc-l5-l6-mapping", authMiddleware, Bindingcnclevel5level6);
 
-app.use("/attendance", Attendance);
-app.use("/courier-fake-attempts", courierFakeAttemptsRoutes);
-app.use("/call-logs", callLogs);
-app.use("/branch-wise-calender", BranchCalender);
+app.use("/attendance", authMiddleware, Attendance);
+app.use("/courier-fake-attempts", authMiddleware, courierFakeAttemptsRoutes);
+app.use("/call-logs", authMiddleware, callLogs);
+app.use("/branch-wise-calender", authMiddleware, BranchCalender);
 
 
 // error handler (last)
