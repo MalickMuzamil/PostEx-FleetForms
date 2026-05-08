@@ -22,6 +22,10 @@ export class LoginComponent {
   savedEmail: string | null = null;
   passkeyAvailable = false;
 
+  /** Reused with same email so AuthService.startOtp can skip a duplicate getStatus call. */
+  private cachedAuthStatus: any = null;
+  private cachedStatusEmail: string | null = null;
+
   constructor(
     private fb: FormBuilder,
     private auth: AuthService,
@@ -48,22 +52,15 @@ export class LoginComponent {
     this.loading = true;
     const email = String(this.form.value.email || '').trim().toLowerCase();
 
-    // ✅ ADD THIS LINE
     localStorage.setItem('auth.email', email);
 
     try {
-      const hasPasskey = await this.auth.hasPasskeyRegistered(email);
+      const snapshot =
+        this.cachedStatusEmail !== null && email === this.cachedStatusEmail
+          ? this.cachedAuthStatus
+          : undefined;
 
-      const result: any = await this.auth.startOtp(email);
-
-      if (!hasPasskey) {
-        sessionStorage.setItem('auth.loginDone', '1');
-        sessionStorage.removeItem('auth.otpVerified');
-
-        this.msg.success('OTP sent to email');
-        this.router.navigateByUrl('/auth/otp', { replaceUrl: true });
-        return;
-      }
+      const result: any = await this.auth.startOtp(email, { statusSnapshot: snapshot });
 
       if (result?.status === 'webauthn_challenge' || result?.status === 'webauthn_ready') {
         const challenge = result?.challenge;
@@ -80,29 +77,7 @@ export class LoginComponent {
         }
 
         const res: any = await this.auth.authenticateWithPasskey({ challenge, rp, credentialIds });
-
-        const data = res?.data ?? res;
-
-        const accessToken = data?.access_token || data?.token || data?.accessToken || null;
-        const refreshToken = data?.refresh_token || data?.refreshToken || null;
-
-        if (accessToken) localStorage.setItem('postex.access_token', accessToken);
-        if (refreshToken) localStorage.setItem('postex.refresh_token', refreshToken);
-
-        const user = {
-          login: data?.login,
-          userName: data?.userName,
-          name: data?.name,
-          email: data?.email,
-          realm: data?.realm,
-          apps: data?.apps || [],
-          roles: data?.roles || [],
-          token_type: data?.token_type,
-          auth_method: data?.auth_method,
-        };
-
-        console.log('[Login] Submitted email:', email);
-        localStorage.setItem('postex.user', JSON.stringify(user));
+        this.auth.storePostexSession(res);
 
         sessionStorage.removeItem('auth.loginDone');
         sessionStorage.removeItem('auth.otpVerified');
@@ -151,7 +126,10 @@ export class LoginComponent {
 
        console.log('[Login] Email patched in form:', email);
 
-      this.passkeyAvailable = await this.auth.hasPasskeyRegistered(email);
+      const status = await this.auth.getAuthStatus(email);
+      this.cachedAuthStatus = status;
+      this.cachedStatusEmail = String(email).trim().toLowerCase();
+      this.passkeyAvailable = this.auth.hasPasskeyFromStatus(status);
 
     } catch (err) {
 
@@ -167,11 +145,15 @@ export class LoginComponent {
 
     try {
 
-      // ✅ FIX
       const email = String(this.savedEmail || '').trim().toLowerCase();
       localStorage.setItem('auth.email', email);
 
-      const result: any = await this.auth.startOtp(email);
+      const snapshot =
+        this.cachedStatusEmail !== null && email === this.cachedStatusEmail
+          ? this.cachedAuthStatus
+          : undefined;
+
+      const result: any = await this.auth.startOtp(email, { statusSnapshot: snapshot });
 
       if (result?.status !== 'webauthn_challenge') return;
 
@@ -180,12 +162,7 @@ export class LoginComponent {
         rp: result.rp,
         credentialIds: result.credentialIds
       });
-
-      const data = res?.data ?? res;
-      console.log('[Passkey] Using saved email:', this.savedEmail);
-
-      localStorage.setItem('postex.access_token', data.access_token);
-      localStorage.setItem('postex.refresh_token', data.refresh_token);
+      this.auth.storePostexSession(res);
 
       this.router.navigateByUrl('/');
 

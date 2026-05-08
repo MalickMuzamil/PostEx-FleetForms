@@ -9,7 +9,6 @@ import { AuthSDK, AuthSDKFetchError, setPasskeyEmail, getPasskeyEmail } from 'po
 import { environment } from '../../../environment/environment';
 import { BehaviorSubject } from 'rxjs';
 import { Router } from '@angular/router';
-import { GeneralService } from './general-service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -29,7 +28,7 @@ export class AuthService {
   private authed$ = new BehaviorSubject<boolean>(false);
   private endpoint = '/auth';
 
-  constructor(private api: GeneralService, private router: Router) {
+  constructor(private router: Router) {
 
     // 🔧 override SDK base URL
     // (this.auth as any).getBaseUrl = () => `${environment.POSTEX_BASE_URL}/public/v1`;
@@ -60,11 +59,41 @@ export class AuthService {
     }
   }
 
-  async startOtp(email: string) {
+  /** GET /auth/status — use once on login load; pass snapshot into {@link startOtp} to avoid a duplicate call. */
+  async getAuthStatus(email: string): Promise<any> {
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!normalized) throw new Error('Email required');
+    return this.auth.getStatus({ email: normalized });
+  }
+
+  /** Whether the status response indicates registered WebAuthn credentials. */
+  hasPasskeyFromStatus(status: any): boolean {
+    const credentialIds = this.credentialIdsFromStatus(status);
+    return credentialIds.length > 0;
+  }
+
+  private credentialIdsFromStatus(status: any): unknown[] {
+    const credentialIds =
+      status?.credentialIds ??
+      status?.webauthn?.credentialIds ??
+      status?.passkey?.credentialIds ??
+      status?.data?.credentialIds ??
+      status?.data?.webauthn?.credentialIds ??
+      status?.credentials ??
+      status?.webauthn?.credentials ??
+      status?.passkeys ??
+      [];
+    return Array.isArray(credentialIds) ? credentialIds : [];
+  }
+
+  async startOtp(email: string, options?: { statusSnapshot?: any }) {
     email = String(email || '').trim().toLowerCase();
     if (!email) throw new Error('Email required');
 
-    const status: any = await this.auth.getStatus({ email });
+    const status: any =
+      options?.statusSnapshot !== undefined
+        ? options.statusSnapshot
+        : await this.auth.getStatus({ email });
 
     const notFound =
       status?.status === 'not_found' ||
@@ -148,7 +177,12 @@ export class AuthService {
     return this.authed$.value;
   }
 
-  logout() {
+  async logout(): Promise<void> {
+    try {
+      await this.auth.logout();
+    } catch (e) {
+      console.error('AuthSDK logout failed', e);
+    }
 
     localStorage.removeItem('postex-auth-token');
     localStorage.removeItem('postex.access_token');
@@ -219,44 +253,32 @@ export class AuthService {
   }
 
   async hasPasskeyRegistered(email: string): Promise<boolean> {
-
-    const normalized = String(email || '').trim().toLowerCase();
-    const status: any = await this.auth.getStatus({ email: normalized });
-
-    const credentialIds =
-      status?.credentialIds ??
-      status?.webauthn?.credentialIds ??
-      status?.passkey?.credentialIds ??
-      status?.data?.credentialIds ??
-      status?.data?.webauthn?.credentialIds ??
-      status?.credentials ??
-      status?.webauthn?.credentials ??
-      status?.passkeys ??
-      [];
-
-    return Array.isArray(credentialIds) && credentialIds.length > 0;
-
+    const status = await this.getAuthStatus(email);
+    return this.hasPasskeyFromStatus(status);
   }
 
   storePostexSession(resp: any) {
 
     const data = resp?.data ?? resp;
 
-    const access = data?.access_token;
-    const refresh = data?.refresh_token;
+    const access = data?.access_token ?? data?.token ?? data?.accessToken;
+    const refresh = data?.refresh_token ?? data?.refreshToken;
 
     if (access) localStorage.setItem(this.postexAccessKey, access);
     if (access) localStorage.setItem('postex-auth-token', access);
     if (refresh) localStorage.setItem(this.postexRefreshKey, refresh);
 
     const user = {
+      login: data?.login,
       email: data?.email,
       name: data?.name,
       userName: data?.userName,
       realm: data?.realm,
       roles: data?.roles || [],
       apps: data?.apps || [],
+      token_type: data?.token_type,
       auth_method: data?.auth_method,
+      image: data?.image,
     };
 
     localStorage.setItem(this.postexUserKey, JSON.stringify(user));
@@ -302,10 +324,5 @@ export class AuthService {
     const roles = this.getUserRoles();
     return roles.includes(normalized);
   }
-
-  verifyTokenFromBackend() {
-    return this.api.get('/auth/verify-token').toPromise();
-  }
-
 
 }
